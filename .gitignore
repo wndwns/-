@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Runtime logs
+*.log
+run.out.log
+run.err.log
+
+# Local secrets and environment
+.env
+.env.*
+!.env.example
+
+# Local database / temporary files
+*.sqlite
+*.sqlite3
+*.db
+*.tmp
+*.bak
+
+# Large raw public datasets, keep processed CSVs in git
+public_data/raw/**/*.nc
+public_data/raw/**/*.tif
+
+# Frontend / editor
+node_modules/
+dist/
+frontend/.edge-*/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Uploaded media generated at runtime
+backend/media/
+
+# Office temporary files
+~$*.docx

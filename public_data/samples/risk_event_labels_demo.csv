@@ -1,0 +1,9 @@
+region_id,event_month,event_type,severity,loss_amount,claim_amount,overdue_flag,source,source_url,is_real_label,note
+naqu-bange,2024-02,snowstorm,中,38,24,false,demo,,false,演示标签：暴雪导致补饲成本上升
+changdu-luolong,2024-03,overdue,中,12,0,true,demo,,false,演示标签：一户主体出现短期逾期
+shannan-langzi,2024-04,drought,低,16,4,false,demo,,false,演示标签：春季降水偏少
+ganan-maqu,2024-08,grassland_pressure,中,30,8,false,demo,,false,演示标签：草畜压力升高
+yushu-zaduo,2024-10,claim,中,26,18,false,demo,,false,演示标签：低温损失触发理赔
+naqu-nierong,2024-11,overdue,高,45,0,true,demo,,false,演示标签：贷后核查样例
+huangnan-zeku,2024-12,snowstorm,中,32,15,false,demo,,false,演示标签：冬季积雪异常
+rikaze-kangma,2024-12,cold_wave,低,10,3,false,demo,,false,演示标签：寒潮预警样例

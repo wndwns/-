@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>牧融绿链 - 工行数据底账</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-page="data">
+    <div id="app">
+      <div v-if="loading" class="loading">
+        <span></span>
+        <strong>数据底座加载中</strong>
+      </div>
+
+      <main v-else class="page-shell">
+        <header class="site-header">
+          <div class="brand-mark">
+            <b>牧融绿链</b>
+            <span>工行数据底账</span>
+          </div>
+          <nav class="top-nav">
+            <a href="./index.html">首页</a>
+            <a href="./overview.html">工行总览</a>
+            <a href="./modules.html">风控模块</a>
+            <a href="./roadmap.html">实施路线</a>
+          </nav>
+        </header>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <span>Weather & Remote Sensing</span>
+            <h2>贷前/贷后气象遥感数据</h2>
+          </div>
+          <div class="data-tiles">
+            <article v-for="item in weatherRows" :key="item.region_id" class="data-card">
+              <h3>{{ item.region_name }}</h3>
+              <p>气象站：{{ item.station }}</p>
+              <ul>
+                <li>温度：{{ item.temperature_c }} ℃</li>
+                <li>24小时降水：{{ item.precipitation_mm_24h }} mm</li>
+                <li>风速：{{ item.wind_speed_mps }} m/s</li>
+                <li>积雪深度：{{ item.snow_depth_cm }} cm</li>
+                <li>寒潮 / 暴雪 / 干旱：{{ item.cold_wave_risk }} / {{ item.snowstorm_risk }} / {{ item.drought_risk }}</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <span>Satellite Indicators</span>
+            <h2>遥感生态指标</h2>
+          </div>
+          <div class="data-tiles">
+            <article v-for="item in remoteRows" :key="item.region_id" class="data-card">
+              <h3>{{ item.region_name }}</h3>
+              <p>影像日期：{{ item.scene_date }}</p>
+              <ul>
+                <li>NDVI：{{ item.ndvi }}，较常年 {{ item.ndvi_change }}</li>
+                <li>植被覆盖：{{ item.vegetation_cover }}</li>
+                <li>积雪覆盖：{{ item.snow_cover }}</li>
+                <li>草地类型：{{ item.grassland_type }}</li>
+                <li>退化等级：{{ item.degradation_level }}</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <span>Risk Assessment</span>
+            <h2>工行综合风险评估</h2>
+          </div>
+          <div class="note-grid">
+            <article v-for="item in riskRows" :key="item.region_id">
+              <strong>{{ item.region_name }}：{{ item.level }}风险 / {{ item.score }}分</strong>
+              <p v-for="driver in item.drivers" :key="driver">{{ driver }}</p>
+              <p>{{ item.recommendation }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <span>Data Connections</span>
+            <h2>工行风控数据接入状态</h2>
+          </div>
+          <div class="note-grid">
+            <article v-for="item in dataConnections" :key="item.name">
+              <strong>{{ item.name }}：{{ item.status }}</strong>
+              <p>来源：{{ item.source }}</p>
+              <p>字段：{{ item.fields.join(" / ") }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <span>Public Data</span>
+            <h2>公开数据</h2>
+          </div>
+          <div class="data-tiles">
+            <article v-for="item in publicData" :key="item" class="data-card">
+              <p>{{ item }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <span>Sample Data</span>
+            <h2>样例与模拟数据</h2>
+          </div>
+          <div class="data-tiles">
+            <article v-for="item in sampleData" :key="item" class="data-card">
+              <p>{{ item }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <span>Principles</span>
+            <h2>数据使用原则</h2>
+          </div>
+          <div class="note-grid">
+            <article v-for="item in principles" :key="item">
+              <p>{{ item }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <span>Tech Layers</span>
+            <h2>技术分层</h2>
+          </div>
+          <div class="note-grid">
+            <article v-for="item in techLayers" :key="item.name">
+              <strong>{{ item.name }}</strong>
+              <p>{{ item.desc }}</p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

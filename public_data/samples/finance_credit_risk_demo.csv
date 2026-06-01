@@ -1,0 +1,11 @@
+subject_name,credit_line,used_credit,interest_rate,term_months,repayment_status,overdue_times,data_source,is_sample
+扎西高原牧业合作社,350,280,4.35%,36,正常,0,sample,true
+德吉牦牛养殖联合体,250,180,4.50%,24,关注,1,sample,true
+雪域青稞饲草供应社,180,130,4.65%,18,正常,0,sample,true
+昆仑牧场家庭农场,120,95,4.80%,24,正常,0,sample,true
+玛曲草畜平衡合作社,260,220,4.75%,36,关注,1,sample,true
+若尔盖高寒畜牧社,190,150,4.45%,24,正常,0,sample,true
+玉树牧旅融合牧场,210,165,4.90%,18,关注,2,sample,true
+那曲尼玛县牧民联社,300,240,5.05%,36,逾期关注,2,sample,true
+日喀则康马牧场,110,80,4.60%,18,正常,0,sample,true
+黄南泽库县高原牧业社,260,210,4.95%,24,关注,1,sample,true

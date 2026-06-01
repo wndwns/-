@@ -1,0 +1,13 @@
+﻿region_id,scene_date,ndvi,ndvi_change,vegetation_cover,snow_cover,grassland_type,degradation_level,carrying_capacity_sheep_unit
+naqu-bange,2026-01-15,0.18,-12.5%,18%,68%,高寒草甸,中度退化,9800
+changdu-luolong,2026-01-15,0.25,-7.1%,30%,42%,山地草甸,轻度退化,15600
+rikaze-xietongmen,2026-01-15,0.31,-2.1%,38%,24%,河谷草地,基本稳定,17200
+naqu-bange,2026-03-20,0.24,-9.8%,28%,52%,高寒草甸,中度退化,12400
+changdu-luolong,2026-03-20,0.35,-4.5%,42%,28%,山地草甸,轻度退化,19200
+rikaze-xietongmen,2026-03-20,0.41,-0.5%,48%,15%,河谷草地,基本稳定,18500
+naqu-bange,2026-05-20,0.34,-8.6%,42%,31%,高寒草甸,中度退化,18200
+changdu-luolong,2026-05-20,0.47,-3.2%,55%,18%,山地草甸,轻度退化,23600
+rikaze-xietongmen,2026-05-20,0.52,+1.4%,61%,11%,河谷草地,基本稳定,19800
+naqu-bange,2025-07-15,0.52,-4.2%,68%,2%,高寒草甸,中度退化,32100
+changdu-luolong,2025-07-15,0.61,+1.8%,72%,0%,山地草甸,轻度退化,35800
+rikaze-xietongmen,2025-07-15,0.68,+3.2%,78%,0%,河谷草地,基本稳定,29600

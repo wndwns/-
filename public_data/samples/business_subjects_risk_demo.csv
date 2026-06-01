@@ -1,0 +1,11 @@
+name,region_id,region_name,subject_type,cattle_count,sheep_count,grassland_mu,credit_amount,credit_value,score,insurance_coverage,status,loan_use,data_source,is_sample
+扎西高原牧业合作社,naqu-bange,那曲市班戈县,合作社,1260,3200,85000,280万元,280,83,82%,正常监控,冬季补饲、牦牛防疫、饲草采购,sample,true
+德吉牦牛养殖联合体,changdu-luolong,昌都市洛隆县,联合体,910,1500,62000,180万元,180,76,71%,关注回款,活体交易、订单履约、冷链物流,sample,true
+雪域青稞饲草供应社,shannan-langzi,山南市浪卡子县,供应商,360,2800,48000,130万元,130,69,64%,关注补保,饲草储备、牧草运输、仓储周转,sample,true
+昆仑牧场家庭农场,haixi-golmud,海西州格尔木市,家庭牧场,520,900,35000,95万元,95,72,68%,正常监控,棚圈改造、疫病防控、饲料采购,sample,true
+玛曲草畜平衡合作社,ganan-maqu,甘南州玛曲县,合作社,780,4100,76000,220万元,220,66,58%,草畜压力,饲草采购、牲畜出栏、草场修复,sample,true
+若尔盖高寒畜牧社,aba-ruoergai,阿坝州若尔盖县,合作社,430,2600,54000,150万元,150,78,74%,正常监控,草场轮牧、牦牛育肥、保险续保,sample,true
+玉树牧旅融合牧场,yushu-zaduo,玉树州杂多县,家庭牧场,640,1800,69000,165万元,165,61,55%,重点关注,牧旅设施、活体交易、冬储饲草,sample,true
+那曲尼玛县牧民联社,naqu-nierong,那曲市聂荣县,联合体,850,3300,82000,240万元,240,58,49%,贷后核查,补饲采购、牲畜交易、疫苗采购,sample,true
+日喀则康马牧场,rikaze-kangma,日喀则市康马县,家庭牧场,390,1200,31000,80万元,80,74,70%,正常监控,饲草采购、棚圈维护、订单履约,sample,true
+黄南泽库县高原牧业社,huangnan-zeku,黄南州泽库县,合作社,700,3600,74000,210万元,210,63,53%,人工复核,草场修复、牲畜出栏、运输周转,sample,true
