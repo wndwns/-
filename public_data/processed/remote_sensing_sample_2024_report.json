@@ -1,0 +1,20 @@
+{
+  "source": "modis",
+  "source_id": "remote-sensing",
+  "processed_at": "2026-05-26T14:44:10.991982+00:00",
+  "year_range": "2024-2024",
+  "county_count": 25,
+  "month_count": 12,
+  "total_rows": 300,
+  "ndvi_rows": 300,
+  "snow_rows": 0,
+  "fvc_rows": 0,
+  "warnings": [
+    "300/300 行无上年同期数据, ndvi_change 设为 0%",
+    "输出标记为 sample（样例输入: True, mark_real=False, mark_simulated=False）",
+    "FVC 数据缺失, vegetation_cover 由 NDVI 估算 (ndvi*100) 或默认 50%",
+    "积雪数据缺失, snow_cover 默认 0%"
+  ],
+  "output_file": "public_data\\processed\\remote_sensing_sample_2024.csv",
+  "next_step": "打开 http://127.0.0.1:8000/admin 上传此 CSV 到 remote_sensing_data 表"
+}

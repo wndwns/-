@@ -1,0 +1,21 @@
+ENVI
+description = {
+  Applied Mask Result [Sat Feb 29 14:44:41 2020]}
+samples = 2608
+lines   = 1928
+bands   = 1
+header offset = 0
+file type = ENVI Standard
+data type = 4
+interleave = bsq
+sensor type = Unknown
+byte order = 0
+x start = 455
+y start = 26
+map info = {Albers Conical Equal Area, 1.0000, 1.0000, -2638577.6943, 4672722.1690, 1.0000000000e+003, 1.0000000000e+003, WGS-84, units=Meters}
+projection info = {9, 6378137.0, 6356752.3, 0.000000, 105.000000, 0.0, 0.0, 25.000000, 47.000000, WGS-84, Albers Conical Equal Area, units=Meters}
+coordinate system string = {PROJCS["Albers Conical Equal Area",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Albers"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",105.0],PARAMETER["Standard_Parallel_1",25.0],PARAMETER["Standard_Parallel_2",47.0],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]}
+wavelength units = Unknown
+data ignore value = -3.00000000e+000
+band names = {
+ Mask (Mask (ROI Mask (Mask (Band 1:NDVIslope-2009-2019_ProjectRaster_Resample.dat):NDVIslope-2009-2019_ProjectRaster_Resample_mask.dat):NDVIslope-2009-2019_ProjectRaster_Resample_mask_RIO.dat):¸ßÉ½Ö²±»10.dat)}

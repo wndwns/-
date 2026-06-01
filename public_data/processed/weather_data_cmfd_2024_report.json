@@ -1,0 +1,28 @@
+{
+  "source": "tpdc",
+  "source_id": "cmfd-v2",
+  "dataset_name": "CMFD_V0200",
+  "processed_at": "2026-05-26T14:16:29.595860+00:00",
+  "input_files": {
+    "temp": "C:/temp/cmfd/temp_CMFD_V0200_B-01_01mo_010deg_195101-202412.nc",
+    "prec": "C:/temp/cmfd/prec_CMFD_V0200_B-01_01mo_010deg_195101-202412.nc",
+    "wind": "C:/temp/cmfd/wind_CMFD_V0200_B-01_01mo_010deg_195101-202412.nc"
+  },
+  "year_range": "2024-2024",
+  "county_count": 25,
+  "month_count": 12,
+  "total_rows": 300,
+  "variables_loaded": [
+    "temp",
+    "prec",
+    "wind"
+  ],
+  "variables_missing": [],
+  "warnings": [
+    "snow_depth_cm=0: CMFD 不含雪深数据",
+    "cold_wave_risk 由月均温度阈值自动判定",
+    "drought_risk 默认='中'"
+  ],
+  "output_file": "d:\\工行杯\\yak-risk-platform\\public_data\\processed\\weather_data_cmfd_2024.csv",
+  "next_step": "打开 http://127.0.0.1:8000/admin 上传此 CSV 到 weather_data 表"
+}

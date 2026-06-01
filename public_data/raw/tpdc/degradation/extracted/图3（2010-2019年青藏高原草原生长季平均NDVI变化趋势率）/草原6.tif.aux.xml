@@ -1,0 +1,35 @@
+<PAMDataset>
+  <Metadata domain="IMAGE_STRUCTURE">
+    <MDI key="INTERLEAVE">BAND</MDI>
+  </Metadata>
+  <Metadata>
+    <MDI key="Band_1">Mask (Mask (ROI Mask (Mask (Band 1:NDVIslope-2009-2019_ProjectRaster_Resample.dat):NDVIslope-2009-2019_ProjectRaster_Resample_mask.dat):NDVIslope-2009-2019_ProjectRaster_Resample_mask_RIO.dat):²ÝÔ­6.dat)</MDI>
+  </Metadata>
+  <Metadata domain="Esri">
+    <MDI key="PyramidResamplingType">NEAREST</MDI>
+  </Metadata>
+  <PAMRasterBand band="1">
+    <Description>Mask (Mask (ROI Mask (Mask (Band 1:NDVIslope-2009-2019_ProjectRaster_Resample.dat):NDVIslope-2009-2019_ProjectRaster_Resample_mask.dat):NDVIslope-2009-2019_ProjectRaster_Resample_mask_RIO.dat):²ÝÔ­6.dat)</Description>
+    <NoDataValue>-3.00000000000000E+000</NoDataValue>
+    <Histograms>
+      <HistItem>
+        <HistMin>-0.04126593843102455</HistMin>
+        <HistMax>0.07386799901723862</HistMax>
+        <BucketCount>256</BucketCount>
+        <IncludeOutOfRange>1</IncludeOutOfRange>
+        <Approximate>0</Approximate>
+        <HistCounts>1|2|0|0|0|0|0|2|0|0|2|1|1|0|1|0|0|0|1|0|2|1|3|1|4|2|5|5|3|3|0|10|3|4|4|8|12|3|13|13|6|14|12|21|18|22|16|37|18|37|53|47|49|52|61|98|91|82|98|102|115|162|139|193|197|242|286|307|311|373|476|523|647|775|1021|1124|1227|1439|1728|2043|2614|3041|4062|5111|6024|7690|10086|13231|18477|27822|44058|74810|92435|88212|71131|53578|39949|29309|22179|16722|12767|10141|8299|6602|5428|4655|3977|3335|2974|2447|2120|1814|1543|1353|1136|959|840|613|520|416|350|335|294|279|166|160|122|120|85|81|78|65|59|50|68|55|55|48|43|25|36|31|28|26|26|24|21|35|28|16|21|23|19|20|13|12|13|6|9|20|7|9|10|3|2|3|2|6|6|7|6|9|2|1|4|1|4|3|4|1|3|3|1|2|0|2|2|4|0|2|2|8|1|0|3|0|2|0|0|0|0|0|0|0|2|0|0|0|1|1|0|0|0|0|0|0|0|0|0|0|0|1|0|0|0|0|0|0|2|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|2|0</HistCounts>
+      </HistItem>
+    </Histograms>
+    <Metadata>
+      <MDI key="STATISTICS_MINIMUM">-0.041265938431025</MDI>
+      <MDI key="STATISTICS_MAXIMUM">0.073867999017239</MDI>
+      <MDI key="STATISTICS_MEAN">0.0011210286183979</MDI>
+      <MDI key="STATISTICS_STDDEV">0.0029601253231715</MDI>
+      <MDI key="STATISTICS_SKIPFACTORX">1</MDI>
+      <MDI key="STATISTICS_SKIPFACTORY">1</MDI>
+      <MDI key="STATISTICS_EXCLUDEDVALUES"></MDI>
+      <MDI key="STATISTICS_COVARIANCES">8.76234192888143E-06</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>

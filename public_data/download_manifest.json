@@ -1,0 +1,73 @@
+{
+  "description": "牧融绿链下一步需要下载的公开遥感数据集清单",
+  "last_updated": "2026-05-26",
+  "status": {
+    "weather_data": "done — CMFD 2.0 已接入 300 行 (2024)",
+    "remote_sensing_data": "todo — 需要下载以下数据集",
+    "business_subjects": "待定 — 使用脱敏模拟数据",
+    "finance_credit": "待定 — 使用脱敏模拟数据"
+  },
+  "datasets": [
+    {
+      "id": "modis-ndvi-mod13q1",
+      "name": "MODIS NDVI (MOD13Q1 v061)",
+      "url": "https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MOD13Q1",
+      "source": "tpdc / Google Earth Engine",
+      "variable": "NDVI",
+      "spatial": "250m, 16-day",
+      "maps_to_field": "remote_sensing_data.ndvi / ndvi_change",
+      "usage": "提取 25 个示范县的 16 天 NDVI 均值, 月度聚合后计算 ndvi_change",
+      "output_csv": "public_data/processed/remote_sensing_ndvi_2024.csv",
+      "ingest_command": "python public_data/scripts/ingest_public_data.py --source tpdc --dataset ndvi --remote-ndvi <path> --start-year 2024 --end-year 2024 --output public_data/processed/remote_sensing_ndvi_2024.csv"
+    },
+    {
+      "id": "modis-fvc",
+      "name": "植被覆盖度 (FVC / MOD44B or GLASS FVC)",
+      "url": "https://data.tpdc.ac.cn/ 搜索 '植被覆盖度'",
+      "source": "tpdc",
+      "variable": "FVC / vegetation_cover",
+      "spatial": "500m-1km, monthly",
+      "maps_to_field": "remote_sensing_data.vegetation_cover",
+      "usage": "提取 25 县月度植被覆盖度百分比",
+      "output_csv": "public_data/processed/remote_sensing_fvc_2024.csv",
+      "ingest_command": "python public_data/scripts/ingest_public_data.py --source tpdc --dataset fvc --remote-fvc <path> --start-year 2024 --end-year 2024 --output public_data/processed/remote_sensing_fvc_2024.csv"
+    },
+    {
+      "id": "modis-snow-mod10a1",
+      "name": "MODIS Snow Cover (MOD10A1 v061)",
+      "url": "https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MOD10A1",
+      "source": "tpdc / Google Earth Engine",
+      "variable": "NDSI_Snow_Cover",
+      "spatial": "500m, daily",
+      "maps_to_field": "remote_sensing_data.snow_cover / weather_data.snow_depth_cm",
+      "usage": "提取 25 县逐日积雪覆盖, 月度聚合为 snow_cover 百分比",
+      "output_csv": "public_data/processed/remote_sensing_snow_2024.csv",
+      "ingest_command": "python public_data/scripts/ingest_public_data.py --source tpdc --dataset snow --remote-snow <path> --start-year 2024 --end-year 2024 --output public_data/processed/remote_sensing_snow_2024.csv"
+    },
+    {
+      "id": "grassland-degradation",
+      "name": "青藏高原草地退化数据集",
+      "url": "https://data.tpdc.ac.cn/ 搜索 '青藏高原草地退化'",
+      "source": "tpdc",
+      "variable": "degradation_level / grassland_type",
+      "spatial": "1km, static",
+      "maps_to_field": "remote_sensing_data.degradation_level / grassland_type",
+      "usage": "静态数据, 每个区域一条记录, 直接映射到 degeneration_level 和 grassland_type",
+      "output_csv": "public_data/processed/remote_sensing_degradation.csv",
+      "ingest_command": "python public_data/scripts/ingest_public_data.py --source tpdc --dataset degradation --input <csv_path> --table remote_sensing_data --output public_data/processed/remote_sensing_degradation.csv"
+    },
+    {
+      "id": "grassland-type",
+      "name": "青藏高原草地类型图",
+      "url": "https://data.tpdc.ac.cn/ 搜索 '青藏高原草地类型'",
+      "source": "tpdc",
+      "variable": "grassland_type",
+      "spatial": "1km, static",
+      "maps_to_field": "remote_sensing_data.grassland_type",
+      "usage": "静态分类, 每个区域一条记录, 如 '高寒草甸' / '山地草甸' / '河谷草地'",
+      "output_csv": "public_data/processed/remote_sensing_grassland_type.csv",
+      "ingest_command": "python public_data/scripts/ingest_public_data.py --source tpdc --dataset grassland_type --input <csv_path> --table remote_sensing_data --output public_data/processed/remote_sensing_grassland_type.csv"
+    }
+  ],
+  "note": "所有字段映射见 public_data/sources.json。NDVI/FVC/Snow 文件下载后放入 public_data/raw/tpdc/ 下对应子目录, 用 ingest_public_data.py 转换。"
+}

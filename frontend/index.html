@@ -1,0 +1,1497 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ICBC 牧融绿链 - 工行高原畜牧绿色金融风控平台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div v-if="loading" class="loading-screen">
+        <div class="spinner"></div>
+        <p>ICBC 牧融绿链平台加载中…</p>
+      </div>
+
+      <div v-else>
+
+        <!-- ================================================================
+             顶部导航栏（首页 & 内页通用）
+             ================================================================ -->
+        <header class="top-navbar" :class="{ scrolled: scrolled, 'inner-page': page !== 'home' }">
+          <div class="nav-inner">
+            <a class="nav-logo" @click="navigate('home')">
+              <span class="logo-icon icbc-mark">ICBC</span>
+              <span class="logo-text">牧融绿链</span>
+            </a>
+            <nav class="nav-menu">
+              <a :class="{ active: page === 'home' }" @click="navigate('home')">首页</a>
+              <a :class="{ active: page === 'overview' }" @click="navigate('overview')">平台概览</a>
+              <a :class="{ active: page === 'modules' }" @click="navigate('modules')">业务模块</a>
+              <a :class="{ active: page === 'data' }" @click="navigate('data')">数据底座</a>
+              <a :class="{ active: page === 'roadmap' }" @click="navigate('roadmap')">实施路线</a>
+              <a :class="{ active: page === 'dashboard' }" @click="navigate('dashboard')">风险评估</a>
+              <a :class="{ active: page === 'insurance' }" @click="navigate('insurance')">保险协同</a>
+              <a :class="{ active: page === 'supply-chain' }" @click="navigate('supply-chain')">产业链</a>
+              <a :class="{ active: page === 'green-performance' }" @click="navigate('green-performance')">绿色绩效</a>
+              <a :class="{ active: page === 'livelihood' }" @click="navigate('livelihood')">边疆民生</a>
+            </nav>
+          </div>
+        </header>
+
+        <!-- ================================================================
+             首页
+             ================================================================ -->
+        <div v-if="page === 'home'" class="home-page">
+
+          <!-- Hero -->
+          <section class="hero-banner">
+            <div class="hero-slides">
+              <div v-for="(slide, i) in heroSlides" :key="i" class="hero-slide" :class="[{ active: heroIndex === i, 'has-image': slide.image }, slide.image ? '' : 'scene-' + slide.scene]">
+                <img v-if="slide.image" class="hero-slide-image" :src="slide.image" :alt="slide.title || '首页轮播图'" />
+                <template v-else>
+                  <div class="scene-sky"></div>
+                  <div class="scene-mountains back"></div>
+                  <div class="scene-mountains front"></div>
+                  <div class="scene-field"></div>
+                  <div class="scene-river"></div>
+                  <div class="scene-yaks"></div>
+                </template>
+              </div>
+            </div>
+            <div class="hero-mask"></div>
+            <div class="hero-content">
+              <div class="hero-text-wrap" v-for="(slide, i) in heroSlides" :key="'t'+i" v-show="heroIndex === i">
+                <span class="hero-kicker">{{ slide.kicker }}</span>
+                <h1 class="hero-title">{{ slide.title }}</h1>
+                <p class="hero-desc">{{ slide.desc }}</p>
+              </div>
+              <div class="hero-dots">
+                <button v-for="(s, i) in heroSlides" :key="'d'+i" :class="{ active: heroIndex === i }" @click="heroIndex = i"></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 平台要闻 -->
+          <section class="section">
+            <div class="section-container">
+              <div class="section-head">
+                <h2 class="section-title">工行业务闭环</h2>
+                <p class="section-sub">围绕授信准入、贷后监测、风险处置、银保协同与绿色金融绩效形成闭环</p>
+              </div>
+              <div class="news-grid">
+                <div class="news-card" v-for="(alert, i) in data.alerts.slice(0, 4)" :key="alert.id">
+                  <div class="news-tag" :class="alert.level === '高风险' ? 'tag-red' : alert.level === '中风险' ? 'tag-orange' : 'tag-green'">{{ alert.level }}</div>
+                  <h3>{{ alert.title }}</h3>
+                  <p>{{ alert.description }}</p>
+                  <span class="news-action">{{ alert.action }}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 核心能力 -->
+          <section class="section icbc-role-section">
+            <div class="section-container">
+              <div class="section-head">
+                <h2 class="section-title">工行在系统中的主体角色</h2>
+                <p class="section-sub">平台不是展示项目材料，而是服务工行绿色信贷业务从准入到贷后的完整流程</p>
+              </div>
+              <div class="icbc-role-grid">
+                <article v-for="item in icbcRoleCards" :key="item.step" class="icbc-role-card">
+                  <span>{{ item.step }}</span>
+                  <h3>{{ item.title }}</h3>
+                  <p>{{ item.desc }}</p>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <!-- 核心能力 -->
+          <section class="section section-alt">
+            <div class="section-container">
+              <div class="section-head">
+                <h2 class="section-title">工行风控能力</h2>
+                <p class="section-sub">从高原牧区公开环境数据到工行授信和贷后处置的业务化能力</p>
+              </div>
+              <div class="cap-grid">
+                <div class="cap-card" v-for="mod in businessModules" :key="mod.code" @click="selectedModule = mod; navigate('modules')">
+                  <div class="cap-icon">{{ moduleIcon(mod.code) }}</div>
+                  <h3>{{ mod.name }}</h3>
+                  <p>{{ mod.value }}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 数据纵览 -->
+          <section class="section">
+            <div class="section-container">
+              <div class="section-head">
+                <h2 class="section-title">工行数据底账</h2>
+                <p class="section-sub">支撑客户经理完成主体准入、额度判断、贷后核查和银保协同</p>
+              </div>
+              <div class="stats-grid">
+                <div class="stats-card">
+                  <span class="stats-num">{{ data.regions.length }}</span>
+                  <span class="stats-unit">个</span>
+                  <span class="stats-label">监测区域</span>
+                </div>
+                <div class="stats-card">
+                  <span class="stats-num">{{ businessModules.length }}</span>
+                  <span class="stats-unit">个</span>
+                  <span class="stats-label">业务模块</span>
+                </div>
+                <div class="stats-card">
+                  <span class="stats-num">{{ data.subjects.length }}+</span>
+                  <span class="stats-unit">户</span>
+                  <span class="stats-label">工行授信主体</span>
+                </div>
+                <div class="stats-card">
+                  <span class="stats-num">{{ data.data_connections.length }}</span>
+                  <span class="stats-unit">类</span>
+                  <span class="stats-label">数据源类型</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 行业赋能 -->
+          <section class="section section-alt">
+            <div class="section-container">
+              <div class="section-head">
+                <h2 class="section-title">工行主体角色</h2>
+                <p class="section-sub">系统服务工行绿色信贷在高原牧区的可评估、可追踪、可处置</p>
+              </div>
+              <div class="pain-grid-seu">
+                <div class="pain-card-seu" v-for="item in data.outline.pain_points.slice(0, 5)" :key="item.title">
+                  <h3>{{ item.title }}</h3>
+                  <ul>
+                    <li v-for="text in item.items" :key="text">{{ text }}</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 底部 -->
+          <footer class="site-footer">
+            <div class="section-container">
+              <div class="footer-grid">
+                <div class="footer-brand">
+                  <h3>ICBC 牧融绿链</h3>
+                  <p>工行高原畜牧绿色金融风险评估与贷后管理平台</p>
+                </div>
+                <div class="footer-links">
+                  <h4>快速导航</h4>
+                  <a @click="navigate('overview')">平台概览</a>
+                  <a @click="navigate('modules')">业务模块</a>
+                  <a @click="navigate('data')">数据底座</a>
+                  <a @click="navigate('roadmap')">实施路线</a>
+                </div>
+                <div class="footer-links">
+                  <h4>数据服务</h4>
+                  <a @click="navigate('dashboard')">风险评估</a>
+                  <a @click="navigate('data')">气象遥感</a>
+                  <a @click="navigate('data')">风险评估</a>
+                  <a @click="navigate('admin')">管理端</a>
+                </div>
+                <div class="footer-info">
+                  <h4>联系方式</h4>
+                  <p>面向青藏高原、高原牧区和边疆地区</p>
+                  <p>服务工行绿色信贷 · 贷后管理 · 银保协同 · 普惠牧区</p>
+                </div>
+              </div>
+              <div class="footer-bottom">
+                <p>© 2026 ICBC 牧融绿链. 工行高原畜牧绿色金融风险评估、产业链闭环与贷后管理平台.</p>
+              </div>
+            </div>
+          </footer>
+        </div>
+
+        <!-- ================================================================
+             内页（非首页）
+             ================================================================ -->
+        <div v-else class="inner-page-wrapper">
+          <div class="inner-container">
+
+            <!-- 风险评估 -->
+            <div v-show="page === 'dashboard'" class="ops-dashboard risk-workbench">
+              <section class="risk-public-summary">
+                <div class="risk-kpis">
+                  <div v-for="item in publicRiskKpis" :key="item.label" class="public-kpi-card" :class="{ danger: item.danger }">
+                    <strong>{{ item.value }}</strong>
+                    <span>{{ item.label }}</span>
+                  </div>
+                </div>
+                <div class="risk-public-grid">
+                  <div class="plain-card risk-heat-card">
+                    <div class="plain-card-head risk-card-head">
+                      <div>
+                        <h2>County Risk Heat</h2>
+                        <p>县域风险热力总览</p>
+                      </div>
+                      <em>6维规则评分 · 权重加权</em>
+                    </div>
+                    <table class="schema-table heat-table">
+                      <thead><tr><th>#</th><th>县域</th><th>综合评分</th><th>6维子分</th><th>风险等级</th><th>建议动作</th></tr></thead>
+                      <tbody>
+                        <tr v-for="(row, idx) in publicRiskHeatRows" :key="row.region_id" class="heat-row" :class="{ active: selectedPublicRiskRow?.region_id === row.region_id }" @click="selectPublicRiskRow(row)">
+                          <td>{{ idx + 1 }}</td>
+                          <td><strong>{{ row.region_name }}</strong></td>
+                          <td><b>{{ row.display_score }}</b></td>
+                          <td><span class="risk-dots"><i v-for="dim in row.dim_scores" :key="dim.name" :class="{ hot: dim.value >= 55 }" :title="dim.name + ' ' + dim.value"></i></span></td>
+                          <td>{{ row.display_level }}</td>
+                          <td>加强贷后监测频率，关注保险覆盖补充</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="plain-card radar-card">
+                    <div class="plain-card-head risk-card-head">
+                      <div><h2>6-Dim Radar</h2><p>{{ selectedPublicRiskRow?.region_name || '6维评分雷达图' }}</p></div>
+                      <em>{{ selectedPublicRiskRow?.display_level || '请选择县域' }}</em>
+                    </div>
+                    <div id="chart-public-radar" class="ops-chart public-radar-chart"></div>
+                    <div class="radar-dim-list" v-if="selectedPublicRiskRow">
+                      <span v-for="dim in selectedPublicRiskRow.dim_scores" :key="dim.name"><b>{{ dim.name }}</b>{{ dim.value }}</span>
+                    </div>
+                    <p class="radar-note">{{ selectedPublicRiskRow?.dim_summary || '点击左侧县域查看对应雷达图。' }}</p>
+                  </div>
+                </div>
+                <div class="plain-card trend-card">
+                  <div class="plain-card-head risk-card-head">
+                    <div><h2>Risk Trend</h2><p>全县域平均风险趋势（近60个月）</p></div>
+                  </div>
+                  <div id="chart-public-risk-trend" class="ops-chart"></div>
+                </div>
+              </section>
+
+              <section class="assessment-toolbar">
+                <div class="assessment-title">
+                  <span>ICBC Risk Assessment</span>
+                  <h1>工行绿色信贷风险评估工作台</h1>
+                </div>
+                <div class="assessment-status">
+                  <div v-for="item in assessmentStats" :key="item.label">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                    <em>{{ item.note }}</em>
+                  </div>
+                </div>
+                <div class="terminal-actions">
+                  <button class="btn-main" @click="trainModel" :disabled="modelTraining">{{ modelTraining ? '训练中' : '重训模型' }}</button>
+                  <button class="terminal-btn" @click="navigate('data')">工行数据底账</button>
+                  <a class="terminal-btn" href="/admin" target="_blank">管理端</a>
+                </div>
+              </section>
+
+              <section class="assessment-layout">
+                <aside class="assessment-pool">
+                  <div class="assessment-pool-head">
+                    <div>
+                      <span>Object Pool</span>
+                      <h2>工行评估对象池</h2>
+                    </div>
+                    <b>{{ assessmentObjects.length }}</b>
+                  </div>
+                  <div class="assessment-switch">
+                    <button :class="{ active: assessmentMode === 'region' }" @click="assessmentMode='region'; selectedAssessmentKey=''; renderDashboardChartsSoon()">县域风险</button>
+                    <button :class="{ active: assessmentMode === 'subject' }" @click="assessmentMode='subject'; selectedAssessmentKey=''; renderDashboardChartsSoon()">工行授信主体</button>
+                  </div>
+                  <input class="assessment-search" v-model="assessmentSearch" placeholder="搜索县域、主体、风险因子" />
+                  <div class="assessment-object-list">
+                    <button
+                      v-for="item in assessmentObjects"
+                      :key="item.type + item.key"
+                      class="assessment-object"
+                      :class="{ active: selectedAssessmentObject && selectedAssessmentObject.key === item.key && selectedAssessmentObject.type === item.type }"
+                      @click="selectAssessment(item)"
+                    >
+                      <span class="ao-rank">#{{ item.rank }}</span>
+                      <span class="ao-main">
+                        <strong>{{ item.title }}</strong>
+                        <em>{{ item.sub }}</em>
+                      </span>
+                      <span class="ao-score" :class="riskLevelClass(item.level)">{{ item.score.toFixed(1) }}</span>
+                      <span class="ao-meta">
+                        <b>{{ item.driver }}</b>
+                        <small>{{ item.action }}</small>
+                      </span>
+                    </button>
+                  </div>
+                </aside>
+
+                <main class="assessment-report" v-if="selectedAssessment">
+                  <div class="assessment-report-head">
+                    <div>
+                      <span>{{ selectedAssessment.type === 'region' ? 'County Report' : 'Credit Report' }}</span>
+                      <h2>{{ selectedAssessment.title }}</h2>
+                      <p>{{ selectedAssessment.month }} · {{ selectedAssessment.primary_driver }}驱动</p>
+                    </div>
+                    <div class="assessment-decision" :class="riskLevelClass(selectedAssessment.level)">
+                      <span>{{ selectedAssessment.decision }}</span>
+                      <strong>{{ selectedAssessment.level }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="assessment-score-row">
+                    <div class="assessment-score-card" :class="riskLevelClass(selectedAssessment.level)">
+                      <span>工行综合风险分</span>
+                      <strong>{{ selectedAssessment.score.toFixed(1) }}</strong>
+                      <em>{{ modelStatus.label_type === 'rule_label' ? '弱监督评分' : '监督模型评分' }}</em>
+                    </div>
+                    <div class="assessment-metrics">
+                      <div v-for="metric in selectedAssessment.metrics" :key="metric.label">
+                        <span>{{ metric.label }}</span>
+                        <strong>{{ metric.value }}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="manager-workflow">
+                    <div v-for="step in managerWorkflowSteps" :key="step.key" class="workflow-step" :class="step.state">
+                      <span>{{ step.key }}</span>
+                      <strong>{{ step.title }}</strong>
+                      <em>{{ step.note }}</em>
+                    </div>
+                  </div>
+
+                  <div v-if="selectedAssessment.type === 'subject'" class="subject-detail-drawer">
+                    <div class="mini-head">
+                      <span>Subject Profile</span>
+                      <b>工行授信主体详情</b>
+                    </div>
+                    <div class="subject-detail-grid">
+                      <div v-for="item in subjectProfileRows" :key="item.label">
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.value }}</strong>
+                      </div>
+                    </div>
+                    <p>{{ selectedAssessment.raw.sample_note || '样例主体数据，仅用于比赛演示和流程验证。' }}</p>
+                  </div>
+
+                  <div class="assessment-charts">
+                    <div class="assessment-chart-card">
+                      <div class="mini-head">
+                        <span>Drivers</span>
+                        <b>风险因子贡献</b>
+                      </div>
+                      <div id="chart-dashboard-driver" class="ops-chart small"></div>
+                      <div class="driver-list">
+                        <p v-for="item in selectedAssessment.driver_details" :key="item.name">
+                          <span>{{ item.name }}</span>
+                          <strong>{{ item.value }}</strong>
+                          <em>{{ item.detail }}</em>
+                        </p>
+                      </div>
+                    </div>
+                    <div class="assessment-chart-card">
+                      <div class="mini-head">
+                        <span>Trend</span>
+                        <b>风险走势</b>
+                      </div>
+                      <div id="chart-dashboard-trend" class="ops-chart"></div>
+                    </div>
+                  </div>
+                </main>
+
+                <aside class="evidence-panel" v-if="selectedAssessment">
+                  <div class="evidence-head">
+                    <span>Evidence</span>
+                    <h2>工行证据链与处置</h2>
+                  </div>
+                  <div class="evidence-list">
+                    <div v-for="item in assessmentEvidence" :key="item.group" class="evidence-item" :class="item.state">
+                      <span>{{ item.group }}</span>
+                      <strong>{{ item.title }}</strong>
+                      <p v-for="row in item.rows" :key="row">{{ row }}</p>
+                    </div>
+                  </div>
+                  <div class="action-checklist">
+                    <div class="mini-head">
+                      <span>Actions</span>
+                      <b>处置动作</b>
+                    </div>
+                    <div v-for="item in assessmentActions" :key="item.priority + item.title" class="action-item">
+                      <span>{{ item.priority }}</span>
+                      <strong>{{ item.title }}</strong>
+                      <p>{{ item.desc }}</p>
+                    </div>
+                  </div>
+                  <div class="label-disclosure">
+                    <strong>标签说明</strong>
+                    <p>{{ labelDisclosure }}</p>
+                  </div>
+                </aside>
+              </section>
+
+              <section class="assessment-table-panel">
+                <div class="assessment-table-head">
+                  <div>
+                    <span>Assessment Detail</span>
+                    <h2>工行评估明细</h2>
+                  </div>
+                  <div id="chart-dashboard-quality" class="quality-mini-chart"></div>
+                </div>
+                <div class="terminal-table-wrap compact">
+                  <table class="terminal-table assessment-table">
+                    <thead>
+                      <tr>
+                        <th>对象</th>
+                        <th>类型</th>
+                        <th>风险分</th>
+                        <th>等级</th>
+                        <th>敞口/用信</th>
+                        <th>主因子</th>
+                        <th>建议动作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="row in assessmentDetailRows" :key="row.type + row.key">
+                        <td><strong>{{ row.object }}</strong></td>
+                        <td>{{ row.type }}</td>
+                        <td><span class="terminal-score" :class="riskLevelClass(row.level)">{{ row.score.toFixed(1) }}</span></td>
+                        <td>{{ row.level }}</td>
+                        <td>{{ formatNumber(row.exposure) }}万</td>
+                        <td>{{ row.driver }}</td>
+                        <td><span class="terminal-tag">{{ row.action }}</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+
+            <div v-if="false">
+              <div class="page-hero">
+                <h1>风险评估工作台</h1>
+                <p>实时监测高原生态风险、产业经营与金融保险动态</p>
+              </div>
+              <div class="stat-row">
+                <div class="stat-item">
+                  <span class="si-num green">{{ data.regions.length }}</span>
+                  <span class="si-label">监测区域</span>
+                </div>
+                <div class="stat-item">
+                  <span class="si-num cyan">{{ data.modules.length }}</span>
+                  <span class="si-label">业务模块</span>
+                </div>
+                <div class="stat-item">
+                  <span class="si-num gold">{{ activeAlertCount }}</span>
+                  <span class="si-label">活跃预警</span>
+                </div>
+                <div class="stat-item">
+                  <span class="si-num red">{{ highRiskCount }}</span>
+                  <span class="si-label">高风险区域</span>
+                </div>
+              </div>
+              <!-- 模型状态卡片 -->
+              <div class="panel" style="margin-bottom:18px;">
+                <div class="panel-head">
+                  <h3>模型训练状态</h3>
+                  <span class="badge" :style="{background: modelStatus.model_type === 'ml_hybrid' ? 'rgba(45,125,79,0.12)' : 'rgba(217,138,58,0.12)', color: modelStatus.model_type === 'ml_hybrid' ? 'var(--green)' : 'var(--orange)' }">{{ modelStatus.model_type === 'ml_hybrid' ? 'ML 混合' : '规则模型' }}</span>
+                </div>
+                <div class="panel-body">
+                  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;text-align:center;">
+                    <div><span style="font-size:20px;font-weight:700;color:var(--green);">{{ modelStatus.n_samples || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">训练样本</span></div>
+                    <div><span style="font-size:20px;font-weight:700;">{{ modelStatus.county_count || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">县域数</span></div>
+                    <div><span style="font-size:20px;font-weight:700;">{{ modelStatus.month_count || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">月份数</span></div>
+                    <div><span style="font-size:20px;font-weight:700;color:var(--cyan);">{{ ((modelStatus.confidence || 0) * 100).toFixed(0) }}%</span><br /><span style="font-size:10px;color:var(--text-muted);">置信度</span></div>
+                    <div><span style="font-size:20px;font-weight:700;color:var(--gold);">{{ ((modelStatus.real_data_ratio || 0) * 100).toFixed(0) }}%</span><br /><span style="font-size:10px;color:var(--text-muted);">真实数据</span></div>
+                    <div><span style="font-size:20px;font-weight:700;color:var(--gold);">{{ modelStatus.sklearn_available ? '就绪' : '未安装' }}</span><br /><span style="font-size:10px;color:var(--text-muted);">sklearn</span></div>
+                  </div>
+                  <p style="font-size:10px;color:var(--text-muted);margin-top:8px;text-align:center;">{{ modelStatus.note || '' }} | 训练时间: {{ modelStatus.trained_at ? new Date(modelStatus.trained_at).toLocaleString() : '未训练' }}</p>
+                  <div v-if="modelStatus.data_quality_warnings && modelStatus.data_quality_warnings.length > 0" style="margin-top:8px;padding:8px 12px;background:rgba(217,138,58,0.08);border-radius:4px;">
+                    <p v-for="w in modelStatus.data_quality_warnings" :key="w" style="font-size:10px;color:var(--orange);margin:0;">⚠ {{ w }}</p>
+                  </div>
+                  <div style="text-align:center;margin-top:8px;">
+                    <button class="btn-outline" @click="trainModel" :disabled="modelTraining">{{ modelTraining ? '训练中…' : '重新训练模型' }}</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="content-2col">
+                <div class="panel">
+                  <div class="panel-head"><h3>模型风险预测</h3><span class="badge" v-if="modelPrediction">{{ modelPrediction.model_type }}</span></div>
+                  <div class="panel-body no-pad" v-if="modelPrediction">
+                    <div v-for="p in modelPrediction.predictions" :key="p.region_id" class="region-row">
+                      <div class="rr-head">
+                        <strong>{{ p.region_id }}</strong>
+                        <span class="tag" :class="p.predicted_level === '高' ? 'tag-red' : p.predicted_level === '中' ? 'tag-orange' : 'tag-green'">{{ p.predicted_level }}风险 · {{ p.predicted_score }} 分</span>
+                      </div>
+                      <div class="rr-metrics" v-if="p.drivers">
+                        <div><span class="rr-val" style="font-size:12px;">{{ p.drivers.weather?.score_part || 0 }}</span><span class="rr-lbl">气象贡献</span></div>
+                        <div><span class="rr-val" style="font-size:12px;">{{ p.drivers.remote?.score_part || 0 }}</span><span class="rr-lbl">遥感贡献</span></div>
+                        <div><span class="rr-val" style="font-size:12px;">{{ p.drivers.business?.score_part || 0 }}</span><span class="rr-lbl">经营贡献</span></div>
+                      </div>
+                      <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">
+                        {{ p.drivers?.weather?.detail || '' }} | {{ p.drivers?.business?.detail || '' }} | {{ p.drivers?.finance?.detail || '' }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="panel-body" v-else><p style="color:var(--text-muted);">模型未就绪，请先训练。</p></div>
+                </div>
+                <div class="panel">
+                  <div class="panel-head"><h3>实时预警</h3></div>
+                  <div class="panel-body no-pad">
+                    <div v-for="alert in data.alerts" :key="alert.id" class="alert-row">
+                      <span class="alert-badge" :class="alert.level === '高风险' ? 'badge-red' : alert.level === '中风险' ? 'badge-orange' : 'badge-green'">{{ alert.level }}</span>
+                      <div>
+                        <strong>{{ alert.title }}</strong>
+                        <p>{{ alert.description }}</p>
+                        <span class="alert-measure">{{ alert.action }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="content-2col">
+                <div class="panel">
+                  <div class="panel-head"><h3>授信评分模型</h3></div>
+                  <div class="panel-body"><div id="chart-score" class="chart-box"></div></div>
+                </div>
+                <div class="panel">
+                  <div class="panel-head"><h3>经营主体</h3></div>
+                  <div class="panel-body no-pad">
+                    <table class="tbl">
+                      <thead><tr><th>主体名称</th><th>区域</th><th>牦牛</th><th>授信</th><th>评分</th><th>状态</th></tr></thead>
+                      <tbody>
+                        <tr v-for="s in data.subjects" :key="s.name">
+                          <td><strong>{{ s.name }}</strong></td><td>{{ s.region }}</td><td>{{ s.cattle }}</td><td>{{ s.credit }}</td>
+                          <td><div class="score-bar"><div class="bar-track"><div class="bar-fill" :class="s.score >= 80 ? 's-high' : s.score >= 70 ? 's-mid' : 's-low'" :style="{ width: s.score + '%' }"></div></div><span>{{ s.score }}</span></div></td>
+                          <td><span class="tag" :class="s.status === '正常监控' ? 'tag-green' : s.status === '需补保险' ? 'tag-red' : 'tag-orange'">{{ s.status }}</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 平台概览 -->
+            <div v-show="page === 'overview'">
+              <div class="public-page public-page-plain">
+                <section class="plain-page-head">
+                  <h1>平台概览</h1>
+                  <p>工行绿色信贷组合 · 环境数据接入 · 模型弱标签状态</p>
+                  <button class="btn-main" @click="navigate('data')">查看工行数据底账</button>
+                </section>
+
+                <section class="overview-metric-grid compact">
+                  <div v-for="m in dataSourceSnapshot" :key="m.label" class="ops-kpi-card">
+                    <span>{{ m.label }}</span>
+                    <strong>{{ m.value }}</strong>
+                    <em>{{ m.note }}</em>
+                  </div>
+                </section>
+
+                <section class="analysis-board">
+                  <div class="ops-panel analysis-large">
+                    <div class="ops-panel-head">
+                      <div><h3>工行高原牧区风险分布</h3><p>25 个示范县 · 60 个月环境样本 · 服务授信准入</p></div>
+                      <span class="ops-badge">{{ modelStatus.label_type || 'rule_label' }}</span>
+                    </div>
+                    <div id="chart-overview-model" class="ops-chart"></div>
+                  </div>
+                  <div class="ops-panel">
+                    <div class="ops-panel-head">
+                      <div><h3>数据来源结构</h3><p>真实环境数据、工行样例台账、模拟标签分层统计</p></div>
+                    </div>
+                    <div id="chart-overview-mix" class="ops-chart"></div>
+                  </div>
+                </section>
+
+                <section class="ops-layout no-sidebar">
+                  <div class="ops-panel">
+                    <div class="ops-panel-head">
+                      <div><h3>工行风控数据流</h3><p>公开环境数据与授信、还款、保险台账</p></div>
+                    </div>
+                    <div class="pipeline-list dense">
+                      <div v-for="item in dataAssetCards" :key="item.key" class="pipeline-item">
+                        <b>{{ item.title }}</b>
+                        <span>{{ item.desc }}</span>
+                        <em>{{ item.status }} · {{ formatNumber(item.row_count) }} 行</em>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="ops-panel">
+                    <div class="ops-panel-head">
+                      <div><h3>外部接口</h3><p>服务贷前核验与贷后预警的天气、地图、扩展气象服务</p></div>
+                    </div>
+                    <div class="integration-list">
+                      <div class="integration-item">
+                        <b>高德天气 Web服务</b>
+                        <span :class="integrations?.amap_weather?.configured ? 'status-ok' : 'status-warn'">{{ integrations?.amap_weather?.configured ? '已配置' : '未配置' }}</span>
+                        <p>环境变量：AMAP_WEB_SERVICE_KEY</p>
+                      </div>
+                      <div class="integration-item">
+                        <b>高德地图 JS API</b>
+                        <span :class="integrations?.amap_map?.configured ? 'status-ok' : 'status-warn'">{{ integrations?.amap_map?.configured ? '已配置' : '未配置' }}</span>
+                        <p>环境变量：AMAP_JS_API_KEY / AMAP_SECURITY_JS_CODE</p>
+                      </div>
+                      <div class="integration-item">
+                        <b>Open-Meteo 开放天气</b>
+                        <span :class="integrations?.open_meteo?.configured ? 'status-ok' : 'status-warn'">{{ integrations?.open_meteo?.configured ? '可用' : '不可用' }}</span>
+                        <p>无需 Key，按经纬度获取实时天气</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div v-if="false">
+              <div class="page-hero">
+                <h1>平台概览</h1>
+                <p>{{ data.outline.core_positioning }}</p>
+              </div>
+              <div class="content-2col">
+                <div class="panel">
+                  <div class="panel-head"><h3>建设目标</h3></div>
+                  <div class="panel-body">
+                    <div class="goal-list">
+                      <div v-for="goal in data.outline.goals" :key="goal.name" class="goal-item">
+                        <strong>{{ goal.name }}</strong>
+                        <p>{{ goal.desc }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-head"><h3>项目价值</h3></div>
+                  <div class="panel-body">
+                    <div v-for="(items, key) in data.outline.benefits" :key="key" style="margin-bottom:16px;">
+                      <h4 style="font-size:13px;color:var(--green-dim);margin-bottom:8px;">{{ key === 'eco' ? '生态价值' : key === 'economic' ? '经济价值' : '社会价值' }}</h4>
+                      <ul style="display:grid;gap:6px;"><li v-for="item in items" :key="item" style="font-size:12px;color:var(--text-secondary);padding-left:12px;position:relative;"><span style="position:absolute;left:0;top:7px;width:4px;height:4px;border-radius:50%;background:var(--green-dim);"></span>{{ item }}</li></ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="panel" style="margin-top:18px;">
+                <div class="panel-head"><h3>行业痛点</h3></div>
+                <div class="panel-body">
+                  <div class="pain-grid-seu">
+                    <div class="pain-card-seu" v-for="item in data.outline.pain_points" :key="item.title">
+                      <h3>{{ item.title }}</h3>
+                      <ul><li v-for="text in item.items" :key="text">{{ text }}</li></ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 业务模块 -->
+            <div v-show="page === 'modules'">
+              <div class="public-page public-page-plain modules-page">
+                <section class="module-page-head">
+                  <span>ICBC Business Modules</span>
+                  <h1>工行高原畜牧绿色金融业务中台</h1>
+                </section>
+
+                <section class="module-console" v-if="selectedModule">
+                  <aside class="module-rail">
+                    <button v-for="(mod, i) in businessModules" :key="mod.code" :class="{ active: selectedModule && selectedModule.code === mod.code }" @click="selectedModule = mod">
+                      <span>{{ String(i + 1).padStart(2, '0') }}</span>
+                      <strong>{{ mod.name }}</strong>
+                    </button>
+                  </aside>
+
+                  <div class="module-stage">
+                    <div class="module-stage-head">
+                      <span class="ops-eyebrow">{{ selectedModule.code }}</span>
+                      <h2>{{ selectedModule.name }}</h2>
+                      <p>{{ selectedModule.value }}</p>
+                    </div>
+                    <div class="module-feature-grid">
+                      <div v-for="(f, i) in selectedModule.features" :key="f" class="module-feature">
+                        <span>{{ String(i + 1).padStart(2, '0') }}</span>
+                        <strong>{{ f }}</strong>
+                      </div>
+                    </div>
+                    <div class="module-bottom-grid">
+                      <div>
+                        <b>数据支撑</b>
+                        <p>{{ dataAssetCards.slice(0, 3).map(a => a.title).join(' / ') }}</p>
+                      </div>
+                      <div>
+                        <b>工行业务输出</b>
+                        <p>授信准入、额度建议、贷后预警、保险缓释、绿色绩效</p>
+                      </div>
+                      <div>
+                        <b>当前状态</b>
+                        <p>{{ modelStatus.model_type || 'rule' }} · {{ formatNumber(modelStatus.n_samples || 0) }} 样本</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="module-overview-grid">
+                  <article v-for="(mod, i) in businessModules" :key="'overview-' + mod.code" @click="selectedModule = mod" :class="{ active: selectedModule && selectedModule.code === mod.code }">
+                    <span>{{ String(i + 1).padStart(2, '0') }}</span>
+                    <h3>{{ mod.name }}</h3>
+                    <p>{{ mod.value }}</p>
+                  </article>
+                </section>
+
+                <section class="plain-card module-closed-loop">
+                  <div class="plain-card-head">
+                    <h2>工行业务闭环</h2>
+                  </div>
+                  <div class="module-loop-grid">
+                    <div v-for="item in moduleLoopItems" :key="item.title">
+                      <span>{{ item.step }}</span>
+                      <strong>{{ item.title }}</strong>
+                      <p>{{ item.desc }}</p>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div v-if="false">
+              <div class="page-hero">
+                <h1>业务模块</h1>
+                <p>七大核心能力覆盖高原畜牧全链条数字化场景</p>
+              </div>
+              <div class="cap-grid">
+                <div class="cap-card" v-for="mod in data.modules" :key="mod.code" @click="selectedModule = mod; navigate('module-detail')">
+                  <div class="cap-icon">{{ moduleIcon(mod.code) }}</div>
+                  <h3>{{ mod.name }}</h3>
+                  <p>{{ mod.value }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 模块详情 -->
+            <div v-show="page === 'module-detail'">
+              <div class="page-hero">
+                <h1>{{ selectedModule.name }}</h1>
+                <p>{{ selectedModule.value }}</p>
+              </div>
+              <div class="content-2col">
+                <div class="panel">
+                  <div class="panel-head"><h3>功能特性</h3></div>
+                  <div class="panel-body">
+                    <div class="feature-list">
+                      <div v-for="f in selectedModule.features" :key="f" class="feature-row">
+                        <span class="feat-dot"></span>{{ f }}
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:18px;">
+                      <button class="btn-outline" @click="prevModule">← 上一模块</button>
+                      <button class="btn-outline" @click="nextModule">下一模块 →</button>
+                      <button class="btn-outline" @click="navigate('modules')">返回列表</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-head"><h3>关联模块</h3></div>
+                  <div class="panel-body no-pad">
+                    <div v-for="mod in relatedModules" :key="mod.code" class="related-row" @click="selectedModule = mod">
+                      <strong>{{ mod.name }}</strong>
+                      <span>{{ mod.value }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 保险协同 -->
+            <div v-show="page === 'insurance'">
+              <div class="public-page public-page-plain">
+                <section class="plain-page-head">
+                  <h1>保险协同</h1>
+                  <p>承保覆盖 · 灾害触发 · 理赔回流 · 工行风险缓释</p>
+                </section>
+
+                <section class="overview-metric-grid compact">
+                  <div v-for="item in insuranceKpis" :key="item.label" class="ops-kpi-card">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                    <em>{{ item.note }}</em>
+                  </div>
+                </section>
+
+                <section class="public-two-col">
+                  <div class="ops-panel">
+                    <div class="ops-panel-head">
+                      <div><h3>银保联动台账</h3><p>承保、风险、理赔和工行处置动作</p></div>
+                      <span class="ops-badge warn">sample/demo</span>
+                    </div>
+                    <div class="terminal-table-wrap">
+                      <table class="terminal-table">
+                        <thead><tr><th>主体</th><th>县域</th><th>保险覆盖</th><th>还款</th><th>逾期</th><th>工行处置</th></tr></thead>
+                        <tbody>
+                          <tr v-for="row in insuranceRows" :key="row.name">
+                            <td><strong>{{ row.name }}</strong><small>{{ row.type }}</small></td>
+                            <td>{{ row.region }}</td>
+                            <td>{{ row.insurance }}</td>
+                            <td>{{ row.repayment }}</td>
+                            <td>{{ row.overdue }} 次</td>
+                            <td>{{ row.action }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <aside class="ops-panel">
+                    <div class="ops-panel-head">
+                      <div><h3>银保协同字段</h3><p>后续上传真实保单、理赔、查勘记录时建议保留的核心字段</p></div>
+                      <span class="ops-badge">接口预留</span>
+                    </div>
+                    <div class="field-grid">
+                      <span>policy_id</span>
+                      <span>subject_name</span>
+                      <span>insurance_type</span>
+                      <span>insured_amount</span>
+                      <span>coverage_ratio</span>
+                      <span>claim_status</span>
+                      <span>claim_amount</span>
+                      <span>linked_credit_id</span>
+                    </div>
+                  </aside>
+                </section>
+
+                <section class="livelihood-evidence-stack">
+                  <div class="evidence-panel public-evidence plain-evidence">
+                    <div class="evidence-head">
+                      <span>Evidence</span>
+                      <h2>工行证据链与处置</h2>
+                    </div>
+                    <div class="evidence-list livelihood-evidence-list">
+                      <div v-for="item in insuranceEvidence" :key="item.group" class="evidence-item" :class="item.state">
+                        <span>{{ item.group }}</span>
+                        <strong>{{ item.title }}</strong>
+                        <p v-for="line in item.rows" :key="line">{{ line }}</p>
+                      </div>
+                    </div>
+                    <div class="label-disclosure">
+                      <strong>边界说明</strong>
+                      <p>当前保险、理赔与授信台账仍为 sample/demo，页面用于还原银保协同链路，不代表真实生产客户数据。</p>
+                    </div>
+                  </div>
+                  <div class="ops-panel livelihood-actions">
+                    <div class="ops-panel-head"><div><span class="ops-eyebrow">Actions</span></div><strong>处置动作</strong></div>
+                    <div class="action-list">
+                      <div v-for="item in insuranceActions" :key="item.title" class="action-row">
+                        <span>{{ item.priority }}</span>
+                        <div><strong>{{ item.title }}</strong><p>{{ item.desc }}</p></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="ops-panel assessment-table-panel livelihood-detail-panel">
+                    <div class="ops-panel-head">
+                      <div><span class="ops-eyebrow">Assessment Detail</span><h3>工行评估明细</h3></div>
+                    </div>
+                    <div class="terminal-table-wrap compact">
+                      <table class="terminal-table">
+                        <thead><tr><th>对象</th><th>类型</th><th>风险分</th><th>等级</th><th>敞口/用信</th><th>主因子</th><th>建议动作</th></tr></thead>
+                        <tbody>
+                          <tr v-for="row in insuranceAssessmentRows" :key="row.key">
+                            <td><strong>{{ row.object }}</strong></td>
+                            <td>{{ row.type }}</td>
+                            <td><span class="score-pill">{{ row.score }}</span></td>
+                            <td>{{ row.level }}</td>
+                            <td>{{ row.exposure }}万</td>
+                            <td>{{ row.driver }}</td>
+                            <td><span class="action-pill">{{ row.action }}</span></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <!-- 产业链 -->
+            <div v-show="page === 'supply-chain'">
+              <div class="public-page public-page-plain">
+                <section class="plain-page-head">
+                  <h1>产业链资金闭环</h1>
+                  <p>饲草采购 · 活体交易 · 物流回款 · 工行贷款定向追踪</p>
+                </section>
+
+                <section class="upload-notice">
+                  <span class="notice-icon">🔗</span>
+                  <div>
+                    <h3>产业链台账待接入</h3>
+                    <p>通过管理端上传订单与资金流向 CSV，系统将自动生成贷款资金闭环追踪与供应商集中度分析。</p>
+                    <div class="notice-fields">
+                      <em v-for="field in supplyChainUploadFields" :key="field">{{ field }}</em>
+                    </div>
+                  </div>
+                  <a class="btn-main" href="/admin" target="_blank">去管理端上传</a>
+                </section>
+
+                <section class="plain-card">
+                  <div class="plain-card-head">
+                    <h2>工行贷款资金闭环设计</h2>
+                  </div>
+                  <div class="chain-flow plain-flow">
+                  <div v-for="(step, idx) in supplyChainFlow" :key="step.title" class="chain-step">
+                    <span>{{ step.icon }}</span>
+                    <strong>{{ step.title }}</strong>
+                    <em>{{ step.note }}</em>
+                  </div>
+                  </div>
+                </section>
+
+                <section class="public-two-col">
+                  <div class="ops-panel">
+                    <div class="ops-panel-head">
+                      <div><h3>订单表字段（supply_chain_orders）</h3></div>
+                    </div>
+                    <table class="schema-table">
+                      <thead><tr><th>字段</th><th>含义</th><th>示例</th></tr></thead>
+                      <tbody>
+                        <tr v-for="row in supplyChainOrderSchema" :key="row.field">
+                          <td><code>{{ row.field }}</code></td>
+                          <td>{{ row.label }}</td>
+                          <td>{{ row.example }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="ops-panel">
+                    <div class="ops-panel-head">
+                      <div><h3>资金流向表字段（supply_chain_payments）</h3></div>
+                    </div>
+                    <table class="schema-table">
+                      <thead><tr><th>字段</th><th>含义</th><th>示例</th></tr></thead>
+                      <tbody>
+                        <tr v-for="row in supplyChainPaymentSchema" :key="row.field">
+                          <td><code>{{ row.field }}</code></td>
+                          <td>{{ row.label }}</td>
+                          <td>{{ row.example }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section class="ops-panel">
+                  <div class="ops-panel-head">
+                    <div><h3>产业链样例台账</h3><p>sample/demo 数据，仅用于展示字段链路和风控动作</p></div>
+                    <span class="ops-badge warn">sample/demo</span>
+                  </div>
+                  <div class="terminal-table-wrap compact">
+                    <table class="terminal-table">
+                      <thead><tr><th>订单号</th><th>主体</th><th>订单类型</th><th>供应商</th><th>金额</th><th>关联授信</th><th>状态</th></tr></thead>
+                      <tbody>
+                        <tr v-for="row in supplyChainOrders" :key="row.order_id">
+                          <td><strong>{{ row.order_id }}</strong></td>
+                          <td>{{ row.subject_name }}</td>
+                          <td>{{ row.order_type }}</td>
+                          <td>{{ row.supplier }}</td>
+                          <td>{{ row.amount }} 万元</td>
+                          <td>{{ row.linked_credit_id }}</td>
+                          <td>{{ row.action }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section class="evidence-panel public-evidence plain-evidence">
+                  <div class="evidence-head">
+                    <span>Evidence</span>
+                    <h2>工行证据链与处置</h2>
+                  </div>
+                  <div class="evidence-list">
+                    <div class="evidence-item ok"><span>气象</span><strong>{{ latestWeatherSummary[0]?.value || '-' }} 县域气象</strong><p>温度、降水、风速进入贷后预警证据链。</p></div>
+                    <div class="evidence-item ok"><span>遥感</span><strong>{{ latestRemoteSummary[0]?.value || '-' }} 遥感观测</strong><p>NDVI、积雪、退化和载畜量作为绿色信贷证据。</p></div>
+                    <div class="evidence-item warn"><span>模型</span><strong>{{ modelStatus.model_type || 'rule' }} / {{ modelStatus.label_type || 'rule_label' }}</strong><p>当前属于真实环境数据 + 规则弱标签评分。</p></div>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <!-- 绿色绩效 -->
+            <div v-show="page === 'green-performance'">
+              <div class="public-page public-page-plain">
+                <section class="plain-page-head">
+                  <h1>绿色绩效评价</h1>
+                  <p>NDVI 生态改善趋势 · 风险分布 · 碳账户接口 · GEP 核算预留</p>
+                </section>
+
+                <section class="overview-metric-grid compact">
+                  <div v-for="item in greenPerformanceKpis" :key="item.label" class="ops-kpi-card">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                    <em>{{ item.note }}</em>
+                  </div>
+                </section>
+
+                <section class="public-two-col">
+                  <div class="ops-panel">
+                    <div class="ops-panel-head"><div><h3>NDVI 年度改善趋势（2020-2024）</h3></div></div>
+                    <div class="ndvi-chart-static">
+                      <div class="ndvi-grid"></div>
+                      <div v-for="point in ndviYearPoints" :key="point.year" class="ndvi-point" :style="{ left: point.x + '%', bottom: point.y + '%' }"></div>
+                      <span class="ndvi-axis y">NDVI 均值</span>
+                      <span v-for="point in ndviYearPoints" :key="'y'+point.year" class="ndvi-year" :style="{ left: point.x + '%' }">{{ point.year }}</span>
+                    </div>
+                    <p class="panel-note">基期 {{ greenPerformance.firstYear }} 均值 {{ greenPerformance.first.toFixed(3) }} → 末期 {{ greenPerformance.lastYear }} 均值 {{ greenPerformance.last.toFixed(3) }}，改善 {{ greenPerformance.ndviChange }}（真实 MODIS 数据）。</p>
+                  </div>
+                  <div class="ops-panel">
+                    <div class="ops-panel-head"><div><h3>25 县域风险分布</h3></div></div>
+                    <div class="donut-wrap">
+                      <div class="risk-donut" :style="{ background: riskDonutGradient }"><span></span></div>
+                      <div class="donut-legend">
+                        <div v-for="item in greenRiskDistribution" :key="item.label">
+                          <i :class="item.className"></i>{{ item.label }} {{ item.value }}个
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="ops-panel">
+                  <div class="ops-panel-head"><div><h3>绿色信贷指标框架</h3><p><span class="status-ok">接口预留</span></p></div></div>
+                  <div class="green-metric-list public-green-list">
+                    <div v-for="item in greenMetricFramework" :key="item.label">
+                      <span>{{ item.label }}</span>
+                      <strong>{{ item.value }}</strong>
+                      <em>{{ item.note }}</em>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="livelihood-evidence-stack">
+                  <div class="evidence-panel public-evidence plain-evidence">
+                    <div class="evidence-head">
+                      <span>Evidence</span>
+                      <h2>工行证据链与处置</h2>
+                    </div>
+                    <div class="evidence-list livelihood-evidence-list">
+                      <div v-for="item in greenEvidence" :key="item.group" class="evidence-item" :class="item.state">
+                        <span>{{ item.group }}</span>
+                        <strong>{{ item.title }}</strong>
+                        <p v-for="row in item.rows" :key="row">{{ row }}</p>
+                      </div>
+                    </div>
+                    <div class="action-checklist livelihood-actions">
+                      <div class="mini-head">
+                        <span>Actions</span>
+                        <b>处置动作</b>
+                      </div>
+                      <div v-for="item in greenActions" :key="item.priority + item.title" class="action-item">
+                        <span>{{ item.priority }}</span>
+                        <strong>{{ item.title }}</strong>
+                        <p>{{ item.desc }}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <section class="assessment-table-panel livelihood-detail-panel">
+                    <div class="assessment-table-head">
+                      <div>
+                        <span>Assessment Detail</span>
+                        <h2>工行评估明细</h2>
+                      </div>
+                    </div>
+                    <div class="terminal-table-wrap compact">
+                      <table class="terminal-table assessment-table">
+                        <thead>
+                          <tr>
+                            <th>对象</th>
+                            <th>类型</th>
+                            <th>风险分</th>
+                            <th>等级</th>
+                            <th>敞口/用信</th>
+                            <th>主因子</th>
+                            <th>建议动作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="row in greenAssessmentRows" :key="row.type + row.key">
+                            <td><strong>{{ row.object }}</strong></td>
+                            <td>{{ row.type }}</td>
+                            <td><span class="terminal-score" :class="riskLevelClass(row.level)">{{ row.score.toFixed(1) }}</span></td>
+                            <td>{{ row.level }}</td>
+                            <td>{{ formatNumber(row.exposure) }}万</td>
+                            <td>{{ row.driver }}</td>
+                            <td><span class="terminal-tag">{{ row.action }}</span></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </section>
+              </div>
+            </div>
+
+            <!-- 边疆民生 -->
+            <div v-show="page === 'livelihood'">
+              <div class="public-page public-page-plain">
+                <section class="plain-page-head">
+                  <h1>边疆民生与治理协同</h1>
+                  <p>高原牧区 · 边疆稳定 · 乡村振兴 · 四方协同工作台</p>
+                </section>
+
+                <section class="overview-metric-grid compact">
+                  <div v-for="item in livelihoodKpis" :key="item.label" class="ops-kpi-card">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                    <em>{{ item.note }}</em>
+                  </div>
+                </section>
+
+                <section class="ops-panel">
+                    <div class="ops-panel-head">
+                    <div><h3>边境重点县域风险状态（基于真实气象+遥感数据）</h3></div>
+                    </div>
+                    <div class="terminal-table-wrap compact">
+                      <table class="terminal-table">
+                      <thead><tr><th>县域</th><th>综合评分</th><th>气候风险</th><th>生态约束</th><th>建议</th></tr></thead>
+                        <tbody>
+                          <tr v-for="row in borderCountyRows" :key="row.region_id">
+                          <td><strong>{{ row.region_name }}</strong></td>
+                          <td><span class="terminal-score">{{ row.predicted_score }}</span></td>
+                          <td>{{ row.climateRisk }}</td>
+                          <td>{{ row.ecologyConstraint }}</td>
+                          <td>加强贷后监测频率，关注保险覆盖补充</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                </section>
+
+                <section class="ops-panel">
+                  <div class="ops-panel-head"><div><h3>四方协同工作台</h3></div></div>
+                  <div class="four-party-grid">
+                    <article v-for="item in fourPartyCards" :key="item.title">
+                      <span>{{ item.icon }}</span>
+                      <h3>{{ item.title }}</h3>
+                      <b>{{ item.role }}</b>
+                      <p>{{ item.desc }}</p>
+                      <em>{{ item.status }}</em>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="livelihood-evidence-stack">
+                  <div class="evidence-panel public-evidence plain-evidence">
+                    <div class="evidence-head">
+                      <span>Evidence</span>
+                      <h2>工行证据链与处置</h2>
+                    </div>
+                    <div class="evidence-list livelihood-evidence-list">
+                      <div v-for="item in livelihoodEvidence" :key="item.group" class="evidence-item" :class="item.state">
+                        <span>{{ item.group }}</span>
+                        <strong>{{ item.title }}</strong>
+                        <p v-for="row in item.rows" :key="row">{{ row }}</p>
+                      </div>
+                    </div>
+                    <div class="action-checklist livelihood-actions">
+                      <div class="mini-head">
+                        <span>Actions</span>
+                        <b>处置动作</b>
+                      </div>
+                      <div v-for="item in livelihoodActions" :key="item.priority + item.title" class="action-item">
+                        <span>{{ item.priority }}</span>
+                        <strong>{{ item.title }}</strong>
+                        <p>{{ item.desc }}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <section class="assessment-table-panel livelihood-detail-panel">
+                    <div class="assessment-table-head">
+                      <div>
+                        <span>Assessment Detail</span>
+                        <h2>工行评估明细</h2>
+                      </div>
+                    </div>
+                    <div class="terminal-table-wrap compact">
+                      <table class="terminal-table assessment-table">
+                        <thead>
+                          <tr>
+                            <th>对象</th>
+                            <th>类型</th>
+                            <th>风险分</th>
+                            <th>等级</th>
+                            <th>敞口/用信</th>
+                            <th>主因子</th>
+                            <th>建议动作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="row in livelihoodAssessmentRows" :key="row.type + row.key">
+                            <td><strong>{{ row.object }}</strong></td>
+                            <td>{{ row.type }}</td>
+                            <td><span class="terminal-score" :class="riskLevelClass(row.level)">{{ row.score.toFixed(1) }}</span></td>
+                            <td>{{ row.level }}</td>
+                            <td>{{ formatNumber(row.exposure) }}万</td>
+                            <td>{{ row.driver }}</td>
+                            <td><span class="terminal-tag">{{ row.action }}</span></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </section>
+              </div>
+            </div>
+
+            <!-- 数据底座 -->
+            <div v-show="page === 'data'">
+              <div class="public-page public-page-plain">
+                <section class="plain-page-head">
+                  <h1>数据底座</h1>
+                  <p>气象遥感 · 经营主体 · 工行授信 · 还款保险 · 数据质量追踪</p>
+                  <button class="btn-main" @click="navigate('dashboard')">进入风险评估</button>
+                </section>
+
+                <section class="data-console">
+                  <aside class="asset-rail">
+                    <div v-for="asset in dataAssetCards" :key="asset.key" class="asset-line">
+                      <span class="asset-status" :class="dataAssetStatusClass(asset)">{{ asset.status }}</span>
+                      <div>
+                        <h3>{{ asset.title }}</h3>
+                        <p>{{ asset.desc }}</p>
+                      </div>
+                      <strong>{{ formatNumber(asset.row_count) }}</strong>
+                    </div>
+                  </aside>
+
+                  <div class="data-workbench">
+                    <div class="ops-panel">
+                      <div class="ops-panel-head">
+                        <div><h3>贷前/贷后气象趋势</h3><p>CMFD 温度、降水、风速</p></div>
+                        <span class="ops-badge">{{ dataAssetCards.find(c => c.key === 'weather_data')?.status }}</span>
+                      </div>
+                      <div id="chart-weather-trend" class="ops-chart data-trend-chart"></div>
+                      <div class="metric-strip relaxed">
+                        <div v-for="item in latestWeatherSummary" :key="item.label">
+                          <span>{{ item.label }}</span>
+                          <strong>{{ item.value }}</strong>
+                          <em>{{ item.note }}</em>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="ops-panel">
+                      <div class="ops-panel-head">
+                        <div><h3>绿色信贷遥感证据</h3><p>MODIS NDVI、积雪覆盖、退化等级</p></div>
+                        <span class="ops-badge">{{ dataAssetCards.find(c => c.key === 'remote_sensing_data')?.status }}</span>
+                      </div>
+                      <div id="chart-remote-trend" class="ops-chart data-trend-chart"></div>
+                      <div class="metric-strip relaxed">
+                        <div v-for="item in latestRemoteSummary" :key="item.label">
+                          <span>{{ item.label }}</span>
+                          <strong>{{ item.value }}</strong>
+                          <em>{{ item.note }}</em>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="ops-panel">
+                      <div class="ops-panel-head">
+                        <div><h3>数据表与工行业务用途</h3><p>说明每张表服务哪个金融风控环节</p></div>
+                        <span class="ops-badge warn">样例需标注</span>
+                      </div>
+                      <table class="schema-table data-purpose-table">
+                        <thead><tr><th>数据资产</th><th>状态</th><th>行数</th><th>工行业务用途</th></tr></thead>
+                        <tbody>
+                          <tr v-for="asset in dataAssetCards" :key="'purpose-' + asset.key">
+                            <td><strong>{{ asset.title }}</strong></td>
+                            <td><span class="asset-status" :class="dataAssetStatusClass(asset)">{{ asset.status }}</span></td>
+                            <td>{{ formatNumber(asset.row_count) }}</td>
+                            <td>{{ dataAssetPurpose(asset.key) }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="ops-panel geo-evidence-panel">
+                  <div class="ops-panel-head">
+                    <div>
+                      <h3>高德地理证据图层</h3>
+                      <p>已有县域点位 · 卫星底图 · 海拔态势 · 实时天气</p>
+                    </div>
+                    <span class="ops-badge" :class="{ warn: !amapConfigured }">{{ amapConfigured ? '高德地图已配置' : '等待地图 Key' }}</span>
+                  </div>
+                  <div class="geo-evidence-layout">
+                    <div class="geo-map-shell">
+                      <div class="geo-map-toolbar">
+                        <button :class="{ active: selectedMapLayer === 'satellite' }" @click="switchMapLayer('satellite')">卫星遥感</button>
+                        <button :class="{ active: selectedMapLayer === 'terrain' }" @click="switchMapLayer('terrain')">海拔态势</button>
+                        <button :class="{ active: selectedMapLayer === 'standard' }" @click="switchMapLayer('standard')">标准地图</button>
+                      </div>
+                      <div id="amap-evidence-map" class="amap-evidence-map"></div>
+                      <div class="geo-map-theme" :class="'theme-' + selectedMapLayer" aria-hidden="true"></div>
+                      <div v-if="!amapConfigured || amapError" class="geo-map-fallback">
+                        <strong>{{ amapError || '高德地图 JS API 待启用' }}</strong>
+                        <span>请确认 AMAP_JS_API_KEY 和 AMAP_SECURITY_JS_CODE 已配置，刷新后显示县域地理图层。</span>
+                      </div>
+                    </div>
+                    <aside class="geo-evidence-side">
+                      <div class="geo-region-picker">
+                        <button v-for="region in mapRegions.slice(0, 10)" :key="region.id" :class="{ active: selectedMapRegion?.id === region.id }" @click="selectMapRegion(region, true)">
+                          <strong>{{ region.name }}</strong>
+                          <span>{{ region.risk_score ? region.risk_score.toFixed(1) : '-' }} / {{ region.remote?.ndvi ?? 'NDVI-' }}</span>
+                        </button>
+                      </div>
+                      <div class="geo-evidence-list">
+                        <div v-for="item in selectedMapEvidence" :key="item.label">
+                          <span>{{ item.label }}</span>
+                          <strong>{{ item.value }}</strong>
+                          <em>{{ item.note }}</em>
+                        </div>
+                      </div>
+                      <div class="label-disclosure">
+                        <strong>图层说明</strong>
+                        <p>卫星底图由高德 JS API 加载；“海拔态势”点位直接显示县域中心海拔米值，不等同于真实 DEM 地形；实时天气优先调用高德天气，失败则回退本地 CMFD 气象。</p>
+                      </div>
+                    </aside>
+                  </div>
+                </section>
+
+                <section class="workspace-grid quality-only">
+                  <div class="ops-panel">
+                    <div class="ops-panel-head"><div><h3>工行风控数据质量结构</h3><p>真实数据、样例授信台账与模拟标签分布</p></div></div>
+                    <div id="chart-data-quality" class="ops-chart data-quality-chart"></div>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div v-if="false">
+              <div class="page-hero">
+                <h1>数据底座</h1>
+                <p>气象遥感 · 产业经营 · 金融保险 · 多源数据融合</p>
+              </div>
+              <div class="source-row">
+                <div class="source-item" v-for="conn in data.data_connections" :key="conn.name">
+                  <span class="src-icon">{{ conn.name === '气象数据' ? '🌤' : conn.name === '遥感数据' ? '🛰' : conn.name === '产业经营数据' ? '📋' : '🏦' }}</span>
+                  <strong>{{ conn.name }}</strong>
+                  <span class="src-status" :style="{ color: conn.status === '样例可用' ? 'var(--green)' : 'var(--orange)' }">{{ conn.status }}</span>
+                </div>
+              </div>
+              <div class="tab-bar">
+                <button :class="{ active: dataTab === 'weather' }" @click="dataTab = 'weather'">气象监测</button>
+                <button :class="{ active: dataTab === 'remote' }" @click="dataTab = 'remote'">遥感指标</button>
+                <button :class="{ active: dataTab === 'risk' }" @click="dataTab = 'risk'">风险评估</button>
+                <button :class="{ active: dataTab === 'subjects' }" @click="dataTab = 'subjects'">经营主体</button>
+                <button :class="{ active: dataTab === 'finance' }" @click="dataTab = 'finance'">金融保险</button>
+              </div>
+
+              <div v-if="dataTab === 'weather'" class="panel"><div class="panel-body no-pad"><div class="tbl-wrap"><table class="tbl">
+                <thead><tr><th>区域</th><th>气象站</th><th>温度℃</th><th>降水mm</th><th>风速m/s</th><th>积雪cm</th><th>寒潮</th><th>暴雪</th><th>干旱</th></tr></thead>
+                <tbody><tr v-for="item in data.weather" :key="item.region_id"><td><strong>{{ item.region_name }}</strong></td><td>{{ item.station }}</td><td>{{ item.temperature_c }}</td><td>{{ item.precipitation_mm_24h }}</td><td>{{ item.wind_speed_mps }}</td><td>{{ item.snow_depth_cm }}</td><td><span class="tag" :class="item.cold_wave_risk === '高' ? 'tag-red' : item.cold_wave_risk === '中' ? 'tag-orange' : 'tag-green'">{{ item.cold_wave_risk }}</span></td><td><span class="tag" :class="item.snowstorm_risk === '高' ? 'tag-red' : item.snowstorm_risk === '中' ? 'tag-orange' : 'tag-green'">{{ item.snowstorm_risk }}</span></td><td><span class="tag" :class="item.drought_risk === '高' ? 'tag-red' : item.drought_risk === '中' ? 'tag-orange' : 'tag-green'">{{ item.drought_risk }}</span></td></tr></tbody>
+              </table></div></div></div>
+
+              <div v-if="dataTab === 'remote'" class="panel"><div class="panel-body no-pad"><div class="tbl-wrap"><table class="tbl">
+                <thead><tr><th>区域</th><th>日期</th><th>NDVI</th><th>変化</th><th>植被覆盖</th><th>积雪</th><th>草地类型</th><th>退化</th><th>载畜量</th></tr></thead>
+                <tbody><tr v-for="item in data.remote_sensing" :key="item.region_id"><td><strong>{{ item.region_name }}</strong></td><td>{{ item.scene_date }}</td><td>{{ item.ndvi }}</td><td :style="{ color: item.ndvi_change.startsWith('-') ? 'var(--red)' : 'var(--green)' }">{{ item.ndvi_change }}</td><td>{{ item.vegetation_cover }}</td><td>{{ item.snow_cover }}</td><td>{{ item.grassland_type }}</td><td>{{ item.degradation_level }}</td><td>{{ item.carrying_capacity_sheep_unit }}</td></tr></tbody>
+              </table></div></div></div>
+
+              <div v-if="dataTab === 'risk'" class="content-2col">
+                <div class="panel"><div class="panel-head"><h3>综合风险评分</h3></div><div class="panel-body"><div id="chart-risk" class="chart-box tall"></div></div></div>
+                <div class="panel"><div class="panel-head"><h3>风险明细</h3></div>
+                  <div class="panel-body no-pad">
+                    <div v-for="item in data.risk_assessment" :key="item.region_id" style="padding:14px 18px;border-bottom:1px solid var(--border-light);">
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><strong>{{ item.region_name }}</strong><span class="tag" :class="item.level === '高' ? 'tag-red' : item.level === '中' ? 'tag-orange' : 'tag-green'">{{ item.level }}风险 · {{ item.score }}分</span></div>
+                      <div style="font-size:11px;color:var(--text-secondary);display:grid;gap:3px;"><p v-for="d in item.drivers" :key="d" style="font-size:11px;color:var(--text-secondary);margin:0;">{{ d }}</p></div>
+                      <p style="font-size:11px;color:var(--green-dim);margin-top:6px;">{{ item.recommendation }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="dataTab === 'subjects'" class="panel"><div class="panel-body no-pad"><div class="tbl-wrap"><table class="tbl">
+                <thead><tr><th>主体名称</th><th>区域</th><th>类型</th><th>牦牛</th><th>藏羊</th><th>草场(亩)</th><th>授信</th><th>评分</th><th>保险</th><th>状态</th></tr></thead>
+                <tbody><tr v-for="s in data.subjects" :key="s.name"><td><strong>{{ s.name }}</strong></td><td>{{ s.region }}</td><td>{{ s.type }}</td><td>{{ s.cattle }}</td><td>{{ s.sheep }}</td><td>{{ s.grassland_mu ? s.grassland_mu.toLocaleString() : '-' }}</td><td>{{ s.credit }}</td><td><div class="score-bar"><div class="bar-track"><div class="bar-fill" :class="s.score >= 80 ? 's-high' : s.score >= 70 ? 's-mid' : 's-low'" :style="{ width: s.score + '%' }"></div></div><span>{{ s.score }}</span></div></td><td>{{ s.insurance_coverage }}</td><td><span class="tag" :class="s.status === '正常监控' ? 'tag-green' : s.status === '需补保险' ? 'tag-red' : 'tag-orange'">{{ s.status }}</span></td></tr></tbody>
+              </table></div></div></div>
+
+              <div v-if="dataTab === 'finance'" class="panel"><div class="panel-body no-pad"><div class="tbl-wrap"><table class="tbl">
+                <thead><tr><th>主体</th><th>授信总额(万)</th><th>已用(万)</th><th>利率</th><th>期限(月)</th><th>还款</th><th>逾期</th><th>保单</th></tr></thead>
+                <tbody><tr v-for="f in data.finance" :key="f.subject_name"><td><strong>{{ f.subject_name }}</strong></td><td>{{ f.credit_line }}</td><td>{{ f.used_credit }}</td><td>{{ f.rate }}</td><td>{{ f.term_months }}</td><td><span class="tag" :class="f.repayment_status === '正常' ? 'tag-green' : 'tag-orange'">{{ f.repayment_status }}</span></td><td>{{ f.overdue_times }}</td><td>{{ f.policies.map(p => p.type).join('、') }}</td></tr></tbody>
+              </table></div></div></div>
+            </div>
+
+            <!-- 实施路线 -->
+            <div v-show="page === 'roadmap'">
+              <div class="public-page public-page-plain roadmap-page">
+                <section class="plain-page-head">
+                  <h1>实施路线</h1>
+                  <p>数据接入 · 模型联调 · 贷后闭环 · 银保协同 · 答辩演示节奏</p>
+                </section>
+
+                <section class="roadmap-progress">
+                  <div v-for="(item, idx) in data.outline.roadmap" :key="item.step" class="roadmap-progress-step">
+                    <span>0{{ idx + 1 }}</span>
+                    <strong>{{ item.title }}</strong>
+                    <em>{{ item.step }}</em>
+                  </div>
+                </section>
+
+                <section class="roadmap-console">
+                  <div class="roadmap-stage-list">
+                    <article v-for="(item, idx) in data.outline.roadmap" :key="item.step" class="roadmap-stage-card">
+                      <div class="roadmap-stage-index">0{{ idx + 1 }}</div>
+                      <div class="roadmap-stage-main">
+                        <span>{{ item.step }}</span>
+                        <h3>{{ item.title }}</h3>
+                        <div class="roadmap-deliverables">
+                          <i v-for="out in item.outputs" :key="out">{{ out }}</i>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+
+                  <aside class="roadmap-focus">
+                    <div class="roadmap-focus-head">
+                      <span>试点闭环</span>
+                      <h3>{{ data.outline.demo_story.title }}</h3>
+                    </div>
+                    <div class="roadmap-story-flow">
+                      <div v-for="(step, idx) in data.outline.demo_story.steps" :key="step" class="roadmap-story-step">
+                        <span>{{ idx + 1 }}</span>
+                        <p>{{ step }}</p>
+                      </div>
+                    </div>
+                    <div class="roadmap-action-grid">
+                      <button @click="navigate('data')">
+                        <span>数据底座</span>
+                        <strong>{{ formatNumber((data.weather || []).length + (data.remote_sensing || []).length) }}</strong>
+                      </button>
+                      <button @click="navigate('dashboard')">
+                        <span>风险运营</span>
+                        <strong>{{ topRiskRegions.length }} 项</strong>
+                      </button>
+                    </div>
+                  </aside>
+                </section>
+
+                <section class="roadmap-innovation-section">
+                  <div class="roadmap-section-title">
+                    <span>创新能力</span>
+                    <h2>从高原牧区数据资产到工行绿色信贷风控的转化路径</h2>
+                  </div>
+                  <div class="roadmap-innovation-grid">
+                    <article v-for="(point, idx) in data.outline.innovation_points" :key="point" class="roadmap-innovation-card">
+                      <span>0{{ idx + 1 }}</span>
+                      <p>{{ point }}</p>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./vendor/vue.global.prod.js"></script>
+    <script src="./vendor/echarts.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "source": "modis",
+  "source_id": "modis-tpdc-remote-2020-2024",
+  "processed_at": "2026-05-28T06:13:48.433178+00:00",
+  "year_range": "2020-2024",
+  "county_count": 25,
+  "month_count": 60,
+  "total_rows": 1500,
+  "ndvi_rows": 1500,
+  "snow_rows": 1500,
+  "fvc_rows": 0,
+  "degradation_rows": 1500,
+  "warnings": [
+    "304/1500 行无上年同期数据, ndvi_change 设为 0%",
+    "载畜量数据来源为 sample/sample, 仅用于流程验证, 待真实 TPDC NPP 数据替换",
+    "载畜量数据来自样例/演示文件, 仅用于流程验证, 待真实 TPDC NPP 数据替换",
+    "FVC 数据缺失, vegetation_cover 由 NDVI 估算 (ndvi*100) 或默认 50%"
+  ],
+  "output_file": "public_data\\processed\\remote_sensing_full_with_capacity_demo_2020_2024.csv",
+  "next_step": "打开 http://127.0.0.1:8000/admin 上传此 CSV 到 remote_sensing_data 表"
+}

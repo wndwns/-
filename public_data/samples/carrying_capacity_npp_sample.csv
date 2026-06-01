@@ -1,0 +1,26 @@
+region_id,npp,carrying_capacity_sheep_unit,data_source,source_id,dataset_name,is_sample,derived,note
+naqu-bange,0.31,18200,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+naqu-seni,0.34,19600,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+naqu-nierong,0.29,17100,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+naqu-anduo,0.27,15800,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+naqu-shenzha,0.24,14600,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+changdu-karuo,0.48,28600,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+changdu-luolong,0.45,26300,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+changdu-leiwuqi,0.43,25200,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+changdu-jiangda,0.46,27100,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+rikaze-xietongmen,0.36,20500,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+rikaze-jiangzi,0.39,21800,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+rikaze-kangma,0.32,18400,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+rikaze-zhongba,0.22,13200,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+shannan-cuona,0.41,23600,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+ali-gaize,0.18,11800,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+yushu-chengduo,0.37,22400,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+yushu-zaduo,0.33,19800,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+guoluo-maqin,0.52,31800,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+guoluo-jiuzhi,0.56,34200,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+haibei-gangcha,0.40,23200,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+huangnan-zeku,0.44,25800,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+ganzi-shiqu,0.35,21400,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+ganzi-seda,0.42,24500,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+aba-hongyuan,0.58,35600,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval
+gannan-luqu,0.55,33100,sample,npp-capacity-demo,Demo_NPP_CarryingCapacity,true,true,Demo only: replace with TPDC NPP after approval

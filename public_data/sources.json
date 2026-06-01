@@ -1,0 +1,149 @@
+{
+  "description": "牧融绿链公开数据源清单。比赛版使用公开数据字段体系构建样例 CSV，后续可接入真实数据。",
+  "last_updated": "2026-05-21",
+  "sources": [
+    {
+      "id": "tpdc",
+      "name": "国家青藏高原科学数据中心",
+      "url": "https://data.tpdc.ac.cn/",
+      "category": "生态/气候/积雪/植被",
+      "requires_registration": true,
+      "access_type": "注册后按数据集申请下载",
+      "maps_to_tables": ["remote_sensing_data", "weather_data"],
+      "description": "青藏高原生态、植被、积雪、地表、气候相关权威数据目录。包含青藏高原草地退化、积雪覆盖、气象观测、土壤水分、湖泊面积等数据集。比赛版参考其字段结构和区域划分逻辑，用于构建样例 CSV。",
+      "key_datasets": [
+        "青藏高原草地退化遥感监测数据集",
+        "青藏高原积雪覆盖数据集",
+        "青藏高原气象观测数据集",
+        "青藏高原植被指数（NDVI）数据集"
+      ],
+      "field_mapping": {
+        "remote_sensing_data": {
+          "ndvi": "植被指数产品 → 16天/月度 NDVI 均值",
+          "ndvi_change": "同比 NDVI 变化率，从逐年对比计算",
+          "vegetation_cover": "植被覆盖度产品 → 百分比分级",
+          "snow_cover": "积雪覆盖产品 → 百分比",
+          "grassland_type": "草地类型图 → 分类名称",
+          "degradation_level": "退化等级产品 → 基本稳定/轻度退化/中度退化/重度退化",
+          "carrying_capacity_sheep_unit": "载畜量模型 → 基于草地产量换算"
+        },
+        "weather_data": {
+          "temperature_c": "气象站或再分析数据 → 日均/候均温度",
+          "precipitation_mm_24h": "气象站或 TRMM/GPM → 降水量",
+          "wind_speed_mps": "气象站或再分析 → 风速",
+          "snow_depth_cm": "积雪深度产品 → 雪深"
+        }
+      },
+      "integration_next_step": "注册账号 → 申请青藏高原示范区数据集 → 下载 NetCDF/GeoTIFF → 按县域裁剪 → 输出 CSV"
+    },
+    {
+      "id": "modis-ndvi",
+      "name": "NASA MODIS NDVI (MOD13Q1)",
+      "url": "https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MOD13Q1",
+      "category": "植被指数",
+      "requires_registration": false,
+      "access_type": "Google Earth Engine 免费访问 / 直接下载 HDF",
+      "maps_to_tables": ["remote_sensing_data"],
+      "description": "MODIS/Terra Vegetation Indices 16-Day L3 Global 250m。提供全球 250 米分辨率的 NDVI 和 EVI 产品，每 16 天一期。是高原草场植被监测的权威数据源。",
+      "key_datasets": [
+        "MOD13Q1 v061: 250m 16-day NDVI"
+      ],
+      "spatial_coverage": "全球，可裁剪到青藏高原示范区（那曲、昌都、日喀则）",
+      "temporal_resolution": "16 天，可聚合为月度均值",
+      "field_mapping": {
+        "remote_sensing_data": {
+          "ndvi": "MOD13Q1 'NDVI' 波段 → 缩放 0.0001 → 县域均值",
+          "ndvi_change": "当前 NDVI 与去年同期对比 → 百分比变化",
+          "vegetation_cover": "基于 NDVI 的植被覆盖度经验公式 → 百分比分级",
+          "scene_date": "MODIS 产品日期 → YYYY-MM-DD"
+        }
+      },
+      "gee_script_hint": "使用 ee.ImageCollection('MODIS/061/MOD13Q1').filterDate().filterBounds() 提取县域 NDVI 时间序列",
+      "integration_next_step": "安装 geemap → 编写 GEE 提取脚本 → 按县域输出 CSV"
+    },
+    {
+      "id": "modis-snow",
+      "name": "NASA MODIS Snow Cover (MOD10A1)",
+      "url": "https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MOD10A1",
+      "category": "积雪覆盖",
+      "requires_registration": false,
+      "access_type": "Google Earth Engine 免费访问",
+      "maps_to_tables": ["remote_sensing_data", "weather_data"],
+      "description": "MODIS/Terra Snow Cover Daily L3 Global 500m。提供每日全球 500 米分辨率的积雪覆盖产品（NDSI_Snow_Cover）。用于高原牧区积雪灾害监测。",
+      "key_datasets": [
+        "MOD10A1 v061: 500m daily snow cover"
+      ],
+      "spatial_coverage": "全球，可裁剪到示范区县域",
+      "temporal_resolution": "日尺度，可聚合为旬或月度积雪覆盖比例",
+      "field_mapping": {
+        "remote_sensing_data": {
+          "snow_cover": "NDSI_Snow_Cover 波段 → 县域积雪面积比例 → 百分比"
+        },
+        "weather_data": {
+          "snow_depth_cm": "可从积雪覆盖度 + 经验模型推算，或结合被动微波雪深产品（AMSR2）"
+        }
+      },
+      "integration_next_step": "使用 GEE 提取逐日积雪覆盖 → 按县域统计积雪比例 → 输出 CSV"
+    },
+    {
+      "id": "weather-public",
+      "name": "气象公开数据",
+      "url": "https://data.cma.cn/",
+      "category": "气象观测",
+      "requires_registration": true,
+      "access_type": "注册后申请 / 部分数据需审批",
+      "maps_to_tables": ["weather_data"],
+      "description": "中国气象数据网提供全国气象站观测数据，包括逐日温度、降水、风速等要素。比赛版参考其字段体系构造样例 CSV，寒潮/暴雪/干旱风险等级由阈值规则判定。",
+      "key_sources": [
+        "中国气象数据网 (data.cma.cn) - 需注册",
+        "国家气象科学数据中心 - 需注册",
+        "和风天气 API (dev.qweather.com) - 免费额度有限",
+        "Open-Meteo API (open-meteo.com) - 免费无需注册，但高原站点稀疏"
+      ],
+      "risk_level_rules": {
+        "cold_wave_risk": "24小时降温≥8℃且最低气温≤4℃→高；降温4-8℃→中；否则低",
+        "snowstorm_risk": "24小时降雪≥10mm或积雪深度≥20cm→高；5-10mm或10-20cm→中；否则低",
+        "drought_risk": "连续无有效降水≥30天→高；15-30天→中；否则低"
+      },
+      "field_mapping": {
+        "weather_data": {
+          "temperature_c": "气象站日均温度",
+          "precipitation_mm_24h": "24小时降水量",
+          "wind_speed_mps": "日均风速",
+          "snow_depth_cm": "积雪深度观测",
+          "cold_wave_risk": "基于降温幅度自动判定",
+          "snowstorm_risk": "基于降雪量和雪深自动判定",
+          "drought_risk": "基于连续无雨天数自动判定"
+        }
+      },
+      "integration_next_step": "注册 CMA 账号 → 申请示范区气象站数据 → 导出 CSV → 管理端上传"
+    },
+    {
+      "id": "county-statistics",
+      "name": "县域畜牧统计数据",
+      "url": "https://data.stats.gov.cn/",
+      "category": "社会经济统计",
+      "requires_registration": false,
+      "access_type": "国家统计局公开数据 / 各省统计年鉴",
+      "maps_to_tables": ["business_subjects"],
+      "description": "县域年末牲畜存栏、畜牧业产值、农牧民收入等统计指标。用于构建经营主体样例数据的背景参考值。",
+      "key_datasets": [
+        "中国县域统计年鉴",
+        "西藏统计年鉴",
+        "各省畜牧业统计公报"
+      ],
+      "field_mapping": {
+        "business_subjects": {
+          "cattle_count": "牦牛存栏量参考县域统计年鉴",
+          "sheep_count": "藏羊存栏量参考县域统计年鉴",
+          "grassland_mu": "草场面积参考土地利用数据 + 县域统计",
+          "credit_amount": "授信额度为脱敏模拟数据",
+          "score": "信用评分为基于经营指标的计算值",
+          "insurance_coverage": "保险覆盖率为脱敏模拟数据"
+        }
+      },
+      "note": "经营主体个体的信贷、保险数据为脱敏模拟数据，反映典型情况，不涉及真实隐私。",
+      "integration_next_step": "下载统计年鉴 → 提取县域指标 → 结合典型主体参数生成主体 CSV"
+    }
+  ]
+}

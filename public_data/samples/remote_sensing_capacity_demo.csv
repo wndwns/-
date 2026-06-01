@@ -1,0 +1,11 @@
+region_id,scene_date,ndvi,ndvi_change,vegetation_cover,snow_cover,grassland_type,degradation_level,carrying_capacity_sheep_unit,capacity_data_source,capacity_is_sample,capacity_derived,data_source,is_sample
+naqu-bange,2024-12-01,0.42,-0.03,57%,22%,高寒草原,轻度退化,18500,demo_npp,true,true,sample,true
+changdu-luolong,2024-12-01,0.51,0.01,63%,14%,山地草甸,基本稳定,16200,demo_npp,true,true,sample,true
+shannan-langzi,2024-12-01,0.38,-0.05,52%,18%,高寒草甸,中度退化,12800,demo_npp,true,true,sample,true
+haixi-golmud,2024-12-01,0.31,-0.02,44%,9%,荒漠草原,轻度退化,9100,demo_npp,true,true,sample,true
+ganan-maqu,2024-12-01,0.46,-0.06,59%,16%,高寒草甸,中度退化,14600,demo_npp,true,true,sample,true
+aba-ruoergai,2024-12-01,0.55,0.02,68%,20%,沼泽草甸,基本稳定,17200,demo_npp,true,true,sample,true
+yushu-zaduo,2024-12-01,0.36,-0.04,49%,26%,高寒草原,中度退化,11900,demo_npp,true,true,sample,true
+naqu-nierong,2024-12-01,0.34,-0.05,47%,29%,高寒草原,中度退化,10800,demo_npp,true,true,sample,true
+rikaze-kangma,2024-12-01,0.44,0.00,58%,13%,山地草甸,基本稳定,13700,demo_npp,true,true,sample,true
+huangnan-zeku,2024-12-01,0.39,-0.04,53%,24%,高寒草甸,轻度退化,13200,demo_npp,true,true,sample,true

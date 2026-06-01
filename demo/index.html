@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>牧融智控 Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">工行杯方向收口版</p>
+          <h1>牧融智控</h1>
+          <p class="hero-subtitle">
+            基于多源环境与产业数据的牦牛产业链金融风控与保险协同平台
+          </p>
+          <p class="hero-text">
+            这不是一个泛农业平台，而是一套面向银行的产业链金融操作系统。
+            它围绕活体资产确权、授信评分、资金闭环、贷后预警和保险协同，
+            解决银行“不敢贷、不会控、理赔慢”的核心问题。
+          </p>
+          <div class="hero-tags" id="data-source-tags"></div>
+        </div>
+
+        <aside class="hero-panel">
+          <p class="panel-label">当前推荐选题</p>
+          <div class="topic-card">
+            <h2>牦牛产业链金融风控与保险协同</h2>
+            <p>
+              用环境风险、养殖经营、交易结算和保险理赔数据，做贷前、贷中、贷后的全链路风控。
+            </p>
+          </div>
+
+          <div class="region-switcher">
+            <label for="region-select">示范区域</label>
+            <select id="region-select"></select>
+          </div>
+        </aside>
+      </header>
+
+      <main>
+        <section class="metrics-section">
+          <div class="section-heading">
+            <p class="section-kicker">01</p>
+            <h2>区域驾驶舱</h2>
+          </div>
+          <div class="metrics-grid" id="metrics-grid"></div>
+        </section>
+
+        <section class="split-layout">
+          <article class="card emphasis-card">
+            <div class="section-heading compact">
+              <p class="section-kicker">02</p>
+              <h2>授信评分维度</h2>
+            </div>
+            <div id="score-bars" class="score-bars"></div>
+            <p class="small-note">
+              首版建议采用“规则评分 + 人工复核”的方式，先把可解释性做强，再逐步引入机器学习。
+            </p>
+          </article>
+
+          <article class="card">
+            <div class="section-heading compact">
+              <p class="section-kicker">03</p>
+              <h2>业务闭环</h2>
+            </div>
+            <div class="stage-toggle" id="stage-toggle"></div>
+            <div class="flow-card" id="flow-card"></div>
+          </article>
+        </section>
+
+        <section class="card">
+          <div class="section-heading compact">
+            <p class="section-kicker">04</p>
+            <h2>样例授信主体</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>主体</th>
+                  <th>区域</th>
+                  <th>牦牛存栏</th>
+                  <th>拟授信</th>
+                  <th>综合评分</th>
+                  <th>保险覆盖</th>
+                  <th>当前状态</th>
+                </tr>
+              </thead>
+              <tbody id="borrower-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="alerts-layout">
+          <article class="card">
+            <div class="section-heading compact">
+              <p class="section-kicker">05</p>
+              <h2>风险预警</h2>
+            </div>
+            <div id="alerts-list" class="alert-list"></div>
+          </article>
+
+          <article class="card">
+            <div class="section-heading compact">
+              <p class="section-kicker">06</p>
+              <h2>接下来做什么</h2>
+            </div>
+            <div id="roadmap-list" class="roadmap-list"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="./data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
