@@ -46,6 +46,23 @@ except ImportError:
 
 BACKEND_DIR = Path(__file__).resolve().parent
 
+
+def _load_dotenv_file(path: Path = BACKEND_DIR.parent / ".env") -> None:
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_dotenv_file()
+
 MYSQL_CONFIG: dict[str, Any] = {
     "host": os.environ.get("MYSQL_HOST", "127.0.0.1"),
     "port": int(os.environ.get("MYSQL_PORT", "3306")),

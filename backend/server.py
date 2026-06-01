@@ -45,6 +45,24 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_IMAGE_BYTES = 25 * 1024 * 1024
 SLIDE_ASPECT_RATIO = 16 / 9
 
+
+def load_dotenv_file(path: Path = ROOT / ".env") -> None:
+    """Load simple KEY=VALUE pairs from .env without adding a dependency."""
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_dotenv_file()
+
 # 允许的静态前端页面
 ADMIN_PAGES = {
     "",
@@ -341,7 +359,7 @@ def create_app() -> FastAPI:
                 "configured": True,
                 "provider": "Open-Meteo 开放天气 API",
                 "apply_url": "https://open-meteo.com/en/docs",
-                "env_key": "",
+                "env_key": "OPEN_METEO_ENDPOINT",
                 "usage": "/api/integrations/open-meteo/now?latitude=31.36&longitude=90.01",
                 "config_source_key": "open_meteo",
                 "note": "无需 API Key，按经纬度返回当前温度、湿度、降水、风速和天气代码。",
@@ -400,7 +418,7 @@ def create_app() -> FastAPI:
     @app.get("/api/integrations/open-meteo/now")
     def open_meteo_now(latitude: float = 31.36, longitude: float = 90.01) -> dict[str, Any]:
         """Open-Meteo 开放天气接口，无需 Key，按经纬度返回实时天气。"""
-        endpoint = "https://api.open-meteo.com/v1/forecast"
+        endpoint = os.environ.get("OPEN_METEO_ENDPOINT", "https://api.open-meteo.com/v1/forecast")
         params = urlencode({
             "latitude": latitude,
             "longitude": longitude,

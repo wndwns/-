@@ -41,13 +41,13 @@ python .\backend\server.py
 
 ## 外部天气与地图 API
 
-系统已经预留高德和和风天气接入，不在代码里写死 Key。你可以在管理端 `外部 API 配置` 区填写，也可以写入 `.env`。
+系统已经预留高德地图、高德天气和 Open-Meteo 开放天气接入，不在代码里写死 Key。你可以在管理端 `外部 API 配置` 区填写，也可以写入 `.env`。配置优先级为：管理端保存的 `backend/content-store.json` 非空值优先；为空时读取 `.env` 环境变量。
 
 | 能力 | 申请位置 | 本地配置 |
 |------|----------|----------|
 | 高德天气 Web服务 | https://lbs.amap.com/api/webservice/guide/api/weatherinfo | `AMAP_WEB_SERVICE_KEY` |
 | 高德地图 JS API 2.0 | https://lbs.amap.com/api/javascript-api-v2/guide/abc/load | `AMAP_JS_API_KEY`、`AMAP_SECURITY_JS_CODE` |
-| 和风天气 | https://dev.qweather.com/docs/ | `QWEATHER_API_KEY` |
+| Open-Meteo 开放天气 | https://open-meteo.com/en/docs | `OPEN_METEO_ENDPOINT`，无需 Key |
 
 相关接口：
 
@@ -55,7 +55,7 @@ python .\backend\server.py
 GET /api/integrations/status
 GET /api/integrations/amap/weather?city=那曲市
 GET /api/integrations/amap/map-config
-GET /api/integrations/qweather/now?location=90.01,31.36
+GET /api/integrations/open-meteo/now?latitude=31.36&longitude=90.01
 ```
 
 ## 数据存储模式
