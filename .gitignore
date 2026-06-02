@@ -37,8 +37,19 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Uploaded media generated at runtime
-backend/media/
+# Uploaded media generated at runtime.
+# Keep the demo homepage slides referenced by backend/content-store.json.
+backend/media/*
+!backend/media/slides/
+backend/media/slides/*
+!backend/media/slides/20260528200748-c1d577bbef-banner.jpg
+!backend/media/slides/20260528200748-c1d577bbef-original.jpg
+!backend/media/slides/20260528200748-5792484051-banner.jpg
+!backend/media/slides/20260528200748-5792484051-original.jpg
+!backend/media/slides/20260528200749-baf44c3409-banner.jpg
+!backend/media/slides/20260528200749-baf44c3409-original.jpg
+!backend/media/slides/20260528200749-6e56ed6d8f-banner.jpg
+!backend/media/slides/20260528200749-6e56ed6d8f-original.jpg
 
 # Office temporary files
 ~$*.docx
