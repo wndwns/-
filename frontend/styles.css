@@ -2251,6 +2251,93 @@ input, select, textarea { font: inherit; }
   overflow-wrap: anywhere;
 }
 
+.credit-decision-suite {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  overflow: hidden;
+}
+
+.credit-decision-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+}
+
+.credit-decision-card {
+  min-width: 0;
+  min-height: 156px;
+  padding: 12px;
+  border-right: 1px solid var(--border-light);
+  box-shadow: inset 0 3px 0 var(--green-light);
+}
+
+.credit-decision-card:last-child {
+  border-right: 0;
+}
+
+.credit-decision-card.warn {
+  box-shadow: inset 0 3px 0 var(--orange);
+  background: #fffaf2;
+}
+
+.credit-decision-card.danger {
+  box-shadow: inset 0 3px 0 var(--red);
+  background: #fff7f7;
+}
+
+.credit-decision-card span,
+.credit-decision-card strong,
+.credit-decision-card p,
+.credit-decision-card em {
+  display: block;
+}
+
+.credit-decision-card span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.credit-decision-card h3 {
+  margin-top: 6px;
+  color: var(--text-dark);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.credit-decision-card strong {
+  margin-top: 8px;
+  color: var(--green-dark);
+  font-size: 19px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.credit-decision-card.warn strong {
+  color: var(--orange);
+}
+
+.credit-decision-card.danger strong {
+  color: var(--red);
+}
+
+.credit-decision-card p {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.credit-decision-card em {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.4;
+}
+
 .assessment-charts {
   display: grid;
   grid-template-columns: 330px minmax(0, 1fr);
@@ -4884,6 +4971,9 @@ input, select, textarea { font: inherit; }
   .subject-detail-grid div:nth-child(4n) { border-right: 1px solid var(--border-light); }
   .subject-detail-grid div:nth-child(2n) { border-right: 0; }
   .assessment-charts { grid-template-columns: 1fr; }
+  .credit-decision-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .credit-decision-card:nth-child(2n) { border-right: 0; }
+  .credit-decision-card:nth-child(n + 3) { border-top: 1px solid var(--border-light); }
   .terminal-grid,
   .terminal-grid.bottom { grid-template-columns: 1fr; }
   .ops-command { grid-template-columns: 1fr; }
@@ -4939,6 +5029,15 @@ input, select, textarea { font: inherit; }
   .assessment-object-list { max-height: none; }
   .assessment-score-row { grid-template-columns: 1fr; }
   .assessment-metrics { grid-template-columns: 1fr; }
+  .credit-decision-grid { grid-template-columns: 1fr; }
+  .credit-decision-card,
+  .credit-decision-card:nth-child(2n) {
+    border-right: 0;
+    border-top: 1px solid var(--border-light);
+  }
+  .credit-decision-card:first-child {
+    border-top: 0;
+  }
   .evidence-list { grid-template-columns: 1fr; }
   .quality-mini-chart { display: none; }
   .assessment-table-head { align-items: flex-start; flex-direction: column; }

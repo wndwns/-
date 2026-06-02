@@ -929,6 +929,9 @@ createApp({
       if (item.type === "subject") return this.buildSubjectAssessment(item.raw);
       return this.buildRegionAssessment(item.raw);
     },
+    creditDecisionCards() {
+      return this.buildCreditDecisionCards(this.selectedAssessment);
+    },
     assessmentEvidence() {
       const assessment = this.selectedAssessment;
       if (!assessment) return [];
@@ -1062,6 +1065,8 @@ createApp({
         level: this.levelForScore(Number(row.predicted_score)),
         exposure: row.exposure,
         driver: row.primary_driver,
+        admission: this.creditDecisionBrief("region", Number(row.predicted_score), row).admission,
+        limitPolicy: this.creditDecisionBrief("region", Number(row.predicted_score), row).limitPolicy,
         action: row.action,
       }));
       const subjectRows = this.creditSubjectRows.slice(0, 8).map((row) => ({
@@ -1072,6 +1077,8 @@ createApp({
         level: this.levelForScore(row.riskScore),
         exposure: row.used,
         driver: row.overdue > 0 ? "逾期记录" : row.regionRiskDriver,
+        admission: this.creditDecisionBrief("subject", row.riskScore, row).admission,
+        limitPolicy: this.creditDecisionBrief("subject", row.riskScore, row).limitPolicy,
         action: row.action,
       }));
       return [...regionRows, ...subjectRows].sort((a, b) => b.score - a.score);
@@ -1820,6 +1827,136 @@ createApp({
       if (n >= 60) return "贷后核查";
       if (n >= 55) return "人工复核";
       return "持续监测";
+    },
+    creditDecisionBrief(type, score, row = {}) {
+      const n = Number(score) || 0;
+      const overdue = Number(row.overdue ?? row.overdue_times ?? 0) || 0;
+      if (type === "region") {
+        if (n >= 70) return { admission: "区域收紧", limitPolicy: "系数0.80" };
+        if (n >= 55) return { admission: "审慎准入", limitPolicy: "系数0.90" };
+        return { admission: "正常准入", limitPolicy: "系数1.00" };
+      }
+      const line = Number(row.line ?? row.credit_line ?? row.credit_value ?? 0) || 0;
+      const used = Number(row.used ?? row.used_credit ?? 0) || 0;
+      const insurance = Number(String(row.insurance ?? row.insurance_coverage ?? "0").replace("%", "")) || 0;
+      let admission = "建议准入";
+      let factor = insurance >= 80 && Number(row.usage || 0) < 0.75 ? 1.1 : 1.05;
+      if (overdue > 0 || n >= 70) {
+        admission = "暂缓新增";
+        factor = 0.85;
+      } else if (n >= 60) {
+        admission = "审慎准入";
+        factor = 0.95;
+      } else if (n >= 55) {
+        admission = "复核后准入";
+        factor = 1;
+      }
+      const proposedLine = line ? Math.max(used, Math.round(line * factor)) : 0;
+      return {
+        admission,
+        limitPolicy: proposedLine ? `建议${this.formatNumber(proposedLine)}万` : "额度待测算",
+      };
+    },
+    buildCreditDecisionCards(assessment) {
+      if (!assessment) return [];
+      const score = Number(assessment.score) || 0;
+      const state = this.riskLevelClass(assessment.level);
+      if (assessment.type === "region") {
+        const brief = this.creditDecisionBrief("region", score, assessment.raw || {});
+        const factor = score >= 70 ? 0.8 : score >= 55 ? 0.9 : 1;
+        const exposure = Number(assessment.exposure || 0) || 0;
+        const adjustedExposure = exposure ? Math.round(exposure * factor) : 0;
+        const reviewCycle = score >= 70 ? "7日核查" : score >= 55 ? "月度复核" : "月度监测";
+        const disposal = score >= 70 ? "暂停区域增额" : score >= 55 ? "逐户复核" : "持续观察";
+        return [
+          {
+            key: "admission",
+            step: "01",
+            title: "能不能贷",
+            value: brief.admission,
+            note: "县域维度只给准入策略，不替代单户审批。",
+            basis: `${assessment.primary_driver || "风险因子"}驱动，风险分 ${score.toFixed(1)}`,
+            state,
+          },
+          {
+            key: "limit",
+            step: "02",
+            title: "贷多少",
+            value: brief.limitPolicy,
+            note: adjustedExposure ? `参考敞口由 ${this.formatNumber(exposure)}万 调整为 ${this.formatNumber(adjustedExposure)}万。` : "待接入该县域真实授信敞口后测算。",
+            basis: "用于区域额度池和增额节奏控制。",
+            state: score >= 70 ? "danger" : score >= 55 ? "warn" : "safe",
+          },
+          {
+            key: "postLoan",
+            step: "03",
+            title: "贷后有没有风险",
+            value: reviewCycle,
+            note: "联动气象、遥感、主体用信和还款记录形成贷后预警。",
+            basis: "当前为真实环境数据 + 规则弱标签。",
+            state: score >= 55 ? "warn" : "safe",
+          },
+          {
+            key: "disposal",
+            step: "04",
+            title: "出风险怎么处置",
+            value: disposal,
+            note: "推送客户经理核查、保险协同或暂停增额动作。",
+            basis: "处置建议用于比赛演示，不代表真实工行审批结论。",
+            state,
+          },
+        ];
+      }
+
+      const row = assessment.raw || {};
+      const line = Number(row.line || 0) || 0;
+      const used = Number(row.used || 0) || 0;
+      const usage = Number(row.usage || 0) || 0;
+      const overdue = Number(row.overdue || 0) || 0;
+      const insurance = Number(String(row.insurance || "0").replace("%", "")) || 0;
+      const brief = this.creditDecisionBrief("subject", score, row);
+      const proposedLine = Number(String(brief.limitPolicy).replace(/[^\d.]/g, "")) || line;
+      const availableAfter = Math.max(proposedLine - used, 0);
+      const postLoan = overdue > 0 || score >= 70 ? "7日内核查" : score >= 60 ? "纳入观察名单" : score >= 55 ? "月度复核" : "自动监测";
+      const disposal = overdue > 0 ? "还款核验+银保协同" : score >= 70 ? "暂停增额+现场核查" : score >= 55 ? "额度复核+补充材料" : "持续监测";
+      return [
+        {
+          key: "admission",
+          step: "01",
+          title: "能不能贷",
+          value: brief.admission,
+          note: `${row.region || "所在县域"}，还款状态：${row.repayment || "-"}。`,
+          basis: `用信率 ${this.percent(usage)}，逾期 ${overdue} 次，保险 ${row.insurance || "-"}。`,
+          state,
+        },
+        {
+          key: "limit",
+          step: "02",
+          title: "贷多少",
+          value: brief.limitPolicy,
+          note: `当前授信 ${this.formatNumber(line)}万，已用 ${this.formatNumber(used)}万，建议可用 ${this.formatNumber(availableAfter)}万。`,
+          basis: insurance >= 80 ? "保险覆盖较充分，可作为额度缓释依据。" : "保险覆盖偏低，增额前建议补充保障。",
+          state: score >= 70 || overdue > 0 ? "danger" : score >= 55 ? "warn" : "safe",
+        },
+        {
+          key: "postLoan",
+          step: "03",
+          title: "贷后有没有风险",
+          value: postLoan,
+          note: `重点监测 ${assessment.primary_driver || "主风险因子"}、用信率和回款状态。`,
+          basis: row.post_loan_action || "由客户经理工作流生成核查任务。",
+          state: score >= 55 || overdue > 0 ? "warn" : "safe",
+        },
+        {
+          key: "disposal",
+          step: "04",
+          title: "出风险怎么处置",
+          value: disposal,
+          note: "将处置动作沉淀为贷后记录，并回流下一轮评分。",
+          basis: "脱敏样例测算，非真实授信审批或监管报送结论。",
+          state,
+        },
+      ];
     },
     riskLevelClass(level) {
       return String(level).includes("高") ? "danger" : String(level).includes("中") ? "warn" : "safe";

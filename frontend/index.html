@@ -349,6 +349,22 @@
                     </div>
                   </div>
 
+                  <div class="credit-decision-suite">
+                    <div class="mini-head">
+                      <span>ICBC Credit Decision</span>
+                      <b>工行授信决策四联单</b>
+                    </div>
+                    <div class="credit-decision-grid">
+                      <div v-for="card in creditDecisionCards" :key="card.key" class="credit-decision-card" :class="card.state">
+                        <span>{{ card.step }}</span>
+                        <h3>{{ card.title }}</h3>
+                        <strong>{{ card.value }}</strong>
+                        <p>{{ card.note }}</p>
+                        <em>{{ card.basis }}</em>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="manager-workflow">
                     <div v-for="step in managerWorkflowSteps" :key="step.key" class="workflow-step" :class="step.state">
                       <span>{{ step.key }}</span>
@@ -444,6 +460,8 @@
                         <th>等级</th>
                         <th>敞口/用信</th>
                         <th>主因子</th>
+                        <th>准入</th>
+                        <th>额度策略</th>
                         <th>建议动作</th>
                       </tr>
                     </thead>
@@ -455,6 +473,8 @@
                         <td>{{ row.level }}</td>
                         <td>{{ formatNumber(row.exposure) }}万</td>
                         <td>{{ row.driver }}</td>
+                        <td>{{ row.admission }}</td>
+                        <td>{{ row.limitPolicy }}</td>
                         <td><span class="terminal-tag">{{ row.action }}</span></td>
                       </tr>
                     </tbody>
