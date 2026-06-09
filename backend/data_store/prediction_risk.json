@@ -1,0 +1,211 @@
+[
+  {
+    "region_id": "aba-hongyuan",
+    "mae": 15.7,
+    "ndvi_cv": 12.5,
+    "npp_cv": 5.8,
+    "npp_z_score": 2.1,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "ali-gaize",
+    "mae": 1.0,
+    "ndvi_cv": 13.4,
+    "npp_cv": 0.1,
+    "npp_z_score": 1.2,
+    "risk_level": "低风险"
+  },
+  {
+    "region_id": "changdu-jiangda",
+    "mae": 7.9,
+    "ndvi_cv": 13.7,
+    "npp_cv": 7.5,
+    "npp_z_score": 2.7,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "changdu-karuo",
+    "mae": 8.9,
+    "ndvi_cv": 18.8,
+    "npp_cv": 6.0,
+    "npp_z_score": 2.6,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "changdu-leiwuqi",
+    "mae": 8.9,
+    "ndvi_cv": 19.0,
+    "npp_cv": 7.6,
+    "npp_z_score": 2.3,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "changdu-luolong",
+    "mae": 9.9,
+    "ndvi_cv": 13.5,
+    "npp_cv": 10.2,
+    "npp_z_score": 2.1,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "gannan-luqu",
+    "mae": 7.5,
+    "ndvi_cv": 11.4,
+    "npp_cv": 6.0,
+    "npp_z_score": 2.6,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "ganzi-seda",
+    "mae": 3.9,
+    "ndvi_cv": 16.2,
+    "npp_cv": 5.6,
+    "npp_z_score": 1.2,
+    "risk_level": "低风险"
+  },
+  {
+    "region_id": "ganzi-shiqu",
+    "mae": 14.1,
+    "ndvi_cv": 20.4,
+    "npp_cv": 7.5,
+    "npp_z_score": 1.1,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "guoluo-jiuzhi",
+    "mae": 4.1,
+    "ndvi_cv": 11.0,
+    "npp_cv": 5.8,
+    "npp_z_score": 2.0,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "guoluo-maqin",
+    "mae": 3.3,
+    "ndvi_cv": 22.1,
+    "npp_cv": 5.3,
+    "npp_z_score": 1.2,
+    "risk_level": "中风险"
+  },
+  {
+    "region_id": "haibei-gangcha",
+    "mae": 3.5,
+    "ndvi_cv": 9.6,
+    "npp_cv": 6.6,
+    "npp_z_score": 1.9,
+    "risk_level": "中风险"
+  },
+  {
+    "region_id": "huangnan-zeku",
+    "mae": 2.2,
+    "ndvi_cv": 8.2,
+    "npp_cv": 6.2,
+    "npp_z_score": 1.9,
+    "risk_level": "中风险"
+  },
+  {
+    "region_id": "naqu-anduo",
+    "mae": 2.0,
+    "ndvi_cv": 18.3,
+    "npp_cv": 9.4,
+    "npp_z_score": 0.2,
+    "risk_level": "低风险"
+  },
+  {
+    "region_id": "naqu-bange",
+    "mae": 6.0,
+    "ndvi_cv": 10.1,
+    "npp_cv": 7.5,
+    "npp_z_score": 0.3,
+    "risk_level": "中风险"
+  },
+  {
+    "region_id": "naqu-nierong",
+    "mae": 4.5,
+    "ndvi_cv": 14.8,
+    "npp_cv": 7.7,
+    "npp_z_score": 0.6,
+    "risk_level": "低风险"
+  },
+  {
+    "region_id": "naqu-seni",
+    "mae": 8.9,
+    "ndvi_cv": 19.8,
+    "npp_cv": 4.9,
+    "npp_z_score": 0.2,
+    "risk_level": "中风险"
+  },
+  {
+    "region_id": "naqu-shenzha",
+    "mae": 2.9,
+    "ndvi_cv": 5.7,
+    "npp_cv": 9.2,
+    "npp_z_score": 1.7,
+    "risk_level": "中风险"
+  },
+  {
+    "region_id": "rikaze-jiangzi",
+    "mae": 3.6,
+    "ndvi_cv": 8.4,
+    "npp_cv": 5.7,
+    "npp_z_score": 4.6,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "rikaze-kangma",
+    "mae": 1.0,
+    "ndvi_cv": 9.3,
+    "npp_cv": 8.6,
+    "npp_z_score": 4.8,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "rikaze-xietongmen",
+    "mae": 0.5,
+    "ndvi_cv": 5.7,
+    "npp_cv": 3.2,
+    "npp_z_score": 2.0,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "rikaze-zhongba",
+    "mae": 5.3,
+    "ndvi_cv": 8.1,
+    "npp_cv": 0.3,
+    "npp_z_score": 2.2,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "shannan-cuona",
+    "mae": 5.7,
+    "ndvi_cv": 31.7,
+    "npp_cv": 11.4,
+    "npp_z_score": 3.9,
+    "risk_level": "高风险"
+  },
+  {
+    "region_id": "yushu-chengduo",
+    "mae": 2.4,
+    "ndvi_cv": 14.7,
+    "npp_cv": 9.7,
+    "npp_z_score": 0.6,
+    "risk_level": "低风险"
+  },
+  {
+    "region_id": "yushu-zaduo",
+    "mae": 4.4,
+    "ndvi_cv": 14.7,
+    "npp_cv": 9.6,
+    "npp_z_score": 0.8,
+    "risk_level": "低风险"
+  },
+  {
+    "region_id": "linzhi-bayi",
+    "mae": 8.2,
+    "ndvi_cv": 5.1,
+    "npp_cv": 3.2,
+    "npp_z_score": -1.8,
+    "risk_level": "低风险",
+    "data_source": "real_insurance_1135"
+  }
+]

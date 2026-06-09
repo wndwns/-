@@ -35,6 +35,7 @@
               <a :class="{ active: page === 'supply-chain' }" @click="navigate('supply-chain')">产业链</a>
               <a :class="{ active: page === 'green-performance' }" @click="navigate('green-performance')">绿色绩效</a>
               <a :class="{ active: page === 'livelihood' }" @click="navigate('livelihood')">边疆民生</a>
+              <a :class="{ active: page === 'cooperative-ranking' }" @click="navigate('cooperative-ranking')">合作社排序</a>
             </nav>
           </div>
         </header>
@@ -1256,6 +1257,198 @@
               </div>
             </div>
 
+            <!-- 合作社放贷排序 -->
+            <div v-show="page === 'cooperative-ranking'">
+              <div class="public-page public-page-plain">
+                <section class="plain-page-head">
+                  <h1>合作社放贷排序</h1>
+                  <p>潍坊模式 · 公共数据融合：工商 + 遥感生态 + 气象历史 → 最值得放贷的前 N 个合作社</p>
+                </section>
+
+                <section class="coop-ranking-toolbar">
+                  <label>选择县域：</label>
+                  <select v-model="coopSelectedRegion" @change="loadCooperativeRanking" class="coop-region-select">
+                    <option value="">-- 请选择 --</option>
+                    <option v-for="r in coopRegions" :key="r.id" :value="r.id">{{ r.name }}</option>
+                  </select>
+                  <label style="margin-left: 16px;">显示前</label>
+                  <select v-model="coopTopN" @change="loadCooperativeRanking" class="coop-region-select" style="width:80px;">
+                    <option :value="10">10</option>
+                    <option :value="20">20</option>
+                    <option :value="50">50</option>
+                  </select>
+                  <span style="margin-left: 8px; color: #94a3b8;">名</span>
+                  <span v-if="coopLoading" style="margin-left: 16px; color: #64748b;">加载中…</span>
+                </section>
+
+                <section v-if="coopSummary" class="coop-summary-cards">
+                  <div class="coop-summary-card">
+                    <div class="coop-summary-num">{{ coopSummary.total_count }}</div>
+                    <div class="coop-summary-label">合作社总数</div>
+                  </div>
+                  <div class="coop-summary-card">
+                    <div class="coop-summary-num" style="color: #22c55e;">{{ coopSummary.recommend_count }}</div>
+                    <div class="coop-summary-label">重点推荐</div>
+                  </div>
+                  <div class="coop-summary-card">
+                    <div class="coop-summary-num" style="color: #f59e0b;">{{ coopSummary.caution_count }}</div>
+                    <div class="coop-summary-label">审慎放贷</div>
+                  </div>
+                  <div class="coop-summary-card">
+                    <div class="coop-summary-num" style="color: #ef4444;">{{ coopSummary.not_recommend_count }}</div>
+                    <div class="coop-summary-label">暂不建议</div>
+                  </div>
+                  <div class="coop-summary-card coop-quality-card">
+                    <div class="coop-summary-num" style="color: #6366f1;">{{ coopDataQuality }}</div>
+                    <div class="coop-summary-label">数据质量评分</div>
+                  </div>
+                </section>
+
+                <section v-if="coopRanking.length > 0" class="coop-ranking-table-wrap">
+                  <table class="assessment-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 40px;">排名</th>
+                        <th>合作社名称</th>
+                        <th style="width: 60px;">总分</th>
+                        <th style="width: 55px;">工商</th>
+                        <th style="width: 55px;">生态</th>
+                        <th style="width: 55px;">气象</th>
+                        <th style="width: 55px;">经营</th>
+                        <th style="width: 70px;">验证评分</th>
+                        <th style="width: 90px;">贷款建议</th>
+                        <th style="width: 40px;">详情</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="c in coopRanking" :key="c.name" :class="{ 'coop-highlight': c.rank <= 3 }">
+                        <td><span class="coop-rank-badge" :class="'rank-' + (c.rank <= 3 ? 'top' : 'normal')">{{ c.rank }}</span></td>
+                        <td>
+                          <div class="coop-name">{{ c.name }}</div>
+                          <div class="coop-meta">{{ c.biz_years_established }}年 · 注册{{ c.biz_registered_capital_wan }}万 · {{ c.ops_cattle_count }}头牛 {{ c.ops_sheep_count }}只羊</div>
+                        </td>
+                        <td><span class="terminal-score" :class="scoreLevelClass(c.score_total)">{{ c.score_total }}</span></td>
+                        <td><span class="coop-dim-score">{{ c.score_biz }}</span></td>
+                        <td><span class="coop-dim-score">{{ c.score_eco }}</span></td>
+                        <td><span class="coop-dim-score">{{ c.score_weather }}</span></td>
+                        <td><span class="coop-dim-score">{{ c.score_ops }}</span></td>
+                        <td>
+                          <div class="coop-verify-cell">
+                            <span class="coop-verify-tag" :class="'verify-' + (c.verification?.code || 'none')">{{ c.verification?.level }}</span>
+                            <span v-if="c.verification?.verify_score" class="coop-verify-score" :class="verifyScoreClass(c.verification.verify_score)">{{ c.verification.verify_score }}分</span>
+                            <span v-if="c.verification?.issue_count" class="coop-verify-issues" title="风险信号">{{ c.verification.issue_count }}个问题</span>
+                          </div>
+                        </td>
+                        <td><span class="coop-loan-tag" :style="{ background: c.loan_recommendation.color }">{{ c.loan_recommendation.level }}</span></td>
+                        <td>
+                          <button class="coop-detail-btn" @click="toggleCoopDetail(c.name)" :title="coopDetailOpen === c.name ? '收起' : '展开验证详情'">
+                            {{ coopDetailOpen === c.name ? '▲' : '▼' }}
+                          </button>
+                        </td>
+                      </tr>
+                      <tr v-if="coopDetailOpen && coopDetailRow" class="coop-detail-row">
+                        <td colspan="10">
+                          <div class="coop-detail-panel">
+                            <!-- 7 维度验证详情 -->
+                            <div class="coop-detail-grid">
+                              <div class="coop-detail-dim">
+                                <div class="coop-dim-header">🔍 统一社会信用代码</div>
+                                <div class="coop-dim-body">
+                                  <span v-if="coopDetailRow.verification?.dimensions?.uscc?.valid" class="coop-check-ok">校验通过</span>
+                                  <span v-else-if="coopDetailRow.verification?.dimensions?.uscc?.valid === null" class="coop-check-na">无数据</span>
+                                  <span v-else class="coop-check-err">校验失败</span>
+                                  <div class="coop-dim-detail">{{ coopDetailRow.verification?.dimensions?.uscc?.detail }}</div>
+                                </div>
+                              </div>
+                              <div class="coop-detail-dim">
+                                <div class="coop-dim-header">👤 法人代表</div>
+                                <div class="coop-dim-body">
+                                  <span :class="legalStatusClass(coopDetailRow)">{{ legalStatusLabel(coopDetailRow) }}</span>
+                                  <div class="coop-dim-detail">{{ coopDetailRow.verification?.dimensions?.legal_representative?.detail }}</div>
+                                </div>
+                              </div>
+                              <div class="coop-detail-dim">
+                                <div class="coop-dim-header">📝 名称变更</div>
+                                <div class="coop-dim-body">
+                                  <span :class="historyStatusClass(coopDetailRow)">{{ coopDetailRow.verification?.dimensions?.name_history?.change_count || 0 }}次变更</span>
+                                  <div class="coop-dim-detail">{{ coopDetailRow.verification?.dimensions?.name_history?.detail }}</div>
+                                </div>
+                              </div>
+                              <div class="coop-detail-dim">
+                                <div class="coop-dim-header">🏢 经营状态</div>
+                                <div class="coop-dim-body">
+                                  <span :class="statusClass(coopDetailRow)">{{ coopDetailRow.verification?.dimensions?.business_status?.detail }}</span>
+                                </div>
+                              </div>
+                              <div class="coop-detail-dim">
+                                <div class="coop-dim-header">📐 内部一致性</div>
+                                <div class="coop-dim-body">
+                                  <div v-for="chk in (coopDetailRow.verification?.dimensions?.internal_consistency || [])" :key="chk.dimension" class="coop-consistency-item">
+                                    <span :class="'coop-consistency-' + chk.status">{{ chk.status === 'match' ? '✓' : chk.status === 'warning' ? '⚠' : '?' }}</span>
+                                    {{ chk.detail }}
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="coop-detail-dim">
+                                <div class="coop-dim-header">📊 异常值</div>
+                                <div class="coop-dim-body">
+                                  <span v-if="!(coopDetailRow.verification?.dimensions?.outliers || []).length" class="coop-check-ok">无异常</span>
+                                  <div v-for="o in (coopDetailRow.verification?.dimensions?.outliers || [])" :key="o.dimension" class="coop-outlier-item">
+                                    <span :class="o.status === 'outlier_high' ? 'coop-outlier-high' : 'coop-outlier-low'">{{ o.status === 'outlier_high' ? '偏高' : '偏低' }}</span>
+                                    {{ o.detail }}
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="coop-detail-dim">
+                                <div class="coop-dim-header">🎯 数据可信度</div>
+                                <div class="coop-dim-body">
+                                  <span class="coop-credibility-score">{{ (coopDetailRow.verification?.dimensions?.credibility?.credibility * 100 || 0).toFixed(0) }}%</span>
+                                  <span class="coop-credibility-label">{{ coopDetailRow.verification?.dimensions?.credibility?.label }}</span>
+                                  <div class="coop-dim-detail">来源: {{ coopDetailRow.verification?.dimensions?.credibility?.source }}</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- 跨源字段比对 -->
+                            <div v-if="coopDetailRow.verification?.dimensions?.field_checks?.length" class="coop-field-compare">
+                              <div class="coop-dim-header">🔄 跨源字段比对</div>
+                              <table class="coop-field-table">
+                                <thead><tr><th>字段</th><th>状态</th><th>值对比</th></tr></thead>
+                                <tbody>
+                                  <tr v-for="fc in coopDetailRow.verification.dimensions.field_checks" :key="fc.field">
+                                    <td>{{ fc.field }}</td>
+                                    <td><span :class="'coop-field-' + fc.status">{{ fc.status === 'match' ? '一致' : '冲突' }}</span></td>
+                                    <td><span v-for="(v, i) in fc.values" :key="i">{{ v }}<span v-if="i < fc.values.length - 1"> vs </span></span></td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+
+                            <!-- 问题汇总 -->
+                            <div v-if="coopDetailRow.verification?.issues?.length" class="coop-issues-summary">
+                              <div class="coop-dim-header">⚠️ 发现问题 ({{ coopDetailRow.verification.issues.length }})</div>
+                              <div v-for="issue in coopDetailRow.verification.issues" :key="issue.dimension" class="coop-issue-item" :class="'coop-issue-' + issue.severity">
+                                <span class="coop-issue-severity">{{ issue.severity === 'error' ? '🔴' : issue.severity === 'warning' ? '🟡' : issue.severity === 'conflict' ? '🟠' : '🔵' }}</span>
+                                <strong>{{ issue.dimension }}</strong>: {{ issue.detail }}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div class="coop-algo-note">
+                    <strong>评分公式：</strong>综合得分 = 0.40×工商(注册资本/社保/纳税/行政处罚/成立年限) + 0.30×生态(NPP草场质量/NDVI趋势/退化程度) + 0.20×气象(积雪稳定性/灾害风险) + 0.10×经营(存栏规模/草场面积/历史信用)
+                  </div>
+                </section>
+
+                <section v-if="!coopSelectedRegion" class="coop-empty-hint">
+                  <p>请在上方选择一个县域，查看该县合作社的放贷排序结果。</p>
+                </section>
+              </div>
+            </div>
+
             <!-- 数据底座 -->
             <div v-show="page === 'data'">
               <div class="public-page public-page-plain">
@@ -1399,6 +1592,7 @@
                 <button :class="{ active: dataTab === 'risk' }" @click="dataTab = 'risk'">风险评估</button>
                 <button :class="{ active: dataTab === 'subjects' }" @click="dataTab = 'subjects'">经营主体</button>
                 <button :class="{ active: dataTab === 'finance' }" @click="dataTab = 'finance'">金融保险</button>
+                <button :class="{ active: dataTab === 'warning' }" @click="dataTab = 'warning'">预警系统</button>
               </div>
 
               <div v-if="dataTab === 'weather'" class="panel"><div class="panel-body no-pad"><div class="tbl-wrap"><table class="tbl">
@@ -1409,7 +1603,43 @@
               <div v-if="dataTab === 'remote'" class="panel"><div class="panel-body no-pad"><div class="tbl-wrap"><table class="tbl">
                 <thead><tr><th>区域</th><th>日期</th><th>NDVI</th><th>変化</th><th>植被覆盖</th><th>积雪</th><th>草地类型</th><th>退化</th><th>载畜量</th></tr></thead>
                 <tbody><tr v-for="item in data.remote_sensing" :key="item.region_id"><td><strong>{{ item.region_name }}</strong></td><td>{{ item.scene_date }}</td><td>{{ item.ndvi }}</td><td :style="{ color: item.ndvi_change.startsWith('-') ? 'var(--red)' : 'var(--green)' }">{{ item.ndvi_change }}</td><td>{{ item.vegetation_cover }}</td><td>{{ item.snow_cover }}</td><td>{{ item.grassland_type }}</td><td>{{ item.degradation_level }}</td><td>{{ item.carrying_capacity_sheep_unit }}</td></tr></tbody>
-              </table></div></div></div>
+              </table></div></div>
+              <!-- 逐日载畜量 -->
+              <div style="margin-top:16px">
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                  <h3 style="margin:0;font-size:14px;">逐日载畜量预测</h3>
+                  <select v-model="warningSelectedRegion" @change="loadDailyCapacity(warningSelectedRegion, 30)" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+                    <option value="">选择县</option>
+                    <option v-for="r in (data?.regions || [])" :key="r.id" :value="r.id">{{ r.name }}</option>
+                  </select>
+                </div>
+                <div v-if="dailyCapacityLoading" style="padding:12px;color:var(--text-secondary);">加载中...</div>
+                <div v-else-if="dailyCapacity" style="padding:0;">
+                  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:var(--text-secondary);">
+                    <span>NPP 预测: <strong>{{ dailyCapacity.npp_value }}</strong></span>
+                    <span>基准载畜量: <strong>{{ dailyCapacity.npp_base }} 羊单位</strong></span>
+                    <span>日均: <strong>{{ dailyCapacity.statistics.capacity_mean }}~{{ dailyCapacity.statistics.capacity_max }}</strong></span>
+                    <span>退化: <strong>{{ dailyCapacity.degradation_coef }}</strong> ({{ dailyCapacity.degradation_level }})</span>
+                    <span v-if="dailyCapacity.gdi_risk !== '低风险'" style="color:var(--red);">GDI: <strong>{{ dailyCapacity.gdi_risk }}</strong> — {{ dailyCapacity.gdi_advisory }}</span>
+                    <span v-else style="color:var(--green);">GDI: 安全</span>
+                  </div>
+                  <div class="tbl-wrap" style="max-height:400px;"><table class="tbl" style="font-size:11px;">
+                    <thead><tr><th>日期</th><th>NDVI</th><th>季节</th><th>物候</th><th>雪盖</th><th>退化</th><th style="color:var(--accent);">载畜量</th></tr></thead>
+                    <tbody>
+                      <tr v-for="d in dailyCapacity.daily.slice(0, 30)" :key="d.date">
+                        <td>{{ d.date }}</td>
+                        <td>{{ d.ndvi_adj }}</td>
+                        <td>{{ d.season_coef }}</td>
+                        <td>{{ d.pheno_coef }}</td>
+                        <td>{{ d.snow_coef }}</td>
+                        <td>{{ d.degradation_coef }}</td>
+                        <td :style="{ fontWeight: 'bold', color: 'var(--accent)' }">{{ d.capacity }}</td>
+                      </tr>
+                    </tbody>
+                  </table></div>
+                </div>
+              </div>
+            </div>
 
               <div v-if="dataTab === 'risk'" class="content-2col">
                 <div class="panel"><div class="panel-head"><h3>综合风险评分</h3></div><div class="panel-body"><div id="chart-risk" class="chart-box tall"></div></div></div>
@@ -1433,6 +1663,53 @@
                 <thead><tr><th>主体</th><th>授信总额(万)</th><th>已用(万)</th><th>利率</th><th>期限(月)</th><th>还款</th><th>逾期</th><th>保单</th></tr></thead>
                 <tbody><tr v-for="f in data.finance" :key="f.subject_name"><td><strong>{{ f.subject_name }}</strong></td><td>{{ f.credit_line }}</td><td>{{ f.used_credit }}</td><td>{{ f.rate }}</td><td>{{ f.term_months }}</td><td><span class="tag" :class="f.repayment_status === '正常' ? 'tag-green' : 'tag-orange'">{{ f.repayment_status }}</span></td><td>{{ f.overdue_times }}</td><td>{{ f.policies.map(p => p.type).join('、') }}</td></tr></tbody>
               </table></div></div></div>
+
+              <div v-if="dataTab === 'warning'" class="content-2col">
+                <!-- GDI 退化风险 -->
+                <div class="panel">
+                  <div class="panel-head"><h3>Li 2025 草地退化预警 (GDI)</h3></div>
+                  <div class="panel-body no-pad">
+                    <div v-if="warningLoading" style="padding:20px;text-align:center;color:var(--text-secondary);">加载中...</div>
+                    <div v-else-if="!warningData" style="padding:20px;text-align:center;color:var(--text-secondary);">预警数据暂不可用</div>
+                    <div v-else class="tbl-wrap"><table class="tbl">
+                      <thead><tr><th>县</th><th>草地类型</th><th>草产量 g/m²</th><th>阈值</th><th>GDI</th><th>NPP趋势</th><th>风险</th></tr></thead>
+                      <tbody>
+                        <tr v-for="g in warningData.gdi" :key="g.region_id">
+                          <td><strong>{{ g.region_id }}</strong></td>
+                          <td>{{ g.grassland_type === 'alpine_meadow' ? '高寒草甸' : g.grassland_type === 'alpine_steppe' ? '高寒草原' : '高寒荒漠' }}</td>
+                          <td :style="{ color: g.indicators.grass_yield_g_m2 < g.thresholds.grass_yield_high_risk ? 'var(--red)' : 'inherit' }">{{ g.indicators.grass_yield_g_m2 }}</td>
+                          <td>{{ g.thresholds.grass_yield_high_risk }}</td>
+                          <td>{{ g.gdi }}</td>
+                          <td :style="{ color: g.npp_trend_direction === 'degrading' ? 'var(--red)' : 'var(--green)' }">{{ g.npp_trend_direction === 'degrading' ? '↓ 退化' : g.npp_trend_direction === 'improving' ? '↑ 改善' : '→ 稳定' }}</td>
+                          <td><span class="tag" :class="g.risk_level === '高风险' ? 'tag-red' : g.risk_level === '中风险' ? 'tag-orange' : 'tag-green'">{{ g.risk_level }}</span></td>
+                        </tr>
+                      </tbody>
+                    </table></div>
+                  </div>
+                </div>
+
+                <!-- NDVI 实时监控 -->
+                <div class="panel">
+                  <div class="panel-head"><h3>NDVI 实时监控</h3></div>
+                  <div class="panel-body no-pad">
+                    <div v-if="warningLoading" style="padding:20px;text-align:center;color:var(--text-secondary);">加载中...</div>
+                    <div v-else-if="!warningData" style="padding:20px;text-align:center;color:var(--text-secondary);">--</div>
+                    <div v-else class="tbl-wrap"><table class="tbl">
+                      <thead><tr><th>县</th><th>最新月</th><th>NDVI</th><th>历史均值</th><th>Z-score</th><th>状态</th></tr></thead>
+                      <tbody>
+                        <tr v-for="n in warningData.ndvi" :key="n.region_id">
+                          <td><strong>{{ n.region_id }}</strong></td>
+                          <td>{{ n.latest_month }}</td>
+                          <td>{{ n.latest_ndvi }}</td>
+                          <td>{{ n.historical_mean }}</td>
+                          <td :style="{ color: Math.abs(n.z_score) > 2 ? 'var(--red)' : Math.abs(n.z_score) > 1 ? 'var(--orange)' : 'inherit' }">{{ n.z_score }}</td>
+                          <td><span class="tag" :class="n.status === '异常' ? 'tag-red' : n.status === '关注' ? 'tag-orange' : 'tag-green'">{{ n.status }}</span></td>
+                        </tr>
+                      </tbody>
+                    </table></div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- 实施路线 -->

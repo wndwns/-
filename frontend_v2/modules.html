@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>牧融绿链 - 风控模块</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-page="modules">
+    <div id="app">
+      <div v-if="loading" class="loading">
+        <span></span>
+        <strong>模块数据加载中</strong>
+      </div>
+
+      <main v-else class="page-shell">
+        <header class="site-header">
+          <div class="brand-mark">
+            <b>牧融绿链</b>
+            <span>工行风控模块</span>
+          </div>
+          <nav class="top-nav">
+            <a href="./index.html">首页</a>
+            <a href="./overview.html">工行总览</a>
+            <a href="./data.html">工行数据底账</a>
+            <a href="./roadmap.html">实施路线</a>
+          </nav>
+        </header>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <span>ICBC Modules</span>
+            <h2>点击查看工行绿色信贷风控能力</h2>
+          </div>
+          <div class="module-grid modules-page-grid">
+            <a v-for="module in outline.systems" :key="module.code" class="module-card link-card" :href="moduleHref(module.code)">
+              <small>{{ module.code }}</small>
+              <h3>{{ module.name }}</h3>
+              <p>{{ module.value }}</p>
+              <span class="card-link">打开详情</span>
+            </a>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

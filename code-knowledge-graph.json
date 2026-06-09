@@ -1,0 +1,604 @@
+{
+  "metadata": {
+    "project": "工银牧融 (gonghangbei)",
+    "description": "工行高原畜牧绿色金融风险评估与贷后管理平台",
+    "generated_at": "2026-06-08",
+    "version": "1.0"
+  },
+  "nodes": [
+    // ===== 后端层 (Backend Layer) =====
+    {
+      "id": "backend/server.py",
+      "label": "server.py",
+      "type": "file",
+      "layer": "API",
+      "description": "FastAPI后端服务，提供REST API和前端静态页面服务",
+      "functions": [
+        "create_app",
+        "on_startup",
+        "health",
+        "platform",
+        "outline",
+        "regions",
+        "modules",
+        "subjects",
+        "finance",
+        "risk_assessment",
+        "alerts",
+        "weather",
+        "remote_sensing",
+        "import_csv",
+        "export_csv"
+      ]
+    },
+    {
+      "id": "backend/server_v2.py",
+      "label": "server_v2.py",
+      "type": "file",
+      "layer": "API",
+      "description": "FastAPI后端服务 v2版本"
+    },
+    {
+      "id": "backend/server_v3.py",
+      "label": "server_v3.py",
+      "type": "file",
+      "layer": "API",
+      "description": "FastAPI后端服务 v3版本"
+    },
+    {
+      "id": "backend/data.py",
+      "label": "data.py",
+      "type": "file",
+      "layer": "Data Access",
+      "description": "数据访问层，优先级: JSON Store > MySQL > 内置样例数据",
+      "functions": [
+        "get_outline",
+        "get_regions",
+        "get_modules",
+        "get_subjects",
+        "get_finance",
+        "get_weather",
+        "get_remote_sensing",
+        "get_risk_assessment",
+        "get_alerts",
+        "get_closed_loop_data",
+        "build_platform_data"
+      ]
+    },
+    {
+      "id": "backend/store.py",
+      "label": "store.py",
+      "type": "file",
+      "layer": "Storage",
+      "description": "JSON文件存储层，无MySQL时的持久化方案",
+      "functions": [
+        "read_table",
+        "write_table",
+        "import_csv_to_table",
+        "table_info"
+      ],
+      "tables": [
+        "weather_data",
+        "remote_sensing_data",
+        "business_subjects",
+        "finance_credit",
+        "insurance_claims",
+        "supply_chain_orders",
+        "supply_chain_payments",
+        "post_loan_workflow",
+        "green_performance_metrics",
+        "risk_event_labels",
+        "forage_supply_demand"
+      ]
+    },
+    {
+      "id": "backend/db.py",
+      "label": "db.py",
+      "type": "file",
+      "layer": "Database",
+      "description": "MySQL连接池（可选）",
+      "functions": [
+        "ensure_initialized",
+        "fetch_all",
+        "fetch_one",
+        "execute",
+        "is_db_available"
+      ]
+    },
+    {
+      "id": "backend/models.py",
+      "label": "models.py",
+      "type": "file",
+      "layer": "Model",
+      "description": "模型层：规则 + sklearn混合预测（RandomForest + Ridge）",
+      "functions": [
+        "train_model",
+        "predict_risk",
+        "evaluate_model",
+        "extract_features",
+        "get_feature_importance"
+      ],
+      "features": [
+        "temperature_c",
+        "precipitation_mm_24h",
+        "wind_speed_mps",
+        "snow_depth_cm",
+        "cold_wave_risk",
+        "snowstorm_risk",
+        "drought_risk",
+        "ndvi",
+        "ndvi_change_pct",
+        "vegetation_cover_pct",
+        "snow_cover_pct",
+        "degradation_level",
+        "carrying_capacity",
+        "avg_score",
+        "avg_insurance_coverage",
+        "finance_risk_score"
+      ]
+    },
+    {
+      "id": "backend/early_warning.py",
+      "label": "early_warning.py",
+      "type": "file",
+      "layer": "Service",
+      "description": "预警系统：综合预警、GDI预警、NDVI预警、灾害预警"
+    },
+    {
+      "id": "backend/carrying_capacity.py",
+      "label": "carrying_capacity.py",
+      "type": "file",
+      "layer": "Service",
+      "description": "草畜平衡承载力计算"
+    },
+    {
+      "id": "backend/cooperative_ranking.py",
+      "label": "cooperative_ranking.py",
+      "type": "file",
+      "layer": "Service",
+      "description": "合作社排名算法"
+    },
+    {
+      "id": "backend/extract_npp.py",
+      "label": "extract_npp.py",
+      "type": "file",
+      "layer": "Utils",
+      "description": "NPP（净初级生产力）提取脚本"
+    },
+    {
+      "id": "backend/extract_phenology.py",
+      "label": "extract_phenology.py",
+      "type": "file",
+      "layer": "Utils",
+      "description": "物候提取脚本"
+    },
+    {
+      "id": "backend/validate_all.py",
+      "label": "validate_all.py",
+      "type": "file",
+      "layer": "Utils",
+      "description": "全量数据验证脚本"
+    },
+    {
+      "id": "backend/validate_daily.py",
+      "label": "validate_daily.py",
+      "type": "file",
+      "layer": "Utils",
+      "description": "每日数据验证脚本"
+    },
+    {
+      "id": "backend/validate_npp.py",
+      "label": "validate_npp.py",
+      "type": "file",
+      "layer": "Utils",
+      "description": "NPP数据验证脚本"
+    },
+
+    // ===== 前端层 (Frontend Layer) =====
+    {
+      "id": "frontend/app.js",
+      "label": "app.js",
+      "type": "file",
+      "layer": "Frontend Logic",
+      "description": "前台Vue 3 + ECharts应用逻辑",
+      "pages": [
+        "home",
+        "dashboard",
+        "overview",
+        "modules",
+        "module-detail",
+        "data",
+        "roadmap",
+        "insurance",
+        "supply-chain",
+        "green-performance",
+        "livelihood"
+      ],
+      "api_calls": [
+        "/api/platform",
+        "/api/model/status",
+        "/api/model/predict",
+        "/api/model/train",
+        "/api/data-quality",
+        "/api/integrations/status",
+        "/api/integrations/amap/weather",
+        "/api/integrations/open-meteo/now",
+        "/api/integrations/amap/map-config",
+        "/api/closed-loop",
+        "/api/cooperative-ranking",
+        "/api/warning/comprehensive-all",
+        "/api/warning/gdi",
+        "/api/warning/ndvi",
+        "/api/carrying-capacity/daily"
+      ]
+    },
+    {
+      "id": "frontend/index.html",
+      "label": "index.html",
+      "type": "file",
+      "layer": "Frontend View",
+      "description": "前台SPA主页"
+    },
+    {
+      "id": "frontend/admin.html",
+      "label": "admin.html",
+      "type": "file",
+      "layer": "Frontend View",
+      "description": "管理端独立页面"
+    },
+    {
+      "id": "frontend/styles.css",
+      "label": "styles.css",
+      "type": "file",
+      "layer": "Frontend Style",
+      "description": "前台样式"
+    },
+    {
+      "id": "frontend/styles-admin.css",
+      "label": "styles-admin.css",
+      "type": "file",
+      "layer": "Frontend Style",
+      "description": "管理端样式"
+    },
+
+    // ===== 前端 v2 =====
+    {
+      "id": "frontend_v2/app.js",
+      "label": "app_v2.js",
+      "type": "file",
+      "layer": "Frontend Logic",
+      "description": "前台Vue 3 + ECharts应用逻辑 v2"
+    },
+    {
+      "id": "frontend_v3/app.js",
+      "label": "app_v3.js",
+      "type": "file",
+      "layer": "Frontend Logic",
+      "description": "前台Vue 3 + ECharts应用逻辑 v3"
+    },
+
+    // ===== 工具脚本 (Tools) =====
+    {
+      "id": "tools/create_defense_doc.py",
+      "label": "create_defense_doc.py",
+      "type": "file",
+      "layer": "Tools",
+      "description": "生成答辩文档"
+    },
+    {
+      "id": "tools/generate_defense_doc.py",
+      "label": "generate_defense_doc.py",
+      "type": "file",
+      "layer": "Tools",
+      "description": "生成答辩文档（另一种实现）"
+    },
+    {
+      "id": "tools/generate_team_dev_doc.py",
+      "label": "generate_team_dev_doc.py",
+      "type": "file",
+      "layer": "Tools",
+      "description": "生成团队开发文档"
+    },
+
+    // ===== 公开数据 (Public Data) =====
+    {
+      "id": "public_data/scripts/build_public_samples.py",
+      "label": "build_public_samples.py",
+      "type": "file",
+      "layer": "Data Scripts",
+      "description": "构建公开数据样例"
+    },
+    {
+      "id": "public_data/scripts/ingest_public_data.py",
+      "label": "ingest_public_data.py",
+      "type": "file",
+      "layer": "Data Scripts",
+      "description": "导入公开数据"
+    },
+    {
+      "id": "public_data/scripts/gee_export_ndvi_template.js",
+      "label": "gee_export_ndvi_template.js",
+      "type": "file",
+      "layer": "Data Scripts",
+      "description": "Google Earth Engine NDVI导出模板"
+    },
+    {
+      "id": "public_data/scripts/gee_export_snow_template.js",
+      "label": "gee_export_snow_template.js",
+      "type": "file",
+      "layer": "Data Scripts",
+      "description": "Google Earth Engine 雪盖导出模板"
+    },
+
+    // ===== 检查脚本 (Check Scripts) =====
+    {
+      "id": "check_all_api.py",
+      "label": "check_all_api.py",
+      "type": "file",
+      "layer": "Testing",
+      "description": "检查所有API端点"
+    },
+    {
+      "id": "check_api.py",
+      "label": "check_api.py",
+      "type": "file",
+      "layer": "Testing",
+      "description": "检查单个API端点"
+    },
+    {
+      "id": "check_coop.py",
+      "label": "check_coop.py",
+      "type": "file",
+      "layer": "Testing",
+      "description": "检查合作社排名API"
+    },
+    {
+      "id": "check_platform.py",
+      "label": "check_platform.py",
+      "type": "file",
+      "layer": "Testing",
+      "description": "检查平台数据API"
+    },
+    {
+      "id": "validate_v3.py",
+      "label": "validate_v3.py",
+      "type": "file",
+      "layer": "Testing",
+      "description": "验证v3版本数据"
+    },
+
+    // ===== 外部集成 (Integrations) =====
+    {
+      "id": "integration/amap_weather",
+      "label": "高德天气 API",
+      "type": "integration",
+      "layer": "External API",
+      "description": "高德Web服务天气接口"
+    },
+    {
+      "id": "integration/amap_map",
+      "label": "高德地图 JS API",
+      "type": "integration",
+      "layer": "External API",
+      "description": "高德地图JavaScript API 2.0"
+    },
+    {
+      "id": "integration/open_meteo",
+      "label": "Open-Meteo API",
+      "type": "integration",
+      "layer": "External API",
+      "description": "Open-Meteo开放天气接口（无需Key）"
+    }
+  ],
+
+  "edges": [
+    // ===== 后端内部依赖 =====
+    {
+      "source": "backend/server.py",
+      "target": "backend/data.py",
+      "type": "imports",
+      "description": "server.py导入data模块获取数据进行API响应"
+    },
+    {
+      "source": "backend/data.py",
+      "target": "backend/store.py",
+      "type": "imports",
+      "description": "data.py优先从store读取数据"
+    },
+    {
+      "source": "backend/data.py",
+      "target": "backend/db.py",
+      "type": "imports",
+      "description": "data.py其次从MySQL读取数据"
+    },
+    {
+      "source": "backend/server.py",
+      "target": "backend/models.py",
+      "type": "imports",
+      "description": "server.py调用models.py进行风险预测"
+    },
+    {
+      "source": "backend/server.py",
+      "target": "backend/early_warning.py",
+      "type": "imports",
+      "description": "server.py调用early_warning.py进行预警分析"
+    },
+    {
+      "source": "backend/server.py",
+      "target": "backend/carrying_capacity.py",
+      "type": "imports",
+      "description": "server.py调用carrying_capacity.py计算承载力"
+    },
+    {
+      "source": "backend/server.py",
+      "target": "backend/cooperative_ranking.py",
+      "type": "imports",
+      "description": "server.py调用cooperative_ranking.py进行合作社排名"
+    },
+
+    // ===== 前端到后端API调用 =====
+    {
+      "source": "frontend/app.js",
+      "target": "backend/server.py",
+      "type": "calls API",
+      "description": "前端通过fetch调用后端REST API"
+    },
+    {
+      "source": "frontend_v2/app.js",
+      "target": "backend/server_v2.py",
+      "type": "calls API",
+      "description": "前端v2通过fetch调用后端v2 REST API"
+    },
+    {
+      "source": "frontend_v3/app.js",
+      "target": "backend/server_v3.py",
+      "type": "calls API",
+      "description": "前端v3通过fetch调用后端v3 REST API"
+    },
+
+    // ===== 外部集成 =====
+    {
+      "source": "backend/server.py",
+      "target": "integration/amap_weather",
+      "type": "integrates",
+      "description": "后端集成高德天气API"
+    },
+    {
+      "source": "backend/server.py",
+      "target": "integration/open_meteo",
+      "type": "integrates",
+      "description": "后端集成Open-Meteo天气API"
+    },
+    {
+      "source": "frontend/app.js",
+      "target": "integration/amap_map",
+      "type": "integrates",
+      "description": "前端集成高德地图JS API"
+    },
+
+    // ===== 数据流 =====
+    {
+      "source": "backend/store.py",
+      "target": "backend/data.py",
+      "type": "data flow",
+      "description": "CSV上传 → store.import_csv_to_table() → 写入JSON文件 → data.py读取"
+    },
+    {
+      "source": "backend/data.py",
+      "target": "backend/models.py",
+      "type": "data flow",
+      "description": "data.py读取数据 → models.py训练模型"
+    },
+    {
+      "source": "backend/models.py",
+      "target": "backend/server.py",
+      "type": "data flow",
+      "description": "models.py预测结果 → /api/model/predict 返回前端"
+    },
+
+    // ===== 版本关系 =====
+    {
+      "source": "frontend_v2/app.js",
+      "target": "frontend/app.js",
+      "type": "version of",
+      "description": "v2是v1的升级版本"
+    },
+    {
+      "source": "frontend_v3/app.js",
+      "target": "frontend_v2/app.js",
+      "type": "version of",
+      "description": "v3是v2的升级版本"
+    },
+    {
+      "source": "backend/server_v2.py",
+      "target": "backend/server.py",
+      "type": "version of",
+      "description": "v2是v1的升级版本"
+    },
+    {
+      "source": "backend/server_v3.py",
+      "target": "backend/server_v2.py",
+      "type": "version of",
+      "description": "v3是v2的升级版本"
+    }
+  ],
+
+  "layers": [
+    {
+      "name": "API",
+      "color": "#FF6B6B",
+      "description": "FastAPI后端服务层，提供REST API端点"
+    },
+    {
+      "name": "Service",
+      "color": "#4ECDC4",
+      "description": "业务逻辑层，处理预警、承载力计算、排名等"
+    },
+    {
+      "name": "Model",
+      "color": "#45B7D1",
+      "description": "模型层，使用sklearn进行风险评估和预测"
+    },
+    {
+      "name": "Data Access",
+      "color": "#96CEB4",
+      "description": "数据访问层，统一读取接口"
+    },
+    {
+      "name": "Storage",
+      "color": "#FECA57",
+      "description": "存储层，JSON文件存储或MySQL数据库"
+    },
+    {
+      "name": "Database",
+      "color": "#FF9F43",
+      "description": "数据库层，MySQL连接池"
+    },
+    {
+      "name": "Frontend Logic",
+      "color": "#6C5CE7",
+      "description": "前端逻辑层，Vue 3 + ECharts"
+    },
+    {
+      "name": "Frontend View",
+      "color": "#A29BFE",
+      "description": "前端视图层，HTML页面"
+    },
+    {
+      "name": "Frontend Style",
+      "color": "#DDA0DD",
+      "description": "前端样式层，CSS样式"
+    },
+    {
+      "name": "External API",
+      "color": "#FD79A8",
+      "description": "外部API集成，高德、Open-Meteo等"
+    },
+    {
+      "name": "Tools",
+      "color": "#00B894",
+      "description": "工具脚本，文档生成等"
+    },
+    {
+      "name": "Data Scripts",
+      "color": "#00CEC9",
+      "description": "数据处理脚本，GEE导出等"
+    },
+    {
+      "name": "Testing",
+      "color": "#E17055",
+      "description": "测试脚本，API检查等"
+    },
+    {
+      "name": "Utils",
+      "color": "#636E72",
+      "description": "工具函数，数据提取、验证等"
+    }
+  ],
+
+  "architecture": {
+    "pattern": "分层架构 + 数据闭环",
+    "description": "前端Vue 3 SPA ↔ FastAPI后端 ↔ 数据访问层 ↔ JSON/MySQL存储 ↔ sklearn模型层",
+    "data_loop": "管理端CSV上传 → store.import_csv_to_table() → data.py读取 → 前端/api/platform刷新 → 风险评估重算"
+  }
+}

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工银牧融 - 代码知识图谱</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 24px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .search-box {
+            padding: 10px 15px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 300px;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .layer-filter {
+            margin-bottom: 10px;
+        }
+
+        .layer-filter label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+
+        .layer-filter label:hover {
+            background: #f0f0f0;
+        }
+
+        .layer-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .node-details {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .node-details h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .node-details p {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .node-details ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .node-details li {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .main-content {
+            flex: 1;
+            position: relative;
+        }
+
+        #graph {
+            width: 100%;
+            height: 100%;
+        }
+
+        .tooltip {
+            position: absolute;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 13px;
+        }
+
+        .stats p {
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .stats strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🔗 工银牧融 - 代码知识图谱</h1>
+            <p>工行高原畜牧绿色金融风险评估与贷后管理平台</p>
+        </div>
+        <div class="controls">
+            <input type="text" class="search-box" id="searchBox" placeholder="搜索文件、函数或API...">
+            <select class="filter-select" id="typeFilter">
+                <option value="all">所有类型</option>
+                <option value="file">文件</option>
+                <option value="integration">集成</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h3>📊 架构层级筛选</h3>
+            <div id="layerFilters"></div>
+
+            <div class="node-details" id="nodeDetails" style="display: none;">
+                <h4 id="nodeTitle"></h4>
+                <p id="nodeDescription"></p>
+                <div id="nodeMeta"></div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <svg id="graph"></svg>
+            <div class="stats">
+                <p><strong>节点:</strong> <span id="nodeCount">0</span></p>
+                <p><strong>边:</strong> <span id="edgeCount">0</span></p>
+                <p><strong>层级:</strong> <span id="layerCount">0</span></p>
+            </div>
+            <div class="legend" id="legend"></div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+    <script>
+        // 加载知识图谱数据
+        d3.json('code-knowledge-graph.json').then(data => {
+            initVisualization(data);
+        }).catch(err => {
+            console.error('加载知识图谱失败:', err);
+            alert('无法加载 knowledge graph 数据。请确保 code-knowledge-graph.json 文件存在。');
+        });
+
+        function initVisualization(data) {
+            const nodes = data.nodes.map(d => ({...d }));
+            const edges = data.edges.map(d => ({...d }));
+            const layers = data.layers;
+
+            // 更新统计
+            d3.select('#nodeCount').text(nodes.length);
+            d3.select('#edgeCount').text(edges.length);
+            d3.select('#layerCount').text(layers.length);
+
+            // 创建层级筛选器
+            const filtersContainer = d3.select('#layerFilters');
+            layers.forEach(layer => {
+                const label = filtersContainer.append('div')
+                    .attr('class', 'layer-filter')
+                    .append('label');
+
+                label.append('input')
+                    .attr('type', 'checkbox')
+                    .attr('checked', true)
+                    .attr('value', layer.name)
+                    .on('change', function() {
+                        updateGraph();
+                    });
+
+                label.append('div')
+                    .attr('class', 'layer-color')
+                    .style('background', layer.color);
+
+                label.append('span')
+                    .text(layer.name);
+            });
+
+            // 创建图例
+            const legendContainer = d3.select('#legend');
+            layers.forEach(layer => {
+                const item = legendContainer.append('div')
+                    .attr('class', 'legend-item');
+
+                item.append('div')
+                    .attr('class', 'legend-color')
+                    .style('background', layer.color);
+
+                item.append('span')
+                    .text(layer.name);
+            });
+
+            // 设置SVG
+            const width = document.querySelector('.main-content').clientWidth;
+            const height = document.querySelector('.main-content').clientHeight;
+
+            const svg = d3.select('#graph')
+                .attr('width', width)
+                .attr('height', height);
+
+            // 创建力导向图模拟
+            const simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(edges).id(d => d.id).distance(100))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(50));
+
+            // 创建边
+            const link = svg.append('g')
+                .attr('class', 'links')
+                .selectAll('line')
+                .data(edges)
+                .enter().append('line')
+                .attr('stroke', '#999')
+                .attr('stroke-opacity', 0.6)
+                .attr('stroke-width', 2);
+
+            // 创建节点
+            const node = svg.append('g')
+                .attr('class', 'nodes')
+                .selectAll('g')
+                .data(nodes)
+                .enter().append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+
+            // 节点圆圈
+            node.append('circle')
+                .attr('r', d => d.type === 'file' ? 15 : 10)
+                .attr('fill', d => {
+                    const layer = layers.find(l => l.name === d.layer);
+                    return layer ? layer.color : '#999';
+                })
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2);
+
+            // 节点标签
+            node.append('text')
+                .text(d => d.label)
+                .attr('x', 15)
+                .attr('y', 5)
+                .attr('font-size', d => d.type === 'file' ? '12px' : '10px')
+                .attr('fill', '#333')
+                .attr('font-weight', d => d.type === 'file' ? 'bold' : 'normal');
+
+            // 节点交互
+            node.on('mouseover', function(event, d) {
+                const tooltip = d3.select('#tooltip');
+                tooltip.style('display', 'block')
+                    .html(`<strong>${d.label}</strong><br>${d.description || '无描述'}`)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
+            })
+            .on('mouseout', function() {
+                d3.select('#tooltip').style('display', 'none');
+            })
+            .on('click', function(event, d) {
+                showNodeDetails(d);
+            });
+
+            // 更新力导向图
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node
+                    .attr('transform', d => `translate(${d.x}, ${d.y})`);
+            });
+
+            // 搜索功能
+            d3.select('#searchBox').on('input', function() {
+                const query = this.value.toLowerCase();
+                node.style('opacity', d => {
+                    if (!query) return 1;
+                    return d.label.toLowerCase().includes(query) ||
+                           d.description?.toLowerCase().includes(query) ||
+                           d.functions?.join(' ').toLowerCase().includes(query)
+                           ? 1 : 0.1;
+                });
+            });
+
+            // 类型筛选
+            d3.select('#typeFilter').on('change', function() {
+                updateGraph();
+            });
+
+            function updateGraph() {
+                const selectedLayers = [];
+                d3.selectAll('.layer-filter input').each(function() {
+                    if (this.checked) selectedLayers.push(this.value);
+                });
+
+                const typeFilter = d3.select('#typeFilter').property('value');
+
+                node.style('display', d => {
+                    if (!selectedLayers.includes(d.layer)) return 'none';
+                    if (typeFilter!== 'all' && d.type!== typeFilter) return 'none';
+                    return 'block';
+                });
+
+                link.style('display', d => {
+                    if (!selectedLayers.includes(d.source.layer) ||
+                        !selectedLayers.includes(d.target.layer)) return 'none';
+                    return 'block';
+                });
+            }
+
+            function showNodeDetails(d) {
+                const details = d3.select('#nodeDetails');
+                details.style('display', 'block');
+
+                d3.select('#nodeTitle').text(d.label);
+                d3.select('#nodeDescription').text(d.description || '无描述');
+
+                const meta = d3.select('#nodeMeta');
+                meta.html('');
+
+                if (d.functions && d.functions.length > 0) {
+                    meta.append('p').html('<strong>函数:</strong>');
+                    const ul = meta.append('ul');
+                    d.functions.forEach(f => {
+                        ul.append('li').text(f);
+                    });
+                }
+
+                if (d.api_calls && d.api_calls.length > 0) {
+                    meta.append('p').html('<strong>API调用:</strong>');
+                    const ul = meta.append('ul');
+                    d.api_calls.forEach(a => {
+                        ul.append('li').text(a);
+                    });
+                }
+
+                if (d.tables && d.tables.length > 0) {
+                    meta.append('p').html('<strong>数据表:</strong>');
+                    const ul = meta.append('ul');
+                    d.tables.forEach(t => {
+                        ul.append('li').text(t);
+                    });
+                }
+            }
+
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
+    </script>
+</body>
+</html>

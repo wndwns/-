@@ -254,13 +254,23 @@ def _extract_monthly_samples() -> tuple[np.ndarray, np.ndarray, list[dict], dict
             rm_score = 40.0
 
         # --- 经营特征 ---
+        # ★ 保险是增信因子，不是风险因子 ★
+        # 银行放贷视角：牧民有牦牛保险 → 牲畜死亡有保险公司兜底 → 银行风险敞口缩小
+        # 因此：高覆盖率 → 风险降低（减险），低覆盖率 → 风险增加（无兜底）
         biz = biz_by_region.get(rid, {"avg_score": 70.0, "avg_coverage": 70.0})
         avg_s = biz["avg_score"]
         avg_cv = biz["avg_coverage"]
         biz_risk = max(0, min(100, 100 - avg_s))
-        if avg_cv < 60: biz_risk += 15
-        elif avg_cv < 75: biz_risk += 5
-        biz_risk = min(100, biz_risk)
+        # 保险增信/减险逻辑
+        if avg_cv >= 90:
+            biz_risk -= 10  # 高保险覆盖率：银行风险显著降低（有充分兜底）
+        elif avg_cv >= 80:
+            biz_risk -= 5   # 较高覆盖率：银行风险适度降低
+        elif avg_cv < 60:
+            biz_risk += 15  # 低覆盖率：无兜底，银行风险增加
+        elif avg_cv < 75:
+            biz_risk += 5   # 中等覆盖率：兜底不足，风险略增
+        biz_risk = max(0, min(100, biz_risk))
 
         # --- 金融特征 ---
         fin_risk = fin_by_region.get(rid, 50.0)
@@ -522,8 +532,8 @@ class RiskModel:
                     "detail": f"NDVI={feat[7]:.2f}(Δ{feat[8]:+.1f}%), 退化={_deg_decode(feat[11])}",
                 },
                 "business": {
-                    "score_part": round((max(0, min(100, 100 - feat[13] + (5 if feat[13] < 75 else 0) + (15 if feat[13] < 60 else 0)))) * 0.20),
-                    "detail": f"评分={feat[12]:.0f}, 保险覆盖率={feat[13]:.0f}%",
+                    "score_part": round((max(0, min(100, 100 - feat[13] + (5 if feat[14] < 75 else 0) + (15 if feat[14] < 60 else 0) - (5 if feat[14] >= 80 else 0) - (10 if feat[14] >= 90 else 0)))) * 0.20),
+                    "detail": f"评分={feat[13]:.0f}, 保险覆盖率={feat[14]:.0f}%",
                 },
                 "finance": {
                     "score_part": round(feat[15] * 0.25),

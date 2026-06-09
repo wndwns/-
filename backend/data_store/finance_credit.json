@@ -1948,5 +1948,27 @@
     "is_sample": true,
     "sample_note": "比赛演示用工行授信样例，不代表真实授信记录",
     "imported_at": "2026-05-29T15:41:15.037993+00:00"
+  },
+  {
+    "subject_name": "百巴村牦牛养殖合作社",
+    "credit_line": 600,
+    "used_credit": 500,
+    "interest_rate": "3.85%",
+    "term_months": 36,
+    "repayment_status": "正常",
+    "overdue_times": 0,
+    "data_source": "real_insurance",
+    "policies": [
+      {
+        "type": "养殖险牛",
+        "insured_qty": 1135,
+        "coverage": "88%"
+      },
+      {
+        "type": "草场保险",
+        "insured_qty": 120000,
+        "coverage": "100%"
+      }
+    ]
   }
 ]

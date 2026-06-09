@@ -1573,5 +1573,21 @@
     "is_sample": true,
     "sample_note": "比赛演示用脱敏样例主体，不代表真实客户",
     "imported_at": "2026-05-29T15:41:15.037993+00:00"
+  },
+  {
+    "name": "百巴村牦牛养殖合作社",
+    "region_id": "linzhi-bayi",
+    "region_name": "林芝市巴宜区",
+    "subject_type": "行政村集体",
+    "cattle_count": 1135,
+    "sheep_count": 0,
+    "grassland_mu": 120000,
+    "credit_amount": "500 万元",
+    "credit_value": 500,
+    "score": 91,
+    "insurance_coverage": "88%",
+    "status": "正常监控",
+    "loan_use": "牦牛养殖扩产（保单覆盖1135户）",
+    "data_source": "real_insurance"
   }
 ]

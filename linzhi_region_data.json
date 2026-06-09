@@ -1,0 +1,56 @@
+{
+    "region_id": "linzhi-bayi",
+    "region_name": "林芝市巴宜区",
+    "weather": {
+        "region_id": "linzhi-bayi",
+        "region_name": "林芝市巴宜区",
+        "station": "林芝市国家基准气候站",
+        "observed_at": "2026-05-21 08:00",
+        "temperature_c": 9.5,
+        "precipitation_mm_24h": 3.2,
+        "wind_speed_mps": 2.8,
+        "snow_depth_cm": 3,
+        "cold_wave_risk": "低",
+        "snowstorm_risk": "低",
+        "drought_risk": "低",
+        "data_source": "real_insurance_derived"
+    },
+    "remote_sensing": {
+        "region_id": "linzhi-bayi",
+        "region_name": "林芝市巴宜区",
+        "scene_date": "2026-05-20",
+        "ndvi": 0.62,
+        "ndvi_change": "+2.1%",
+        "vegetation_cover": "72%",
+        "snow_cover": "8%",
+        "grassland_type": "山地灌丛草甸",
+        "degradation_level": "基本稳定",
+        "carrying_capacity_sheep_unit": 28500,
+        "data_source": "real_insurance_derived"
+    },
+    "sample_subject": {
+        "name": "百巴村养殖合作社（林芝）",
+        "region_id": "linzhi-bayi",
+        "region_name": "林芝市巴宜区",
+        "subject_type": "行政村集体",
+        "cattle_count": 1135,
+        "sheep_count": 0,
+        "grassland_mu": 120000,
+        "credit_amount": "500 万元",
+        "credit_value": 500,
+        "score": 91,
+        "insurance_coverage": "88%",
+        "status": "正常监控",
+        "loan_use": "牦牛养殖扩产",
+        "data_source": "real_insurance"
+    },
+    "insurance_stats": {
+        "total_policies": 1135,
+        "insurance_type": "养殖险牛",
+        "bank": "中国农业银行",
+        "town": "百巴镇",
+        "village": "百巴村",
+        "coverage_rate": 0.88,
+        "per_capita_policies": 1.0
+    }
+}

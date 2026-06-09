@@ -25,7 +25,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -36,7 +36,7 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 ROOT = Path(__file__).resolve().parents[1]
-FRONTEND_DIR = ROOT / "frontend"
+FRONTEND_DIR = ROOT / "frontend_v2"
 CONTENT_FILE = ROOT / "backend" / "content-store.json"
 MEDIA_DIR = ROOT / "backend" / "media"
 SLIDE_UPLOAD_DIR = MEDIA_DIR / "slides"
@@ -859,110 +859,6 @@ def create_app() -> FastAPI:
         except ImportError:
             from backend.models import get_model  # type: ignore[no-redef]
         return get_model().macro_background()
-
-    # ======================================================================
-    # 饲料需求估算 API（方案B: 日值正弦插值 + NDVI修正）
-    # ======================================================================
-
-    @app.post("/api/feed/estimate")
-    def feed_estimate(
-        latitude: float = Body(..., embed=True),
-        longitude: float = Body(..., embed=True),
-        herd_size: int = Body(1, embed=True),
-        start_date: str | None = Body(None, embed=True),
-        months: int = Body(6, embed=True),
-    ) -> dict[str, Any]:
-        """估算指定位置和规模的饲料需求。
-
-        请求体 (JSON):
-            latitude (float): 纬度 (WGS84)
-            longitude (float): 经度 (WGS84)
-            herd_size (int): 存栏规模（头数），默认 1
-            start_date (str): 起始日期 "YYYY-MM-DD"，默认今天
-            months (int): 预测月数，默认 6
-
-        返回:
-            包含逐日分类统计、月度明细、修正记录和成本估算的完整结果。
-        """
-        try:
-            from feed_calculator import FeedEstimator
-        except ImportError:
-            from backend.feed_calculator import FeedEstimator  # type: ignore[no-redef]
-
-        if latitude == 0 and longitude == 0:
-            return {"error": "invalid_coordinates", "message": "请提供有效的经纬度"}
-
-        est = FeedEstimator()
-        return est.estimate(
-            lat=latitude, lon=longitude,
-            herd_size=herd_size,
-            start_date=start_date,
-            months=months,
-        )
-
-    # ── 季节性牧场查询 API ─────────────────────────────────────────
-
-    @app.get("/api/feed/pasture-info/{region_id}")
-    def pasture_info(region_id: str) -> dict[str, Any]:
-        """查询一个区域的建议牧场海拔（自动推算模式）。"""
-        try:
-            from feed_calculator import SeasonalPastureEstimator
-        except ImportError:
-            from backend.feed_calculator import SeasonalPastureEstimator  # type: ignore[no-redef]
-        spe = SeasonalPastureEstimator()
-        return spe.get_seasonal_pasture_info(region_id)
-
-    # ── 迁徙估算 API（自动推算） ───────────────────────────────────
-
-    @app.post("/api/feed/estimate-migration-auto")
-    def feed_estimate_migration_auto(
-        region_id: str = Body(..., embed=True),
-        herd_size: int = Body(1, embed=True),
-    ) -> dict[str, Any]:
-        """自动推算模式：用县城中心海拔推算各季牧场，返回 12 个月迁徙估算。
-
-        请求体 (JSON):
-            region_id (str): 区域 ID（如 "changdu-karuo"）
-            herd_size (int): 存栏规模（头数）
-        """
-        try:
-            from feed_calculator import SeasonalPastureEstimator
-        except ImportError:
-            from backend.feed_calculator import SeasonalPastureEstimator  # type: ignore[no-redef]
-        spe = SeasonalPastureEstimator()
-        return spe.estimate_auto(region_id=region_id, herd_size=herd_size)
-
-    # ── 迁徙估算 API（手动坐标） ──────────────────────────────────
-
-    @app.post("/api/feed/estimate-migration-manual")
-    def feed_estimate_migration_manual(
-        herd_size: int = Body(..., embed=True),
-        winter_lat: float = Body(..., embed=True),
-        winter_lon: float = Body(..., embed=True),
-        summer_lat: float = Body(..., embed=True),
-        summer_lon: float = Body(..., embed=True),
-        spring_autumn_lat: float = Body(..., embed=True),
-        spring_autumn_lon: float = Body(..., embed=True),
-    ) -> dict[str, Any]:
-        """手动坐标模式：信贷员打点各季牧场，返回 12 个月迁徙估算。
-
-        请求体 (JSON):
-            herd_size (int): 存栏规模
-            winter_lat/lon: 冬季牧场坐标
-            summer_lat/lon: 夏季牧场坐标
-            spring_autumn_lat/lon: 春秋牧场坐标（春、秋共用）
-        """
-        try:
-            from feed_calculator import SeasonalPastureEstimator
-        except ImportError:
-            from backend.feed_calculator import SeasonalPastureEstimator  # type: ignore[no-redef]
-        spe = SeasonalPastureEstimator()
-        return spe.estimate_manual(
-            herd_size=herd_size,
-            winter_lat=winter_lat, winter_lon=winter_lon,
-            summer_lat=summer_lat, summer_lon=summer_lon,
-            spring_autumn_lat=spring_autumn_lat, spring_autumn_lon=spring_autumn_lon,
-        )
 
     # ======================================================================
     # 数据质量 API

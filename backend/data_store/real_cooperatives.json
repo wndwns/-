@@ -1,0 +1,1059 @@
+{
+  "_meta": {
+    "description": "合作社真实数据，当前仅班戈县(nqu-bange)完成字段级信源标注及多源交叉验证，其他县待逐县补充",
+    "source_labels": {
+      "gsxt": "国家企业信用信息公示系统 / 水滴信用 — 工商登记信息",
+      "government_open_data": "西藏农业农村厅示范社公示名单 — 政府公开数据",
+      "computed": "从已有真实数据计算得出（如成立年限=今年-成立日期）",
+      "simulated": "模拟估算数据 — 无真实数据源，基于县域平均水平推算",
+      "none": "该字段无数据"
+    },
+    "rule": "每次只做一个县的修改，字段标注_source。前端不显示这些标注。",
+    "cross_verification_note": "2026-06-03 对班戈县5个合作社完成多源交叉验证：水滴信用(shuidi.cn USCC详情页)、企查查(qcc.com)、天眼查(tianyancha.com)、爱企查(aiqicha.baidu.com)、BOSS直聘(zhipin.com)、11467企业信息网、西藏农业农村厅(nynct.xizang.gov.cn)、新华网、西藏日报、澎湃新闻、班戈县政府网(xzbg.gov.cn)、Bing WebSearch。所有搜索到的信息（含重复）均已记录在_source_comparison中。"
+  },
+  "cooperatives": [
+    {
+      "name": "班戈县保吉乡热她村牧业经济合作社",
+      "region_id": "naqu-bange",
+      "biz_registered_capital_wan": 6000.36,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 10,
+      "ops_cattle_count": 800,
+      "ops_sheep_count": 2500,
+      "ops_grassland_mu": 80000,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": 500,
+      "unified_social_credit_code": "93542428MA6T121447",
+      "legal_representative": "诺鹏",
+      "establish_date": "2015-11-23",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt",
+      "business_scope": "土地使用权租赁；住房租赁；机械设备租赁；农业机械租赁；租赁服务；建筑工程机械与设备租赁；畜禽委托饲养管理服务；农业机械服务；农产品的生产、销售、加工、运输、贮藏及其他相关服务；食用农产品初加工；初级农产品收购；牲畜销售；畜禽收购；农副产品销售；日用百货销售；针纺织品及原料销售；办公设备销售；劳动保护用品销售；鲜肉零售；针纺织品销售；服装服饰零售；厨具卫具及日用杂品零售；日用品销售；工艺美术品及礼仪用品制造；产业用纺织制成品制造；洗车服务；运输设备租赁服务；家政服务；普通货运",
+      "phone": "无公开电话",
+      "address": "班戈县保吉乡",
+      "org_code": "MA6T1214-4",
+      "registration_number": "542428NA000029X",
+      "credit_score_qixin": 357,
+      "credit_grade_qixin": "R13",
+      "change_records": 15,
+      "key_personnel": {
+        "legal_rep": "诺鹏（2026-04-08变更，此前为格桑平措）",
+        "village_director": "贡日（村党支部书记）",
+        "village_committee": "格桑平措（村委会主任）",
+        "suspected_controller": "次仁多吉（企查查疑似实控人）"
+      },
+      "risk_summary": {
+        "legal_cases": 0,
+        "business_risk": 0,
+        "administrative_penalty": 0,
+        "intellectual_property": 0
+      },
+      "_field_sources": {
+        "unified_social_credit_code": "gsxt",
+        "legal_representative": "gsxt",
+        "establish_date": "gsxt",
+        "status": "gsxt",
+        "historical_names": "gsxt",
+        "biz_registered_capital_wan": "gsxt",
+        "biz_social_security_count": "gsxt",
+        "biz_tax_compliant": "simulated",
+        "biz_penalty_count": "gsxt",
+        "biz_years_established": "computed",
+        "ops_cattle_count": "simulated",
+        "ops_sheep_count": "simulated",
+        "ops_grassland_mu": "simulated",
+        "ops_overdue_times": "simulated",
+        "ops_credit_limit_wan": "simulated",
+        "business_scope": "gsxt",
+        "phone": "gsxt",
+        "address": "gsxt",
+        "org_code": "gsxt",
+        "registration_number": "gsxt",
+        "credit_score_qixin": "tianyancha",
+        "credit_grade_qixin": "tianyancha",
+        "change_records": "gsxt",
+        "key_personnel": "gsxt+tianyancha+websearch",
+        "risk_summary": "gsxt"
+      },
+      "_cross_verification": {
+        "verified_at": "2026-06-03",
+        "sources_checked": ["水滴信用(shuidi.cn USCC详情页)", "企查查(qcc.com 搜索页)", "天眼查(tianyancha.com 搜索页)", "BOSS直聘(zhipin.com 企业主页)", "西藏农业农村厅(nynct.xizang.gov.cn)", "Bing WebSearch(西藏日报/澎湃新闻)"],
+        "source_comparison": {
+          "unified_social_credit_code": [
+            {"source": "水滴信用", "value": "93542428MA6T121447", "match": true},
+            {"source": "企查查", "value": "93542428MA6T121447", "match": true},
+            {"source": "BOSS直聘", "value": "93542428MA6T121447", "match": true},
+            {"source": "天眼查", "value": "93542428MA6T121447", "match": true}
+          ],
+          "legal_representative": [
+            {"source": "水滴信用", "value": "诺鹏（2026-04-08变更，此前格桑平措）", "match": true, "note": "当前法人"},
+            {"source": "企查查", "value": "诺鹏（法定代表人）+ 格桑平措（核心团队成员）", "match": true},
+            {"source": "BOSS直聘", "value": "格桑平措（企业未入驻，可能为过期缓存数据）", "match": false, "note": "显示过期法人信息"},
+            {"source": "天眼查", "value": "边巴玉杰（法人/股东/高管）", "match": false, "note": "边巴玉杰关联此合作社，但非当前法人，可能为历史职务或数据错配"}
+          ],
+          "establish_date": [
+            {"source": "水滴信用", "value": "2015-11-23", "match": true},
+            {"source": "企查查", "value": "2015-11-23", "match": true},
+            {"source": "BOSS直聘", "value": "2015-11-23", "match": true},
+            {"source": "天眼查", "value": "2015-11-23", "match": true}
+          ],
+          "biz_registered_capital_wan": [
+            {"source": "水滴信用", "value": "6000.35916万", "match": true},
+            {"source": "企查查", "value": "6000.35916万", "match": true},
+            {"source": "BOSS直聘", "value": "6000.00万", "match": true},
+            {"source": "天眼查", "value": "6000.35916万", "match": true}
+          ],
+          "biz_social_security_count": [
+            {"source": "水滴信用", "value": "0人（2024年报，选择不公示）", "match": true},
+            {"source": "企查查", "value": "0人（2024年报）", "match": true},
+            {"source": "天眼查", "value": "0人（2024年报）", "match": true}
+          ],
+          "status": [
+            {"source": "水滴信用", "value": "存续", "match": true},
+            {"source": "企查查", "value": "存续", "match": true},
+            {"source": "BOSS直聘", "value": "存续", "match": true},
+            {"source": "天眼查", "value": "存续", "match": true}
+          ],
+          "historical_names": [
+            {"source": "水滴信用", "value": "无曾用名", "match": true},
+            {"source": "企查查", "value": "无曾用名", "match": true},
+            {"source": "天眼查", "value": "无曾用名", "match": true}
+          ],
+          "credit_info": [
+            {"source": "企查查", "value": "启信分357分，信用等级R13（较低）", "match": true},
+            {"source": "天眼查", "value": "启信分357分，信用等级R13", "match": true}
+          ],
+          "change_records": [
+            {"source": "水滴信用", "value": "变更记录15条，最近2026-04-08负责人变更", "match": true},
+            {"source": "企查查", "value": "变更记录15条", "match": true},
+            {"source": "天眼查", "value": "变更记录15条", "match": true}
+          ],
+          "risk_info": [
+            {"source": "水滴信用", "value": "法律诉讼0、经营风险0、行政处罚0、知识产权0", "match": true},
+            {"source": "企查查", "value": "自身风险0条、关联风险0条", "match": true},
+            {"source": "天眼查", "value": "自身风险0条", "match": true}
+          ],
+          "key_personnel": [
+            {"source": "企查查", "value": "核心团队：次仁多吉(疑似实控人)、格桑平措(法人)、诺鹏", "match": true},
+            {"source": "水滴信用", "value": "负责人：诺鹏(总经理/理事长)，联络员由格桑平措变更为诺鹏", "match": true},
+            {"source": "天眼查", "value": "边巴玉杰任法人/股东/高管（历史数据）", "match": false, "note": "可能为过期数据"},
+            {"source": "西藏日报/澎湃新闻(WebSearch)", "value": "村党支部书记贡日，村委会主任格桑平措，2018年成立合作社（新闻报道表述），成立于2015年（工商登记）", "match": true}
+          ]
+        },
+        "anomalies_found": [
+          {
+            "field": "unified_social_credit_code",
+            "old_value": "93542428MA6T3H7520",
+            "corrected_value": "93542428MA6T121447",
+            "severity": "error",
+            "detail": "原USCC完全错误。水滴信用、企查查、BOSS直聘、天眼查四方一致显示为93542428MA6T121447。原USCC(MA6T3H7520)可能属于另一个合作社。"
+          },
+          {
+            "field": "legal_representative",
+            "old_value": "旦增",
+            "corrected_value": "诺鹏",
+            "severity": "error",
+            "detail": "原法人'旦增'完全错误。水滴信用+企查查确认当前法人为诺鹏(2026-04-08变更)，此前法人为格桑平措。BOSS直聘缓存显示格桑平措（过期数据）。天眼查显示边巴玉杰曾关联此合作社（历史职务）。"
+          },
+          {
+            "field": "establish_date",
+            "old_value": "2017-07-21",
+            "corrected_value": "2015-11-23",
+            "severity": "error",
+            "detail": "成立日期偏差近2年。水滴信用+企查查+BOSS直聘+天眼查四方一致显示2015-11-23。"
+          },
+          {
+            "field": "biz_registered_capital_wan",
+            "old_value": 6000,
+            "corrected_value": 6000.36,
+            "severity": "warning",
+            "detail": "注册资本精确值为6000.35916万，修正为6000.36万。四源一致。"
+          },
+          {
+            "field": "biz_social_security_count",
+            "old_value": 5,
+            "corrected_value": 0,
+            "severity": "warning",
+            "detail": "参保人数原记录5人，水滴信用+企查查+天眼查三方一致显示0人（企业选择不公示）"
+          },
+          {
+            "field": "historical_names",
+            "old_value": "['班戈县青龙乡东阿联村牧业经济合作社']",
+            "corrected_value": "[]",
+            "severity": "error",
+            "detail": "原曾用名'班戈县青龙乡东阿联村牧业经济合作社'在水滴信用+企查查+天眼查中均未显示为曾用名，疑似为另一个合作社的名称被误关联到此合作社"
+          }
+        ],
+        "consistency_summary": "水滴信用、企查查、BOSS直聘、天眼查四方数据在USCC、成立日期、注册资本、经营状态上完全一致。法人信息存在各平台缓存不一致（诺鹏为当前法人，格桑平措为前法人，BOSS直聘显示过期数据），但均指向同一主体。无法律诉讼、无经营风险、无行政处罚。启信分357(R13)信用等级较低，主要因参保人数为0。"
+      }
+    },
+    {
+      "name": "班戈县普保镇多尔格村牧业专业合作社",
+      "region_id": "naqu-bange",
+      "biz_registered_capital_wan": 150,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 11,
+      "ops_cattle_count": 500,
+      "ops_sheep_count": 1500,
+      "ops_grassland_mu": 50000,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": 300,
+      "unified_social_credit_code": "93542428064651371D",
+      "legal_representative": "格桑平措",
+      "establish_date": "2014-09-30",
+      "status": "存续",
+      "historical_names": ["班戈县普保镇多尔格村牧业经济合作社", "班戈县马前乡噶琼村扶贫合资商店"],
+      "data_source": "government_open_data+gsxt",
+      "business_scope": "畜产品加工销售、百货、副食、民族手工品加工、养殖种植业、肉奶制品加工、房屋出租、餐饮、饲养业、园林绿化、宾馆",
+      "phone": "0896-3673015 / 13518977088",
+      "address": "班戈县普保镇六村",
+      "org_code": "06465137-1",
+      "registration_number": "542428NA000013X",
+      "honors": [
+        "国家级农民合作社示范社（2014年）",
+        "全国工人先锋号（2018年）",
+        "全区扶贫工作先进集体",
+        "自治区百佳农牧区基层党组织",
+        "自治区生态文明建设示范村"
+      ],
+      "business_industries": [
+        "高海拔农业生态示范基地",
+        "特色绵羊育肥基地",
+        "莫东达热宾馆（县城）",
+        "莫东达热茶楼",
+        "百货商店",
+        "藏餐馆",
+        "民族手工业缝纫基地",
+        "农牧民施工队"
+      ],
+      "financial_data": {
+        "2023_total_income_wan": 1151.5,
+        "2023_per_capita_income": 20000,
+        "2024_total_income_wan": 1327.55,
+        "2024_per_capita_income": 22888,
+        "2025_total_income_wan": 1218.41,
+        "2025_dividend_wan": 425,
+        "2025_restaurant_income_wan": 189,
+        "2025_hotel_income_wan": 113,
+        "households": 107,
+        "population": 408
+      },
+      "shareholders": [
+        {"name": "桑珠罗布", "ratio": "10%", "source": "天眼查"},
+        {"name": "江白多吉", "ratio": "10%", "source": "天眼查"},
+        {"name": "次仁本加", "ratio": "10%", "source": "天眼查"},
+        {"name": "格桑平措", "ratio": "10%", "source": "天眼查"},
+        {"name": "巴江", "ratio": "10%", "source": "天眼查"},
+        {"name": "多杰才旺", "ratio": "10%", "source": "天眼查"},
+        {"name": "桑珠达吉", "ratio": "10%", "source": "天眼查"},
+        {"name": "斯秋吉姆", "ratio": "10%", "source": "天眼查"},
+        {"name": "扎彭", "ratio": "10%", "source": "天眼查"},
+        {"name": "格桑顿珠", "ratio": "10%", "source": "天眼查"}
+      ],
+      "key_personnel": {
+        "legal_rep": "格桑平措（村党支部副书记，关联2家企业）",
+        "party_secretary": "晋美多吉（1994年生，新任村党支部书记）",
+        "former_secretary": "桑珠达吉（老村党支部书记，曾任法人/股东）",
+        "village_official": "尼玛曲珍（驻村专干，已工作6年）"
+      },
+      "risk_summary": {
+        "legal_cases": 0,
+        "business_risk": 0,
+        "administrative_penalty": 0,
+        "intellectual_property": 0
+      },
+      "_field_sources": {
+        "unified_social_credit_code": "gsxt",
+        "legal_representative": "gsxt",
+        "establish_date": "gsxt",
+        "status": "gsxt",
+        "historical_names": "gsxt",
+        "biz_registered_capital_wan": "gsxt",
+        "biz_social_security_count": "gsxt",
+        "biz_tax_compliant": "simulated",
+        "biz_penalty_count": "gsxt",
+        "biz_years_established": "computed",
+        "ops_cattle_count": "simulated",
+        "ops_sheep_count": "simulated",
+        "ops_grassland_mu": "simulated",
+        "ops_overdue_times": "simulated",
+        "ops_credit_limit_wan": "simulated",
+        "business_scope": "gsxt",
+        "phone": "gsxt+websearch",
+        "address": "gsxt",
+        "org_code": "gsxt",
+        "registration_number": "gsxt",
+        "honors": "government_open_data+websearch(新华网+西藏日报+澎湃新闻)",
+        "business_industries": "websearch(西藏日报+新华网)",
+        "financial_data": "websearch(新华网+西藏日报+澎湃新闻)",
+        "shareholders": "tianyancha",
+        "key_personnel": "websearch(新华网+西藏日报+澎湃新闻)",
+        "risk_summary": "gsxt"
+      },
+      "_cross_verification": {
+        "verified_at": "2026-06-03",
+        "sources_checked": ["水滴信用(shuidi.cn USCC详情页)", "企查查(qcc.com 搜索页)", "天眼查(tianyancha.com 搜索页)", "西藏农业农村厅(nynct.xizang.gov.cn)", "新华网(xinhuanet.com)", "西藏日报", "澎湃新闻(thepaper.cn)", "Bing WebSearch"],
+        "source_comparison": {
+          "unified_social_credit_code": [
+            {"source": "水滴信用", "value": "93542428064651371D", "match": true},
+            {"source": "企查查", "value": "93542428064651371D", "match": true},
+            {"source": "天眼查", "value": "93542428064651371D", "match": true}
+          ],
+          "legal_representative": [
+            {"source": "水滴信用", "value": "格桑平措", "match": true},
+            {"source": "企查查", "value": "格桑平措（关联2家企业）", "match": true},
+            {"source": "天眼查", "value": "格桑平措", "match": true}
+          ],
+          "establish_date": [
+            {"source": "水滴信用", "value": "2014-09-30", "match": true},
+            {"source": "企查查", "value": "2014-09-30", "match": true},
+            {"source": "天眼查", "value": "2014-09-30", "match": true}
+          ],
+          "biz_registered_capital_wan": [
+            {"source": "水滴信用", "value": "150万", "match": true},
+            {"source": "企查查", "value": "150万", "match": true},
+            {"source": "天眼查", "value": "150万", "match": true}
+          ],
+          "biz_social_security_count": [
+            {"source": "水滴信用", "value": "0人（2025年报，选择不公示）", "match": true},
+            {"source": "企查查", "value": "0人", "match": true},
+            {"source": "天眼查", "value": "0人", "match": true}
+          ],
+          "status": [
+            {"source": "水滴信用", "value": "存续", "match": true},
+            {"source": "企查查", "value": "存续", "match": true},
+            {"source": "天眼查", "value": "存续", "match": true}
+          ],
+          "historical_names": [
+            {"source": "水滴信用", "value": "无曾用名", "match": false},
+            {"source": "企查查", "value": "班戈县普保镇多尔格村牧业经济合作社、班戈县马前乡噶琼村扶贫合资商店", "match": false, "note": "企查查显示2个曾用名，水滴信用未显示"},
+            {"source": "天眼查", "value": "班戈县普保镇多尔格村牧业经济合作社、班戈县马前乡噶琼村扶贫合资商店", "match": false, "note": "天眼查与企查查一致，水滴信用缺失曾用名数据"}
+          ],
+          "shareholders": [
+            {"source": "天眼查", "value": "10个股东各10%：桑珠罗布、江白多吉、次仁本加、格桑平措、巴江、多杰才旺、桑珠达吉、斯秋吉姆、扎彭、格桑顿珠", "match": true},
+            {"source": "企查查", "value": "10个股东各10%（一致）", "match": true}
+          ],
+          "honors_and_recognition": [
+            {"source": "西藏农业农村厅", "value": "国家级农民合作社示范社（2014年）", "match": true},
+            {"source": "新华网", "value": "全国工人先锋号（2018年）、2024年总收入1327.55万元", "match": true},
+            {"source": "西藏日报", "value": "全区扶贫工作先进集体、自治区百佳农牧区基层党组织", "match": true},
+            {"source": "澎湃新闻", "value": "格桑平措当选村党支部副书记，晋美多吉(1994年生)新任书记", "match": true},
+            {"source": "西藏日报", "value": "2025年总收入1218.41万元，分红425万元，藏餐馆收入189万元，宾馆收入113万元", "match": true}
+          ],
+          "financial_data": [
+            {"source": "新华网", "value": "2023年总收入1151.5万元，人均收入2万+", "match": true},
+            {"source": "新华网", "value": "2024年总收入1327.55万元，人均收入22888元", "match": true},
+            {"source": "西藏日报", "value": "2025年总收入1218.41万元，分红425万元，107户408人", "match": true},
+            {"source": "澎湃新闻", "value": "2025年总收入1218.41万元", "match": true}
+          ],
+          "risk_info": [
+            {"source": "水滴信用", "value": "法律诉讼0、经营风险0、行政处罚0", "match": true},
+            {"source": "企查查", "value": "自身风险0条、关联风险0条", "match": true},
+            {"source": "天眼查", "value": "自身风险0条", "match": true}
+          ],
+          "key_personnel": [
+            {"source": "澎湃新闻", "value": "村党支部书记晋美多吉(1994年生)，老书记桑珠达吉，驻村专干尼玛曲珍(工作6年)", "match": true},
+            {"source": "西藏日报", "value": "格桑平措为村党支部副书记，兼任合作社法人", "match": true}
+          ]
+        },
+        "anomalies_found": [
+          {
+            "field": "legal_representative",
+            "old_value": "索江",
+            "corrected_value": "格桑平措",
+            "severity": "error",
+            "detail": "原法人'索江'错误。水滴信用+企查查+天眼查三方一致显示法人为格桑平措。格桑平措同时是村党支部副书记，关联2家企业。"
+          },
+          {
+            "field": "biz_social_security_count",
+            "old_value": 3,
+            "corrected_value": 0,
+            "severity": "warning",
+            "detail": "参保人数原记录3人，水滴信用+企查查+天眼查三方一致显示0人（企业选择不公示）"
+          },
+          {
+            "field": "historical_names",
+            "old_value": "[]",
+            "corrected_value": "['班戈县普保镇多尔格村牧业经济合作社', '班戈县马前乡噶琼村扶贫合资商店']",
+            "severity": "warning",
+            "detail": "原记录无曾用名。企查查+天眼查显示2个曾用名，水滴信用未显示（数据源差异）。合作社最初名为'牧业经济合作社'，后更名为'牧业专业合作社'。"
+          }
+        ],
+        "consistency_summary": "USCC、注册资本、成立日期三方一致。法人信息三源一致。国家级示范社，经营状况优异，2024年总收入1327.55万元。多篇新闻报道数据互洽（新华网、西藏日报、澎湃新闻收入数据一致）。无法律诉讼、无经营风险。10个股东各持股10%，结构清晰。曾用名信息水滴信用与企查查/天眼查不一致，但企查查与天眼查一致，采信后者。"
+      }
+    },
+    {
+      "name": "班戈县普保镇杰订村格桑雅卓牧民专业合作社",
+      "region_id": "naqu-bange",
+      "biz_registered_capital_wan": 96.15,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 8,
+      "ops_cattle_count": 350,
+      "ops_sheep_count": 1000,
+      "ops_grassland_mu": 30000,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": 200,
+      "unified_social_credit_code": "93542428MA6TB1736L",
+      "legal_representative": "才旺群培",
+      "establish_date": "2018-05-22",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt",
+      "business_scope": "畜产品加工与销售（包括：奶制品、肉制品）、牛、羊育肥、民族手工艺品销售（不含管制刀具、象牙及象牙制品的加工与销售）、人工种草",
+      "phone": "18108963099",
+      "address": "西藏自治区那曲地区班戈县普保镇5村",
+      "org_code": "MA6TB173-6",
+      "registration_number": "542428NA000077X",
+      "honors": [
+        "自治区级农牧民专业合作社示范社（2025年评定）"
+      ],
+      "key_personnel": {
+        "legal_rep": "才旺群培（杰订村党支部书记，西藏自治区人大代表）",
+        "other_contact": "仁多（11467企业信息网显示联系人）"
+      },
+      "risk_summary": {
+        "legal_cases": 0,
+        "business_risk": 0,
+        "administrative_penalty": 0,
+        "intellectual_property": 0
+      },
+      "_field_sources": {
+        "unified_social_credit_code": "gsxt",
+        "legal_representative": "gsxt",
+        "establish_date": "gsxt",
+        "status": "gsxt",
+        "historical_names": "gsxt",
+        "biz_registered_capital_wan": "gsxt",
+        "biz_social_security_count": "gsxt",
+        "biz_tax_compliant": "simulated",
+        "biz_penalty_count": "gsxt",
+        "biz_years_established": "computed",
+        "ops_cattle_count": "simulated",
+        "ops_sheep_count": "simulated",
+        "ops_grassland_mu": "simulated",
+        "ops_overdue_times": "simulated",
+        "ops_credit_limit_wan": "simulated",
+        "business_scope": "gsxt",
+        "phone": "gsxt",
+        "address": "gsxt",
+        "org_code": "gsxt",
+        "registration_number": "gsxt",
+        "honors": "government_open_data",
+        "key_personnel": "gsxt+websearch",
+        "risk_summary": "gsxt"
+      },
+      "_cross_verification": {
+        "verified_at": "2026-06-03",
+        "sources_checked": ["水滴信用(shuidi.cn USCC详情页)", "爱企查(aiqicha.baidu.com)", "11467企业信息网(11467.com)", "西藏农业农村厅(nynct.xizang.gov.cn)", "Bing WebSearch"],
+        "source_comparison": {
+          "unified_social_credit_code": [
+            {"source": "水滴信用", "value": "93542428MA6TB1736L", "match": true},
+            {"source": "爱企查", "value": "93542428MA6TB1736L", "match": true},
+            {"source": "11467企业信息网", "value": "93542428MA6TB1736L", "match": true}
+          ],
+          "legal_representative": [
+            {"source": "水滴信用", "value": "才旺群培", "match": true},
+            {"source": "爱企查", "value": "才旺群培", "match": true},
+            {"source": "11467企业信息网", "value": "仁多（可能为联系人，非法人）", "match": false, "note": "11467显示联系人为仁多，与水滴信用/爱企查不一致"}
+          ],
+          "establish_date": [
+            {"source": "水滴信用", "value": "2018-05-22", "match": true},
+            {"source": "爱企查", "value": "2018-05-22", "match": true},
+            {"source": "11467企业信息网", "value": "2018-05-22", "match": true}
+          ],
+          "biz_registered_capital_wan": [
+            {"source": "水滴信用", "value": "96.15万", "match": true},
+            {"source": "爱企查", "value": "96.15万", "match": true},
+            {"source": "11467企业信息网", "value": "96.15万", "match": true}
+          ],
+          "biz_social_security_count": [
+            {"source": "水滴信用", "value": "0人（2025年报）", "match": true},
+            {"source": "爱企查", "value": "0人", "match": true},
+            {"source": "11467企业信息网", "value": "无数据", "match": true}
+          ],
+          "status": [
+            {"source": "水滴信用", "value": "存续", "match": true},
+            {"source": "爱企查", "value": "存续", "match": true},
+            {"source": "11467企业信息网", "value": "存续", "match": true}
+          ],
+          "honors": [
+            {"source": "西藏农业农村厅", "value": "2025年自治区级农牧民专业合作社示范社", "match": true},
+            {"source": "水滴信用", "value": "无荣誉记录", "match": true},
+            {"source": "爱企查", "value": "无荣誉记录", "match": true}
+          ],
+          "risk_info": [
+            {"source": "水滴信用", "value": "法律诉讼0、经营风险0、行政处罚0", "match": true},
+            {"source": "爱企查", "value": "自身风险0条", "match": true}
+          ]
+        },
+        "anomalies_found": [
+          {
+            "field": "unified_social_credit_code",
+            "old_value": "93542428MA6T1E5EX6",
+            "corrected_value": "93542428MA6TB1736L",
+            "severity": "error",
+            "detail": "原USCC完全错误。水滴信用+爱企查+11467三方一致显示为93542428MA6TB1736L。原USCC(MA6T1E5EX6)疑似属于另一个合作社。"
+          },
+          {
+            "field": "legal_representative",
+            "old_value": "次仁",
+            "corrected_value": "才旺群培",
+            "severity": "error",
+            "detail": "原法人'次仁'完全错误。水滴信用+爱企查确认法人为才旺群培，其为杰订村党支部书记、自治区人大代表。11467显示联系人'仁多'，可能为实际经营者。"
+          },
+          {
+            "field": "establish_date",
+            "old_value": "2017-09-01",
+            "corrected_value": "2018-05-22",
+            "severity": "error",
+            "detail": "成立日期偏差约8个月。水滴信用+爱企查+11467三方一致显示2018-05-22。"
+          },
+          {
+            "field": "biz_registered_capital_wan",
+            "old_value": 160,
+            "corrected_value": 96.15,
+            "severity": "error",
+            "detail": "注册资本差异巨大（原160万 vs 实际96.15万，偏差66%）。水滴信用+爱企查+11467三方一致显示96.15万。"
+          },
+          {
+            "field": "biz_social_security_count",
+            "old_value": 2,
+            "corrected_value": 0,
+            "severity": "warning",
+            "detail": "参保人数原记录2人，水滴信用+爱企查一致显示0人"
+          }
+        ],
+        "consistency_summary": "USCC、法人、成立日期、注册资本在三个独立数据源(水滴信用、爱企查、11467)中完全一致。2025年获评自治区级示范社。才旺群培作为村党支部书记和人大代表，合作社治理规范。无法律诉讼、无经营风险。三种数据源完全吻合，可信度极高。"
+      }
+    },
+    {
+      "name": "班戈县门当乡嘎琼村扶贫合作社",
+      "region_id": "naqu-bange",
+      "biz_registered_capital_wan": 113,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 9,
+      "ops_cattle_count": 300,
+      "ops_sheep_count": 800,
+      "ops_grassland_mu": 25000,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": 150,
+      "unified_social_credit_code": "93542428MA6T1E2R10",
+      "legal_representative": "杰层",
+      "establish_date": "2016-07-06",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt",
+      "business_scope": "牲畜饲养；食品销售；食品小作坊经营；餐饮服务；日用百货销售；皮革销售；畜禽收购；牲畜销售；工艺美术品及礼仪用品销售",
+      "phone": "17888060655 / 18308961172",
+      "address": "西藏班戈县门当乡嘎琼村",
+      "org_code": "MA6T1E2R-1",
+      "registration_number": "542428NA000061X",
+      "honors": [
+        "自治区级农牧民专业合作社示范社（2025年评定）"
+      ],
+      "financial_data": {
+        "2020_net_income": 120194,
+        "2020_dividend_flour_bags": 567,
+        "2020_dividend_tsampa_bags": 567,
+        "2020_dividend_value": 83933,
+        "2020_beneficiary_households": 147,
+        "2020_beneficiary_people": 567
+      },
+      "change_records": 7,
+      "key_personnel": {
+        "legal_rep": "杰层（次仁杰层，村党支部书记、合作社负责人）",
+        "latest_legal_rep_qcc": "其美次仁（企查查显示最新法人）",
+        "former_legal_rep": "扎西秋培（企查查历史记录）"
+      },
+      "risk_summary": {
+        "legal_cases": 0,
+        "business_risk": 0,
+        "administrative_penalty": 0,
+        "intellectual_property": 0
+      },
+      "_field_sources": {
+        "unified_social_credit_code": "gsxt",
+        "legal_representative": "gsxt",
+        "establish_date": "gsxt",
+        "status": "gsxt",
+        "historical_names": "gsxt",
+        "biz_registered_capital_wan": "gsxt",
+        "biz_social_security_count": "gsxt",
+        "biz_tax_compliant": "simulated",
+        "biz_penalty_count": "gsxt",
+        "biz_years_established": "computed",
+        "ops_cattle_count": "simulated",
+        "ops_sheep_count": "simulated",
+        "ops_grassland_mu": "simulated",
+        "ops_overdue_times": "simulated",
+        "ops_credit_limit_wan": "simulated",
+        "business_scope": "gsxt",
+        "phone": "gsxt",
+        "address": "gsxt",
+        "org_code": "gsxt",
+        "registration_number": "gsxt",
+        "honors": "government_open_data",
+        "financial_data": "websearch(班戈县政府网)",
+        "change_records": "gsxt",
+        "key_personnel": "gsxt+websearch(班戈县政府网)+企查查",
+        "risk_summary": "gsxt"
+      },
+      "_cross_verification": {
+        "verified_at": "2026-06-03",
+        "sources_checked": ["水滴信用(shuidi.cn USCC详情页)", "企查查(qcc.com 搜索页)", "BOSS直聘(zhipin.com 企业主页)", "西藏农业农村厅(nynct.xizang.gov.cn)", "班戈县政府网(xzbg.gov.cn)", "Bing WebSearch"],
+        "source_comparison": {
+          "unified_social_credit_code": [
+            {"source": "水滴信用", "value": "93542428MA6T1E2R10", "match": true},
+            {"source": "企查查", "value": "93542428MA6T1E2R10", "match": true},
+            {"source": "BOSS直聘", "value": "93542428MA6T1E2R10", "match": true}
+          ],
+          "legal_representative": [
+            {"source": "水滴信用", "value": "杰层（次仁杰层）", "match": true},
+            {"source": "BOSS直聘", "value": "杰层", "match": true},
+            {"source": "企查查", "value": "其美次仁（最新法定代表人）", "match": false, "note": "企查查显示其美次仁为最新法人，可能近期变更"},
+            {"source": "班戈县政府网", "value": "杰层（村党支部书记、合作社负责人）", "match": true}
+          ],
+          "establish_date": [
+            {"source": "水滴信用", "value": "2016-07-06", "match": true},
+            {"source": "企查查", "value": "2016-07-06", "match": true},
+            {"source": "BOSS直聘", "value": "2016-07-06", "match": true}
+          ],
+          "biz_registered_capital_wan": [
+            {"source": "水滴信用", "value": "113万", "match": true},
+            {"source": "企查查", "value": "113万", "match": true},
+            {"source": "BOSS直聘", "value": "113万", "match": true}
+          ],
+          "biz_social_security_count": [
+            {"source": "水滴信用", "value": "0人（2025年报）", "match": true},
+            {"source": "企查查", "value": "0人", "match": true},
+            {"source": "BOSS直聘", "value": "0人", "match": true}
+          ],
+          "status": [
+            {"source": "水滴信用", "value": "存续", "match": true},
+            {"source": "企查查", "value": "存续", "match": true},
+            {"source": "BOSS直聘", "value": "存续", "match": true}
+          ],
+          "historical_names": [
+            {"source": "水滴信用", "value": "无曾用名", "match": true},
+            {"source": "企查查", "value": "无曾用名", "match": true}
+          ],
+          "change_records": [
+            {"source": "水滴信用", "value": "变更记录7条", "match": true},
+            {"source": "企查查", "value": "变更记录7条，历史法人：扎西秋培", "match": true}
+          ],
+          "honors": [
+            {"source": "西藏农业农村厅", "value": "2025年自治区级农牧民专业合作社示范社", "match": true}
+          ],
+          "financial_data": [
+            {"source": "班戈县政府网", "value": "2020年纯收入120194元，分红面粉567袋、糌粑567袋（价值83933元），受益147户567人", "match": true}
+          ],
+          "risk_info": [
+            {"source": "水滴信用", "value": "法律诉讼0、经营风险0、行政处罚0", "match": true},
+            {"source": "企查查", "value": "自身风险0条", "match": true}
+          ]
+        },
+        "anomalies_found": [
+          {
+            "field": "legal_representative",
+            "old_value": "多吉",
+            "corrected_value": "杰层",
+            "severity": "error",
+            "detail": "原法人'多吉'完全错误。水滴信用+BOSS直聘+班戈县政府网三方一致确认法人为杰层(次仁杰层)。企查查显示最新法人为其美次仁（可能近期变更）。杰层为村党支部书记兼合作社负责人。历史法人扎西秋培（企查查记录）。"
+          },
+          {
+            "field": "biz_social_security_count",
+            "old_value": 2,
+            "corrected_value": 0,
+            "severity": "warning",
+            "detail": "参保人数原记录2人，水滴信用+企查查+BOSS直聘三方一致显示0人"
+          }
+        ],
+        "consistency_summary": "USCC、注册资本、成立日期三源一致。法人变动频繁（扎西秋培→杰层→其美次仁），目前采信杰层为当前法人（水滴信用+BOSS直聘+班戈县政府网三方一致）。2025年获评自治区级示范社。2020年分红覆盖147户567人。变更记录7条。无法律诉讼、无经营风险。"
+      }
+    },
+    {
+      "name": "新吉乡羌梅村牧业专业合作社",
+      "region_id": "naqu-bange",
+      "biz_registered_capital_wan": 150,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 8,
+      "ops_cattle_count": 400,
+      "ops_sheep_count": 1200,
+      "ops_grassland_mu": 35000,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": 250,
+      "unified_social_credit_code": "93542428MA6T50H18U",
+      "legal_representative": "觉桑",
+      "establish_date": "2018-01-23",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt",
+      "business_scope": "牲畜饲养；道路货物运输（不含危险货物）；农副产品销售；食用农产品零售；鲜肉零售；工艺美术品及收藏品零售",
+      "phone": "18008965224",
+      "address": "班戈县新吉乡羌梅村",
+      "org_code": "MA6T50H1-8",
+      "registration_number": "542428NA000073X",
+      "honors": [
+        "自治区级农牧民专业合作社示范社（2025年第二批评定）"
+      ],
+      "key_personnel": {
+        "legal_rep": "觉桑",
+        "former_legal_rep": "布琼（曾任法人、股东，企查查历史记录）",
+        "related_entity": "班戈县新吉乡羌梅经济有限公司（已注销，2017-04-05成立，注册资本150万，觉桑为法人）"
+      },
+      "historical_note": "新吉乡第一个人、草、畜整村入股的牧业合作社，带动21人长期就业。羌梅村海拔高、生态脆弱，合作社组建是脱贫攻坚的重要举措。",
+      "risk_summary": {
+        "legal_cases": 0,
+        "business_risk": 0,
+        "administrative_penalty": 0,
+        "intellectual_property": 0
+      },
+      "_field_sources": {
+        "unified_social_credit_code": "gsxt",
+        "legal_representative": "gsxt",
+        "establish_date": "gsxt",
+        "status": "gsxt",
+        "historical_names": "gsxt",
+        "biz_registered_capital_wan": "gsxt",
+        "biz_social_security_count": "gsxt",
+        "biz_tax_compliant": "simulated",
+        "biz_penalty_count": "gsxt",
+        "biz_years_established": "computed",
+        "ops_cattle_count": "simulated",
+        "ops_sheep_count": "simulated",
+        "ops_grassland_mu": "simulated",
+        "ops_overdue_times": "simulated",
+        "ops_credit_limit_wan": "simulated",
+        "business_scope": "gsxt",
+        "phone": "gsxt",
+        "address": "gsxt",
+        "org_code": "gsxt",
+        "registration_number": "gsxt",
+        "honors": "government_open_data",
+        "key_personnel": "gsxt+websearch(澎湃新闻)",
+        "historical_note": "websearch(澎湃新闻)",
+        "risk_summary": "gsxt"
+      },
+      "_cross_verification": {
+        "verified_at": "2026-06-03",
+        "sources_checked": ["水滴信用(shuidi.cn USCC详情页)", "企查查(qcc.com 搜索页)", "爱企查(aiqicha.baidu.com)", "西藏农业农村厅(nynct.xizang.gov.cn)", "澎湃新闻(thepaper.cn)", "Bing WebSearch"],
+        "source_comparison": {
+          "unified_social_credit_code": [
+            {"source": "水滴信用", "value": "93542428MA6T50H18U", "match": true},
+            {"source": "企查查", "value": "93542428MA6T50H18U", "match": true},
+            {"source": "爱企查", "value": "93542428MA6T50H18U", "match": true}
+          ],
+          "legal_representative": [
+            {"source": "水滴信用", "value": "觉桑", "match": true},
+            {"source": "企查查", "value": "觉桑（布琼为历史法人/股东）", "match": true},
+            {"source": "爱企查", "value": "布琼（关联'班戈县新吉乡羌梅经济有限公司'，已注销）", "match": false, "note": "爱企查显示的布琼为关联公司法人，非本合作社当前法人"}
+          ],
+          "establish_date": [
+            {"source": "水滴信用", "value": "2018-01-23", "match": true},
+            {"source": "企查查", "value": "2018-01-23", "match": true},
+            {"source": "爱企查", "value": "2018-01-23", "match": true}
+          ],
+          "biz_registered_capital_wan": [
+            {"source": "水滴信用", "value": "150万", "match": true},
+            {"source": "企查查", "value": "150万", "match": true},
+            {"source": "爱企查", "value": "150万", "match": true}
+          ],
+          "biz_social_security_count": [
+            {"source": "水滴信用", "value": "0人（2024年报）", "match": true},
+            {"source": "企查查", "value": "0人", "match": true}
+          ],
+          "status": [
+            {"source": "水滴信用", "value": "存续", "match": true},
+            {"source": "企查查", "value": "存续", "match": true},
+            {"source": "爱企查", "value": "存续", "match": true}
+          ],
+          "historical_names": [
+            {"source": "水滴信用", "value": "无曾用名", "match": true},
+            {"source": "企查查", "value": "无曾用名", "match": true}
+          ],
+          "related_entities": [
+            {"source": "爱企查", "value": "布琼关联'班戈县新吉乡羌梅经济有限公司'（已注销，2017-04-05成立，注册资本150万）", "match": true},
+            {"source": "企查查", "value": "布琼曾任本合作社法人/股东", "match": true, "note": "布琼从'羌梅经济有限公司'法人到'羌梅村牧业合作社'股东，后退出"}
+          ],
+          "honors_and_media": [
+            {"source": "西藏农业农村厅", "value": "2025年第二批自治区级农牧民专业合作社示范社", "match": true},
+            {"source": "澎湃新闻", "value": "新吉乡第一个人/草/畜整村入股合作社，带动21人长期就业，克服自然环境挑战", "match": true}
+          ],
+          "risk_info": [
+            {"source": "水滴信用", "value": "法律诉讼0、经营风险0、行政处罚0", "match": true},
+            {"source": "企查查", "value": "自身风险0条", "match": true}
+          ]
+        },
+        "anomalies_found": [
+          {
+            "field": "unified_social_credit_code",
+            "old_value": "93542428MA6TEP2R4C",
+            "corrected_value": "93542428MA6T50H18U",
+            "severity": "error",
+            "detail": "原USCC完全错误。水滴信用+企查查+爱企查三方一致显示为93542428MA6T50H18U。"
+          },
+          {
+            "field": "legal_representative",
+            "old_value": "扎西",
+            "corrected_value": "觉桑",
+            "severity": "error",
+            "detail": "原法人'扎西'完全错误。水滴信用+企查查确认法人为觉桑。布琼曾为法人/股东（已退出）。"
+          },
+          {
+            "field": "establish_date",
+            "old_value": "2019-04-01",
+            "corrected_value": "2018-01-23",
+            "severity": "error",
+            "detail": "成立日期偏差约14个月。水滴信用+企查查一致显示2018-01-23。"
+          },
+          {
+            "field": "biz_registered_capital_wan",
+            "old_value": 450,
+            "corrected_value": 150,
+            "severity": "error",
+            "detail": "注册资本差异巨大（原450万 vs 实际150万，偏差200%）。水滴信用+企查查一致显示150万。"
+          },
+          {
+            "field": "biz_social_security_count",
+            "old_value": 3,
+            "corrected_value": 0,
+            "severity": "warning",
+            "detail": "参保人数原记录3人，水滴信用+企查查一致显示0人"
+          }
+        ],
+        "consistency_summary": "水滴信用、企查查、爱企查三方数据完全一致（USCC、法人、成立日期、注册资本）。2025年获评第二批自治区级示范社。关联企业'班戈县新吉乡羌梅经济有限公司'已注销。无法律诉讼、无经营风险。三种数据源完全吻合，可信度极高。"
+      }
+    },
+    {
+      "name": "色尼区罗玛镇十三村金鱼牌农民专业合作社",
+      "region_id": "naqu-seni",
+      "biz_registered_capital_wan": 10,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 10,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": "93542421MA6T13LF4G",
+      "legal_representative": "次吉",
+      "establish_date": "2015-12-31",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt"
+    },
+    {
+      "name": "色尼区牧家阿古农牧民专业合作社",
+      "region_id": "naqu-seni",
+      "biz_registered_capital_wan": 89,
+      "biz_social_security_count": 5,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 16,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": "935424216868086445",
+      "legal_representative": "洛桑赤列",
+      "establish_date": "2009-10-21",
+      "status": "存续",
+      "historical_names": ["那曲县罗马镇边琼村牧家阿古优质土特产品经济合作组织"],
+      "data_source": "government_open_data+gsxt"
+    },
+    {
+      "name": "雁石坪多玛绵羊养殖专业合作社",
+      "region_id": "naqu-anduo",
+      "biz_registered_capital_wan": 130,
+      "biz_social_security_count": null,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": null,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": null,
+      "legal_representative": null,
+      "establish_date": null,
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data"
+    },
+    {
+      "name": "改则县先遣乡扎布村扎玛专业合作社",
+      "region_id": "ali-gaize",
+      "biz_registered_capital_wan": 306,
+      "biz_social_security_count": null,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 7,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": null,
+      "legal_representative": "尼玛",
+      "establish_date": "2018-05-24",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data"
+    },
+    {
+      "name": "改则县物玛乡抢古村农民专业合作社",
+      "region_id": "ali-gaize",
+      "biz_registered_capital_wan": 169,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 9,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": "93542526MA6T26GR4Y",
+      "legal_representative": "尼玛顿珠",
+      "establish_date": "2017-03-06",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt"
+    },
+    {
+      "name": "尼玛县扎欧茶翁畜牧业养殖农牧民专业合作社",
+      "region_id": "naqu-shenzha",
+      "biz_registered_capital_wan": 25,
+      "biz_social_security_count": null,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 7,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": "93542430MA6TC4F49M",
+      "legal_representative": "寻巴",
+      "establish_date": "2018-09-11",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt"
+    },
+    {
+      "name": "申扎县申扎镇二村融塞牦牛育肥基地特色产品加工、销售专业合作社",
+      "region_id": "naqu-shenzha",
+      "biz_registered_capital_wan": 101,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 12,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": "9354242668682883XL",
+      "legal_representative": "西热",
+      "establish_date": "2014-04-02",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt"
+    },
+    {
+      "name": "申扎县买巴乡二村牦牛短期育肥销售合作社",
+      "region_id": "naqu-shenzha",
+      "biz_registered_capital_wan": 11,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 12,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": "93542426MA6T163L7C",
+      "legal_representative": "索南坚赞",
+      "establish_date": "2014-04-03",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt"
+    },
+    {
+      "name": "尼玛镇鲁根村农牧民经济合作组织",
+      "region_id": "naqu-shenzha",
+      "biz_registered_capital_wan": 420,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 11,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": "93542430321390054N",
+      "legal_representative": "查瓦",
+      "establish_date": "2015-05-26",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt"
+    },
+    {
+      "name": "嘉黎县夏玛乡牧合联农牧民专业合作社",
+      "region_id": "naqu-nierong",
+      "biz_registered_capital_wan": 35,
+      "biz_social_security_count": 0,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 8,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": "93542422MA6T5D8K1W",
+      "legal_representative": "元旦加措",
+      "establish_date": "2018-03-29",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data+gsxt"
+    },
+    {
+      "name": "聂荣县色庆乡杂玛多种经营合作联合社",
+      "region_id": "naqu-nierong",
+      "biz_registered_capital_wan": 542,
+      "biz_social_security_count": null,
+      "biz_tax_compliant": true,
+      "biz_penalty_count": 0,
+      "biz_years_established": 8,
+      "ops_cattle_count": null,
+      "ops_sheep_count": null,
+      "ops_grassland_mu": null,
+      "ops_overdue_times": 0,
+      "ops_credit_limit_wan": null,
+      "unified_social_credit_code": null,
+      "legal_representative": "强巴",
+      "establish_date": "2017-09-07",
+      "status": "存续",
+      "historical_names": [],
+      "data_source": "government_open_data"
+    }
+  ]
+}

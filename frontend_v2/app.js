@@ -1,22 +1,11 @@
 /**
- * 工银牧融 - 前端应用
+ * 工银牧融 - 前端应用 v2
  * ============================================================================
- * Vue 3 SPA + ECharts
- *
- * 页面:
- *   home          - 首页（全屏 Hero + 要闻 + 能力 + 数据纵览 + 赋能 + 页脚）
- *   dashboard     - 风险评估
- *   overview      - 平台概览
- *   modules       - 业务模块列表
- *   module-detail - 模块详情
- *   data          - 数据底座
- *   roadmap       - 实施路线
- *   insurance     - 保险协同
- *   supply-chain  - 产业链资金闭环
- *   green-performance - 绿色绩效
- *   livelihood    - 边疆民生
- *
- * 管理端: /admin (独立页面)
+ * 精简版: 4 个核心页面
+ *   home         - 首页（全屏 Hero + 要闻 + 能力 + 数据纵览 + 页脚）
+ *   cooperative  - 合作社评估（排序 + 载畜量 + 预警 + 绿色绩效）
+ *   data         - 数据中心（预警/气象/遥感/金融/风险/保险 6 子标签）
+ *   map          - 证据地图
  */
 
 const { createApp } = Vue;
@@ -1755,16 +1744,14 @@ createApp({
       window.scrollTo({ top: 0, behavior: "smooth" });
       if (page === "home") this.startHero(); else this.stopHero();
       this.$nextTick(() => {
-        if (page === "dashboard") {
-          this.loadModelData();
-        }
-        if (page === "overview") this.renderOverviewChartsSoon();
         if (page === "data") { this.renderDataChartsSoon(); this.loadWarningData(); }
-        if (page === "green-performance") this.renderOverviewChartsSoon();
-        if (page === "data" && this.dataTab === "risk") renderRiskChart(this.data?.risk_assessment);
-        if (page === "cooperative-ranking" && !this.coopRegions.length) {
-          this.coopRegions = (this.data?.regions || []).map(r => ({ id: r.id, name: r.name }));
+        if (page === "cooperative") {
+          if (!this.coopRegions.length) {
+            this.coopRegions = (this.data?.regions || []).map(r => ({ id: r.id, name: r.name }));
+          }
+          this.loadWarningData();
         }
+        if (page === "map") this.initMap();
       });
     },
 
@@ -2442,10 +2429,16 @@ createApp({
 
     async init() {
       const hash = window.location.hash.replace("#", "");
-      const valid = ["home","dashboard","overview","modules","data","roadmap","insurance","supply-chain","green-performance","livelihood"];
+      const valid = ["home","cooperative","data","map"];
       if (hash && valid.includes(hash)) this.page = hash;
 
-      this.data = await api.platform();
+      this.loading = false;  // 先解锁, 避免 JS 错误时永远卡在 loading 屏幕
+      try {
+        this.data = await api.platform();
+      } catch (e) {
+        console.error("platform 加载失败:", e);
+        return;
+      }
       if (Array.isArray(this.data.slides) && this.data.slides.length) {
         this.heroSlides = this.data.slides.map((slide, idx) => ({
           scene: slide.scene || ["snow", "grassland", "river", "sunset"][idx % 4],
@@ -2458,18 +2451,16 @@ createApp({
       }
       if (!this.selectedModule) this.selectedModule = this.businessModules[0] || this.data.modules[0];
       this.closedLoop = this.data?.closed_loop || {};
-      await this.loadModelData();
+      try { await this.loadModelData(); } catch (e) { console.error("loadModelData:", e); }
 
       this.loading = false;
       if (this.page === "home") this.startHero();
 
       await this.$nextTick();
-      if (this.page === "dashboard") {
-        this.renderDashboardChartsSoon();
+      if (this.page === "data") { try { this.renderDataChartsSoon(); } catch(e){console.warn(e);} this.loadWarningData(); }
+      if (this.page === "cooperative") {
+        this.coopRegions = (this.data?.regions || []).map(r => ({ id: r.id, name: r.name }));
       }
-      if (this.page === "overview") this.renderOverviewChartsSoon();
-      if (this.page === "data") { this.renderDataChartsSoon(); this.loadWarningData(); }
-      if (this.page === "data" && this.dataTab === "risk") renderRiskChart(this.data?.risk_assessment);
 
       window.addEventListener("hashchange", () => {
         const h = window.location.hash.replace("#", "");
@@ -2477,7 +2468,7 @@ createApp({
       });
       window.addEventListener("scroll", this.onScroll);
       document.addEventListener("visibilitychange", this.handleVisibilityChange);
-      this.startWeatherAutoRefresh();
+      try { this.startWeatherAutoRefresh(); } catch(e){console.warn(e);}
     },
   },
 
