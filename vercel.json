@@ -1,0 +1,49 @@
+{
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": "backend/**/*.py,backend/**/*.json,backend/media/**/*,public_data/region_list.csv"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "frontend_v3/assets/$1"
+    },
+    {
+      "src": "/vendor/(.*)",
+      "dest": "frontend_v3/vendor/$1"
+    },
+    {
+      "src": "/(.*\\.(html|css|js|png|jpg|jpeg|gif|svg|ico|json|woff2?))",
+      "dest": "frontend_v3/$1"
+    },
+    {
+      "src": "/admin",
+      "dest": "frontend_v3/admin.html"
+    },
+    {
+      "src": "/data",
+      "dest": "frontend_v3/data.html"
+    },
+    {
+      "src": "/modules",
+      "dest": "frontend_v3/modules.html"
+    },
+    {
+      "src": "/overview",
+      "dest": "frontend_v3/overview.html"
+    },
+    {
+      "src": "/",
+      "dest": "frontend_v3/index.html"
+    }
+  ]
+}

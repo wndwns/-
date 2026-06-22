@@ -53,3 +53,9 @@ backend/media/slides/*
 
 # Office temporary files
 ~$*.docx
+
+# Vercel
+.vercel/
+
+# WorkBuddy project data
+.workbuddy/

@@ -449,6 +449,8 @@ class FeedEstimator:
         herd_size: int = 1,
         start_date: str | datetime | None = None,
         months: int = 6,
+        altitude: float | None = None,
+        temp_correction: float = 0.0,
     ) -> dict[str, Any]:
         """执行完整估算。
 
@@ -457,6 +459,8 @@ class FeedEstimator:
             herd_size: 存栏规模（头数）
             start_date: 起始日期，默认今天
             months: 预测月数
+            altitude: 指定海拔 (m)，None则从region_list.csv获取
+            temp_correction: 外部温度修正值 (°C)，如牧场海拔修正
 
         Returns:
             完整估算结果字典
@@ -482,14 +486,22 @@ class FeedEstimator:
         if not weather_rows:
             return {"error": "no_weather_data", "message": f"({lat}, {lon}) 及邻近区域无气象数据"}
 
-        temp_correction = weather_correction["temp_correction_c"] if weather_correction else 0.0
+        station_temp_correction = weather_correction["temp_correction_c"] if weather_correction else 0.0
         if weather_correction:
             corrections_applied.append(
                 f"气象数据修正: {weather_correction['note']}"
             )
 
+        # 合并外部温度修正（如牧场海拔修正）
+        total_temp_correction = station_temp_correction + temp_correction
+        if temp_correction != 0.0:
+            corrections_applied.append(
+                f"牧场海拔修正: {temp_correction:+.1f}°C "
+                f"(Δh × 0.0065°C/m)"
+            )
+
         # ── 步骤 3: 拟合正弦温度模型 ──
-        fit_info = self._temp_model.fit(weather_rows, temp_correction)
+        fit_info = self._temp_model.fit(weather_rows, total_temp_correction)
         if "error" in fit_info:
             return fit_info
 
@@ -570,11 +582,13 @@ class FeedEstimator:
         )
 
         # ── 组装结果 ──
+        result_altitude = altitude if altitude is not None else region_info.get("altitude", 0)
         return {
             "location": {
                 "query_lat": lat,
                 "query_lon": lon,
                 **region_info,
+                "altitude": result_altitude,
                 "weather_source": weather_correction["source_region"] if weather_correction else region_info["region_id"],
                 "weather_is_exact": weather_correction is None,
             },
@@ -952,15 +966,21 @@ class SeasonalPastureEstimator:
         for season, pasture_data in pastures.items():
             if len(pasture_data) == 2:
                 lat, lon = pasture_data
-                altitude_correction = 0.0
+                altitude = None
+                alt_correction = 0.0
             else:
                 lat, lon, altitude = pasture_data
-                # 找最近气象站，计算海拔修正
+                # 找最近气象站海拔，计算温度修正
+                # 牧场海拔 vs 气象站海拔 → ΔT
                 matcher = CoordinateMatcher()
                 nearest = matcher.find_nearest(lat, lon)
                 if nearest:
                     station_alt = nearest.get("altitude", altitude)
-                    altitude_correction = (station_alt - altitude) * 0.0065
+                    # station_alt 是气象站/县城高程, altitude 是牧场高程
+                    # 牧场更高 → 更冷 → alt_correction 为负
+                    alt_correction = (station_alt - altitude) * 0.0065
+                else:
+                    alt_correction = 0.0
 
             months_in_season = pasture_months[season]
             first_month = months_in_season[0]
@@ -977,6 +997,8 @@ class SeasonalPastureEstimator:
                 herd_size=herd_size,
                 start_date=start_str,
                 months=n_months,
+                altitude=altitude,
+                temp_correction=alt_correction,
             )
 
             results[season] = {
@@ -984,7 +1006,8 @@ class SeasonalPastureEstimator:
                 "months": months_in_season,
                 "n_months": n_months,
                 "coords": {"lat": round(lat, 4), "lon": round(lon, 4)},
-                "altitude_correction": round(altitude_correction, 1) if altitude_correction != 0 else 0,
+                "altitude": altitude if altitude else "unknown",
+                "altitude_correction_c": round(alt_correction, 1),
             }
 
             if "error" not in r:
