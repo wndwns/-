@@ -31,6 +31,15 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+# 灾害预测模块（可选，缺失则降级）
+try:
+    from disaster_forecast import forecast_disaster as _forecast_disaster, load_region_mapping as _load_disaster_regions
+    _DISASTER_FORECAST_OK = True
+except Exception as _e:
+    _DISASTER_FORECAST_OK = False
+    _forecast_disaster = None
+    _load_disaster_regions = None
+
 # ---------------------------------------------------------------------------
 # 路径
 # ---------------------------------------------------------------------------
@@ -861,6 +870,105 @@ def create_app() -> FastAPI:
         return get_model().macro_background()
 
     # ======================================================================
+    # SHAP 可解释性 API — 风险解释报告
+    # ======================================================================
+
+    @app.get("/api/model/explain/{region_id}")
+    def model_explain(region_id: str, top_k: int = 8) -> dict[str, Any]:
+        """返回指定区域的 SHAP 风险解释报告。
+
+        包含：
+        - base_value: 训练集平均预测风险分
+        - prediction: 当前预测风险分
+        - top_drivers: 贡献最大的 top_k 个特征（含方向）
+        - full_explanation: 全部16维特征的SHAP值
+        - summary: 自然语言风险摘要
+        - recommendations: 基于解释的针对性建议
+        """
+        try:
+            from models import get_model
+        except ImportError:
+            from backend.models import get_model  # type: ignore[no-redef]
+        return get_model().explain_prediction(region_id, top_k=top_k)
+
+    @app.get("/api/model/explain-all")
+    def model_explain_all() -> list[dict[str, Any]]:
+        """批量返回所有区域的风险解释报告。"""
+        try:
+            from models import get_model
+        except ImportError:
+            from backend.models import get_model  # type: ignore[no-redef]
+        return get_model().explain_batch()
+
+    @app.get("/api/model/backtest")
+    def model_backtest() -> dict[str, Any]:
+        """返回模型回测验证报告。
+
+        报告包含3个层次验证：
+        1. 时间序列交叉验证 (Walk-Forward CV)
+        2. 真实标签前向验证 (2020-2022训练 → 2023预测)
+        3. PSI 特征稳定性验证
+        """
+        import json as _json
+        from pathlib import Path as _Path
+        report_path = _Path(__file__).resolve().parent / "data_store" / "backtest_report.json"
+        if not report_path.exists():
+            return {"error": "backtest_report.json not found", "overall_pass": False}
+        return _json.loads(report_path.read_text(encoding="utf-8"))
+
+    # ======================================================================
+    # 保单画像与增信评分 API（百巴村1135条真实保单）
+    # ======================================================================
+
+    @app.get("/api/insurance-portfolio/profile")
+    def insurance_profile() -> dict[str, Any]:
+        """百巴村畜牧产业画像。"""
+        try:
+            from insurance_portfolio import get_profile
+        except ImportError:
+            from backend.insurance_portfolio import get_profile  # type: ignore[no-redef]
+        return get_profile()
+
+    @app.get("/api/insurance-portfolio/farmers")
+    def insurance_farmers() -> list[dict[str, Any]]:
+        """21户农户增信评分列表（按增信分降序）。"""
+        try:
+            from insurance_portfolio import get_farmers
+        except ImportError:
+            from backend.insurance_portfolio import get_farmers  # type: ignore[no-redef]
+        return get_farmers()
+
+    @app.get("/api/insurance-portfolio/farmer/{farmer_id}")
+    def insurance_farmer_detail(farmer_id: str) -> dict[str, Any]:
+        """单户农户详情（含增信评分明细）。"""
+        try:
+            from insurance_portfolio import get_farmer_detail
+        except ImportError:
+            from backend.insurance_portfolio import get_farmer_detail  # type: ignore[no-redef]
+        result = get_farmer_detail(farmer_id)
+        if result is None:
+            return {"error": f"farmer {farmer_id} not found"}
+        return result
+
+    @app.get("/api/insurance-portfolio/synergy")
+    def insurance_synergy() -> dict[str, Any]:
+        """银保协同场景数据（农行承保→工行放贷→保险兜底）。"""
+        try:
+            from insurance_portfolio import get_synergy
+        except ImportError:
+            from backend.insurance_portfolio import get_synergy  # type: ignore[no-redef]
+        return get_synergy()
+
+    @app.get("/api/insurance-portfolio/comprehensive-risk")
+    def insurance_comprehensive_risk() -> dict[str, Any]:
+        """综合风险评估 = 环境风险 + 保险增信。"""
+        try:
+            from insurance_portfolio import get_comprehensive_risk
+        except ImportError:
+            from backend.insurance_portfolio import get_comprehensive_risk  # type: ignore[no-redef]
+        return get_comprehensive_risk()
+
+    # ======================================================================
     # 饲料需求估算 API（方案B: 日值正弦插值 + NDVI修正）
     # ======================================================================
 
@@ -1357,6 +1465,37 @@ def create_app() -> FastAPI:
         }
 
     # ======================================================================
+    # 时空网格模型 API
+    # ======================================================================
+
+    @app.get("/api/grid/status")
+    def grid_status_api() -> dict[str, Any]:
+        try:
+            from spatio_temporal_grid import grid_status
+        except ImportError:
+            from backend.spatio_temporal_grid import grid_status
+        return grid_status()
+
+    @app.get("/api/grid/all")
+    def grid_all_api() -> list[dict[str, Any]]:
+        try:
+            from spatio_temporal_grid import build_all_grids
+        except ImportError:
+            from backend.spatio_temporal_grid import build_all_grids
+        return build_all_grids()
+
+    @app.get("/api/grid/{region_id}")
+    def grid_region_api(region_id: str) -> dict[str, Any]:
+        try:
+            from spatio_temporal_grid import build_grid
+        except ImportError:
+            from backend.spatio_temporal_grid import build_grid
+        result = build_grid(region_id)
+        if not result.get("grids"):
+            raise HTTPException(status_code=404, detail=f"无数据: {region_id}")
+        return result
+
+    # ======================================================================
     # 管理端独立页面
     # ======================================================================
 
@@ -1364,6 +1503,55 @@ def create_app() -> FastAPI:
     def admin_page() -> FileResponse:
         target = FRONTEND_DIR / "admin.html"
         return FileResponse(target, headers={"Cache-Control": "no-store"})
+
+    # ======================================================================
+    # 灾害预测 API
+    # ======================================================================
+
+    @app.get("/api/disaster-forecast")
+    def disaster_forecast(
+        region: str | None = None,
+        lat: float | None = None,
+        lon: float | None = None,
+    ) -> dict[str, Any]:
+        """输入地区名或经纬度，返回未来3个月5灾种风险预测
+
+        参数（三选一）:
+          - region: 中文县名/简称/region_id/任意地名（如"班戈县"、"拉萨"、"naqu-bange"）
+          - lat + lon: 经纬度
+        """
+        if not _DISASTER_FORECAST_OK:
+            return {"ok": False, "message": "灾害预测模块未加载，请检查 disaster_forecast.py"}
+        if not region and (lat is None or lon is None):
+            return {"ok": False, "message": "请提供 region 参数或 lat/lon 参数"}
+        try:
+            return _forecast_disaster(query=region or "", lat=lat, lon=lon)
+        except Exception as exc:
+            return {"ok": False, "message": f"预测失败: {exc}"}
+
+    @app.get("/api/disaster-forecast/regions")
+    def disaster_forecast_regions() -> dict[str, Any]:
+        """返回支持的26个预设地区（用于前端下拉框）"""
+        if not _DISASTER_FORECAST_OK or not _load_disaster_regions:
+            return {"ok": False, "regions": []}
+        try:
+            mapping = _load_disaster_regions()
+            seen = set()
+            regions = []
+            for v in mapping.values():
+                if v["region_id"] not in seen:
+                    seen.add(v["region_id"])
+                    regions.append({
+                        "region_id": v["region_id"],
+                        "region_name": v["region_name"],
+                        "latitude": v["latitude"],
+                        "longitude": v["longitude"],
+                        "pasture_type": v.get("pasture_type", ""),
+                    })
+            regions.sort(key=lambda r: r["region_id"])
+            return {"ok": True, "regions": regions, "count": len(regions)}
+        except Exception as exc:
+            return {"ok": False, "message": str(exc), "regions": []}
 
     # ======================================================================
     # 404 兜底

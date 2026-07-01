@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>CMFD 数据下载</title>
+<style>
+body { font-family: 'Microsoft YaHei', sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+.card { background: white; border-radius: 12px; padding: 24px; margin: 16px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+h1 { color: #1a5276; }
+.filename { font-family: monospace; font-size: 13px; color: #555; word-break: break-all; }
+.size { color: #888; font-size: 14px; }
+.status { font-size: 14px; padding: 4px 10px; border-radius: 12px; display: inline-block; margin-left: 10px; }
+.downloading { background: #fff3cd; color: #856404; }
+.done { background: #d4edda; color: #155724; }
+.btn { display: inline-block; padding: 10px 24px; background: #2980b9; color: white; text-decoration: none; border-radius: 6px; margin-top: 10px; font-size: 15px; }
+.btn:hover { background: #1a5276; }
+p { color: #666; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<h1>CMFD 气象数据批量下载</h1>
+<p>点击下方按钮逐个下载，浏览器会自动保存。下载完成后告诉我，我来跑数据提取。</p>
+
+<div class="card">
+  <strong>1. 温度 (Temperature)</strong><br>
+  <span class="filename">temp_CMFD_V0200_B-01_01mo_010deg_195101-202412.nc</span><br>
+  <span class="size">~949 MB</span><br>
+  <a class="btn" href="ftp://download_31964699:64744915@ftp2.tpdc.ac.cn:6201/Data_forcing_01mo_010deg/temp_CMFD_V0200_B-01_01mo_010deg_195101-202412.nc" target="_blank">下载温度文件</a>
+  <p style="font-size:12px;color:#999;margin-top:8px;">保存到: public_data/raw/tpdc/cmfd/</p>
+</div>
+
+<div class="card">
+  <strong>2. 降水 (Precipitation)</strong><br>
+  <span class="filename">prec_CMFD_V0200_B-01_01mo_010deg_195101-202412.nc</span><br>
+  <span class="size">~949 MB</span><br>
+  <a class="btn" href="ftp://download_31964699:64744915@ftp2.tpdc.ac.cn:6201/Data_forcing_01mo_010deg/prec_CMFD_V0200_B-01_01mo_010deg_195101-202412.nc" target="_blank">下载降水文件</a>
+  <p style="font-size:12px;color:#999;margin-top:8px;">保存到: public_data/raw/tpdc/cmfd/</p>
+</div>
+
+<div class="card">
+  <strong>3. 风速 (Wind Speed)</strong><br>
+  <span class="filename">wind_CMFD_V0200_B-01_01mo_010deg_195101-202412.nc</span><br>
+  <span class="size">~949 MB</span><br>
+  <a class="btn" href="ftp://download_31964699:64744915@ftp2.tpdc.ac.cn:6201/Data_forcing_01mo_010deg/wind_CMFD_V0200_B-01_01mo_010deg_195101-202412.nc" target="_blank">下载风速文件</a>
+  <p style="font-size:12px;color:#999;margin-top:8px;">保存到: public_data/raw/tpdc/cmfd/</p>
+</div>
+
+<p style="text-align:center;margin-top:30px;color:#aaa;">
+  三个文件各约 949 MB，共约 2.8 GB。建议逐个点击，等一个下载完再点下一个。
+</p>
+
+</body>
+</html>

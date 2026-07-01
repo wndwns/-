@@ -59,3 +59,37 @@ backend/media/slides/*
 
 # WorkBuddy project data
 .workbuddy/
+
+# 临时探索/调试文件（不提交）
+.chrome-tmp/
+tpdc_captcha*.png
+tpdc_session.pkl
+tpdc_state.json
+tpdc_uuid.txt
+backend/daily_comparison_*.txt
+public_data/scripts/browser_data/
+public_data/scripts/tpdc_login.py
+public_data/scripts/tpdc_browser_*.py
+public_data/scripts/explore_imap*.py
+public_data/scripts/click_imap_download.py
+public_data/scripts/check_account.py
+public_data/scripts/download_grassland_data*.py
+public_data/scripts/download_file_4069.py
+public_data/scripts/download_with_requests.py
+public_data/scripts/retry_data_download.py
+public_data/scripts/read_classification.py
+public_data/scripts/analyze_tpdc_page.py
+
+# 备份文件
+backend/data_store/*.bak_*
+backend/data_store/*_old_*.json
+backend/data_store/*_demo_backup.json
+backend/data_store/npp_by_region_regional.json
+
+# 临时分析报告（非项目核心文件）
+保单分析报告.html
+保单分析结果.json
+项目架构分析报告.md
+
+# 数据集旧版备份
+public_data/raw/tpdc/cmfd/*.nc

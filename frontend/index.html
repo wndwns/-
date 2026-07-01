@@ -36,6 +36,8 @@
               <a :class="{ active: page === 'green-performance' }" @click="navigate('green-performance')">绿色绩效</a>
               <a :class="{ active: page === 'livelihood' }" @click="navigate('livelihood')">边疆民生</a>
               <a :class="{ active: page === 'cooperative-ranking' }" @click="navigate('cooperative-ranking')">合作社排序</a>
+              <a :class="{ active: page === 'insurance-portfolio' }" @click="navigate('insurance-portfolio')">保单画像</a>
+              <a :class="{ active: page === 'disaster-forecast' }" @click="navigate('disaster-forecast')">灾害预测</a>
             </nav>
           </div>
         </header>
@@ -1449,6 +1451,236 @@
               </div>
             </div>
 
+            <!-- 保单画像与增信评分 -->
+            <div v-show="page === 'insurance-portfolio'">
+              <div class="public-page public-page-plain">
+                <section class="plain-page-head">
+                  <h1>保单画像与增信评分</h1>
+                  <p>百巴村1135条真实保单 · 21户牧民 · 农行承保→工行放贷→保险兜底</p>
+                </section>
+
+                <!-- 画像统计卡片 -->
+                <section v-if="portfolioProfile" class="stats-grid" style="margin-bottom:24px;">
+                  <div class="stats-card">
+                    <span class="stats-num">{{ portfolioProfile.total_policies }}</span>
+                    <span class="stats-unit">条</span>
+                    <span class="stats-label">保单总数</span>
+                  </div>
+                  <div class="stats-card">
+                    <span class="stats-num">{{ portfolioProfile.farmer_count }}</span>
+                    <span class="stats-unit">户</span>
+                    <span class="stats-label">投保农户</span>
+                  </div>
+                  <div class="stats-card">
+                    <span class="stats-num">{{ portfolioProfile.total_cattle }}</span>
+                    <span class="stats-unit">头</span>
+                    <span class="stats-label">投保牦牛</span>
+                  </div>
+                  <div class="stats-card">
+                    <span class="stats-num">{{ portfolioProfile.avg_herd_size }}</span>
+                    <span class="stats-unit">头</span>
+                    <span class="stats-label">户均规模</span>
+                  </div>
+                </section>
+
+                <section v-if="!portfolioProfile && !portfolioLoading" class="coop-empty-hint">
+                  <p>正在加载保单数据…</p>
+                </section>
+
+                <!-- 银保协同场景 -->
+                <section v-if="portfolioSynergy" style="margin-bottom:24px;">
+                  <h2 style="margin-bottom:12px;">银保协同场景</h2>
+                  <div class="news-grid">
+                    <div class="news-card">
+                      <div class="news-tag tag-green">{{ portfolioSynergy.insurance_bank }}</div>
+                      <h3>承保方</h3>
+                      <p>{{ portfolioSynergy.total_cattle_insured }}头{{ portfolioSynergy.livestock_type }}已承保</p>
+                    </div>
+                    <div class="news-card">
+                      <div class="news-tag tag-green">{{ portfolioSynergy.lending_bank }}</div>
+                      <h3>放贷方</h3>
+                      <p>{{ portfolioSynergy.farmer_count }}户牧民牦牛养殖贷款</p>
+                    </div>
+                    <div class="news-card">
+                      <div class="news-tag tag-orange">兜底{{ portfolioSynergy.risk_reduction_pct }}%</div>
+                      <h3>风险缩减</h3>
+                      <p>保险兜底总额约{{ (portfolioSynergy.total_insurance_coverage/10000).toFixed(1) }}万元</p>
+                    </div>
+                  </div>
+                  <div style="background:#f6f9f6;padding:16px;border-radius:8px;margin-top:12px;">
+                    <p v-for="(line, i) in portfolioSynergy.synergy_logic" :key="i" style="margin:4px 0;color:#444;">
+                      {{ i + 1 }}. {{ line }}
+                    </p>
+                    <p style="margin-top:12px;color:#2d7d4f;font-weight:600;">{{ portfolioSynergy.summary }}</p>
+                  </div>
+                </section>
+
+                <!-- 综合风险 -->
+                <section v-if="portfolioComprehensive" style="margin-bottom:24px;">
+                  <h2 style="margin-bottom:12px;">百巴村综合风险评估</h2>
+                  <div style="background:#f6f9f6;padding:16px;border-radius:8px;">
+                    <p style="margin:6px 0;">
+                      环境风险评分：
+                      <strong>{{ portfolioComprehensive.environment_risk.risk_score ?? '未知' }}</strong>
+                      <span v-if="portfolioComprehensive.environment_risk.risk_level">（{{ portfolioComprehensive.environment_risk.risk_level }}）</span>
+                    </p>
+                    <p style="margin:6px 0;">
+                      保险增信缩减风险敞口：
+                      <strong>{{ portfolioComprehensive.insurance_synergy.risk_reduction_pct }}%</strong>
+                    </p>
+                    <p style="margin:6px 0;">
+                      综合风险评分：
+                      <strong style="font-size:18px;color:#d44a4a;">
+                        {{ portfolioComprehensive.comprehensive_risk_score ?? '未知' }}
+                      </strong>
+                      <span>（{{ portfolioComprehensive.comprehensive_risk_level }}）</span>
+                    </p>
+                    <p style="margin-top:12px;color:#2d7d4f;font-weight:600;">{{ portfolioComprehensive.conclusion }}</p>
+                  </div>
+                </section>
+
+                <!-- 规模分布 -->
+                <section v-if="portfolioProfile" style="margin-bottom:24px;">
+                  <h2 style="margin-bottom:12px;">规模分布</h2>
+                  <div id="chart-portfolio-scale" style="width:100%;height:300px;"></div>
+                </section>
+
+                <!-- 农户增信评分表 -->
+                <section v-if="portfolioFarmers.length" style="margin-bottom:24px;">
+                  <h2 style="margin-bottom:12px;">农户增信评分（{{ portfolioFarmers.length }}户，按增信分降序）</h2>
+                  <div id="chart-portfolio-farmers" style="width:100%;height:400px;margin-bottom:16px;"></div>
+                  <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                      <thead>
+                        <tr style="background:#2d7d4f;color:#fff;">
+                          <th style="padding:8px;text-align:left;">排名</th>
+                          <th style="padding:8px;text-align:left;">农户</th>
+                          <th style="padding:8px;text-align:right;">投保头数</th>
+                          <th style="padding:8px;text-align:right;">耳标批次</th>
+                          <th style="padding:8px;text-align:right;">增信分</th>
+                          <th style="padding:8px;text-align:center;">等级</th>
+                          <th style="padding:8px;text-align:left;">建议授信</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(f, i) in portfolioFarmers" :key="f.farmer_id"
+                            style="border-bottom:1px solid #e8e8e8;"
+                            :style="{ background: i % 2 === 0 ? '#fafafa' : '#fff' }">
+                          <td style="padding:8px;">{{ i + 1 }}</td>
+                          <td style="padding:8px;">{{ f.farmer_name }}</td>
+                          <td style="padding:8px;text-align:right;">{{ f.herd_size }}</td>
+                          <td style="padding:8px;text-align:right;">{{ f.ear_tag_batch_count }}</td>
+                          <td style="padding:8px;text-align:right;font-weight:600;"
+                              :style="{ color: f.credit_score >= 85 ? '#2d7d4f' : f.credit_score >= 70 ? '#d98a3a' : '#d44a4a' }">
+                            {{ f.credit_score }}
+                          </td>
+                          <td style="padding:8px;text-align:center;">
+                            <span :style="{
+                              display:'inline-block',padding:'2px 8px',borderRadius:'4px',fontSize:'12px',
+                              background: f.credit_level === '优质' ? '#e8f5e9' : f.credit_level === '良好' ? '#fff3e0' : f.credit_level === '一般' ? '#fff9c4' : '#ffebee',
+                              color: f.credit_level === '优质' ? '#2d7d4f' : f.credit_level === '良好' ? '#d98a3a' : f.credit_level === '一般' ? '#f9a825' : '#d44a4a'
+                            }">{{ f.credit_level }}</span>
+                          </td>
+                          <td style="padding:8px;color:#666;">{{ f.suggested_amount }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+              </div>
+            </div>
+
+            <!-- 灾害预测 -->
+            <div v-show="page === 'disaster-forecast'">
+              <div class="public-page public-page-plain">
+                <section class="plain-page-head">
+                  <h1>灾害预测 · 未来3个月</h1>
+                  <p>输入任意地区名 → 自动拉取 Open-Meteo 数据 → 5灾种12周风险趋势</p>
+                </section>
+
+                <!-- 输入区 -->
+                <section style="margin-bottom:24px;padding:16px;background:#f7f9fc;border-radius:8px;">
+                  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                    <input v-model="disasterInput" type="text" placeholder="输入地区名（如：班戈县 / 拉萨 / 那曲）"
+                           style="flex:1;min-width:260px;padding:10px 14px;border:1px solid #d0d7de;border-radius:6px;font-size:14px;"
+                           @keyup.enter="runDisasterForecast" />
+                    <button @click="runDisasterForecast" :disabled="disasterLoading"
+                            style="padding:10px 22px;background:#c00;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">
+                      {{ disasterLoading ? '预测中…' : '开始预测' }}
+                    </button>
+                    <select v-if="disasterRegions && disasterRegions.length"
+                            v-model="disasterInput"
+                            @change="runDisasterForecast"
+                            style="padding:10px 14px;border:1px solid #d0d7de;border-radius:6px;font-size:14px;max-width:240px;">
+                      <option value="">— 选择26县 —</option>
+                      <option v-for="r in disasterRegions" :key="r.region_id" :value="r.region_name">{{ r.region_name }}</option>
+                    </select>
+                  </div>
+                  <p v-if="disasterError" style="color:#c00;margin-top:10px;font-size:13px;">{{ disasterError }}</p>
+                </section>
+
+                <!-- 置信度说明 -->
+                <section v-if="disasterResult" style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;">
+                  <div v-for="seg in disasterResult.confidence_segments" :key="seg.range"
+                       :style="`padding:8px 14px;border-radius:6px;font-size:13px;flex:1;min-width:200px;
+                         background:${seg.level === '高' ? '#e6f4ea' : seg.level === '中' ? '#fef7e0' : '#fce8e6'};
+                         border-left:3px solid ${seg.level === '高' ? '#34a853' : seg.level === '中' ? '#f9ab00' : '#ea4335'};`">
+                    <strong>{{ seg.range }}</strong> · 置信度: {{ seg.level }}<br>
+                    <span style="color:#5f6368;font-size:12px;">{{ seg.basis }}</span>
+                  </div>
+                </section>
+
+                <!-- 综合风险仪表板 -->
+                <section v-if="disasterResult" class="stats-grid" style="margin-bottom:24px;">
+                  <div class="stats-card">
+                    <span class="stats-num" :style="`color:${disasterLevelColor(disasterResult.composite.overall_level)};`">{{ disasterResult.composite.avg_score }}</span>
+                    <span class="stats-label">综合风险分（{{ disasterResult.composite.overall_level }}）</span>
+                  </div>
+                  <div class="stats-card">
+                    <span class="stats-num">{{ disasterResult.composite.max_score }}</span>
+                    <span class="stats-label">峰值风险分</span>
+                  </div>
+                  <div class="stats-card">
+                    <span class="stats-num">第{{ disasterResult.composite.peak_week }}周</span>
+                    <span class="stats-label">风险峰值</span>
+                  </div>
+                  <div class="stats-card">
+                    <span class="stats-num">{{ disasterResult.top_disaster.name }}</span>
+                    <span class="stats-label">首要灾种</span>
+                  </div>
+                </section>
+
+                <!-- 5灾种曲线图 -->
+                <section v-if="disasterResult" style="margin-bottom:24px;">
+                  <h3 style="margin-bottom:12px;">5灾种风险趋势（12周）</h3>
+                  <div ref="disasterChartRef" style="width:100%;height:420px;background:#fff;border:1px solid #e0e0e0;border-radius:8px;"></div>
+                </section>
+
+                <!-- 5灾种卡片 -->
+                <section v-if="disasterResult" class="stats-grid" style="margin-bottom:24px;">
+                  <div v-for="(d, key) in disasterResult.disasters" :key="key" class="stats-card">
+                    <span class="stats-num" :style="`color:${disasterLevelColor(d.weekly[0].risk_level)};`">{{ d.avg_score }}</span>
+                    <span class="stats-label">{{ d.name }}（平均分）</span>
+                  </div>
+                </section>
+
+                <!-- 建议 -->
+                <section v-if="disasterResult && disasterResult.recommendations && disasterResult.recommendations.length" style="padding:16px;background:#f7f9fc;border-radius:8px;">
+                  <h3 style="margin-bottom:10px;">应对建议</h3>
+                  <ul style="margin:0;padding-left:20px;">
+                    <li v-for="(r, i) in disasterResult.recommendations" :key="i" style="margin-bottom:6px;font-size:14px;line-height:1.6;">{{ r }}</li>
+                  </ul>
+                </section>
+
+                <!-- 数据来源说明 -->
+                <section v-if="disasterResult" style="margin-top:16px;font-size:12px;color:#5f6368;">
+                  数据来源：{{ disasterResult.data_source }} · 生成时间：{{ disasterResult.generated_at }} ·
+                  地区：{{ disasterResult.region.region_name }} ({{ disasterResult.region.latitude.toFixed(2) }}, {{ disasterResult.region.longitude.toFixed(2) }})
+                </section>
+              </div>
+            </div>
+
             <!-- 数据底座 -->
             <div v-show="page === 'data'">
               <div class="public-page public-page-plain">
@@ -1593,6 +1825,7 @@
                 <button :class="{ active: dataTab === 'subjects' }" @click="dataTab = 'subjects'">经营主体</button>
                 <button :class="{ active: dataTab === 'finance' }" @click="dataTab = 'finance'">金融保险</button>
                 <button :class="{ active: dataTab === 'warning' }" @click="dataTab = 'warning'">预警系统</button>
+                <button :class="{ active: dataTab === 'grid' }" @click="dataTab = 'grid'">时空网格</button>
               </div>
 
               <div v-if="dataTab === 'weather'" class="panel"><div class="panel-body no-pad"><div class="tbl-wrap"><table class="tbl">
@@ -1710,9 +1943,166 @@
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- 实施路线 -->
+              <!-- 时空网格风险矩阵 -->
+              <div v-if="dataTab === 'grid'" class="content-2col">
+                <div class="panel" style="grid-column:1/-1">
+                  <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
+                    <h3>时空网格风险矩阵 (3草场 × 4季节 × 5年龄段)</h3>
+                    <select v-model="gridSelectedRegion" @change="loadGridData()" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+                      <option value="">选择县</option>
+                      <option v-for="r in (data?.regions || [])" :key="r.id" :value="r.id">{{ r.name }}</option>
+                    </select>
+                  </div>
+                  <div class="panel-body">
+                    <div v-if="gridLoading" style="padding:20px;text-align:center;color:var(--text-secondary);">加载中...</div>
+                    <div v-else-if="!gridData" style="padding:20px;text-align:center;color:var(--text-secondary);">请选择县查看时空网格</div>
+                    <div v-else>
+                      <!-- 统计摘要 -->
+                      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;font-size:12px">
+                        <span>网格数: <strong>{{ gridData.n_grids }}</strong></span>
+                        <span>平均风险: <strong>{{ gridData.summary.avg_risk }}</strong></span>
+                        <span>风险分布: <strong style="color:var(--red)">{{ gridData.summary.risk_distribution['高'] }} 高</strong> / <strong style="color:var(--orange)">{{ gridData.summary.risk_distribution['中'] }} 中</strong> / <strong style="color:var(--green)">{{ gridData.summary.risk_distribution['低'] }} 低</strong></span>
+                        <span>最高: <strong style="color:var(--red)">{{ gridData.summary.max_risk }}</strong> ({{ gridData.summary.highest_risk_grid.grassland_name }}·{{ gridData.summary.highest_risk_grid.season_name.split(' ')[0] }}·{{ gridData.summary.highest_risk_grid.age_name.split(' ')[0] }})</span>
+                        <span>最低: <strong style="color:var(--green)">{{ gridData.summary.min_risk }}</strong> ({{ gridData.summary.lowest_risk_grid.grassland_name }}·{{ gridData.summary.lowest_risk_grid.season_name.split(' ')[0] }}·{{ gridData.summary.lowest_risk_grid.age_name.split(' ')[0] }})</span>
+                      </div>
+
+                      <!-- 风险矩阵热力图: 草场 × 季节 -->
+                      <h4 style="margin:0 0 8px;font-size:13px">风险矩阵: 草场类型 × 季节 (年龄段:
+                        <select v-model="gridAgeFilter" style="padding:2px 6px;border:1px solid var(--border);border-radius:3px;font-size:11px">
+                          <option value="calf">犊牛</option>
+                          <option value="yearling">育成牛</option>
+                          <option value="young">青年牛</option>
+                          <option value="adult">成年牛</option>
+                          <option value="old">老龄牛</option>
+                        </select>
+                      )</h4>
+                      <table class="tbl" style="margin-bottom:16px">
+                        <thead><tr><th>草场 \ 季节</th><th>春季</th><th>夏季</th><th>秋季</th><th>冬季</th></tr></thead>
+                        <tbody>
+                          <tr v-for="gl in ['alpine_meadow','alpine_steppe','alpine_desert']" :key="gl">
+                            <td><strong>{{ gl === 'alpine_meadow' ? '高寒草甸' : gl === 'alpine_steppe' ? '高寒草原' : '高寒荒漠' }}</strong></td>
+                            <td v-for="s in ['spring','summer','autumn','winter']" :key="s"
+                              :style="{ background: gridRiskColor(gridData.grids.find(g => g.grassland_type === gl && g.season === s && g.age_group === gridAgeFilter)?.total_risk || 0), color: '#fff', textAlign: 'center', fontWeight: 'bold' }">
+                              {{ gridData.grids.find(g => g.grassland_type === gl && g.season === s && g.age_group === gridAgeFilter)?.total_risk?.toFixed(1) || '-' }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      <!-- 风险矩阵热力图: 季节 × 年龄 -->
+                      <h4 style="margin:0 0 8px;font-size:13px">风险矩阵: 季节 × 年龄段 (草场:
+                        <select v-model="gridGrassFilter" style="padding:2px 6px;border:1px solid var(--border);border-radius:3px;font-size:11px">
+                          <option value="alpine_meadow">高寒草甸</option>
+                          <option value="alpine_steppe">高寒草原</option>
+                          <option value="alpine_desert">高寒荒漠</option>
+                        </select>
+                      )</h4>
+                      <table class="tbl" style="margin-bottom:16px">
+                        <thead><tr><th>季节 \ 年龄</th><th>犊牛</th><th>育成牛</th><th>青年牛</th><th>成年牛</th><th>老龄牛</th></tr></thead>
+                        <tbody>
+                          <tr v-for="s in ['spring','summer','autumn','winter']" :key="s">
+                            <td><strong>{{ s === 'spring' ? '春季' : s === 'summer' ? '夏季' : s === 'autumn' ? '秋季' : '冬季' }}</strong></td>
+                            <td v-for="a in ['calf','yearling','young','adult','old']" :key="a"
+                              :style="{ background: gridRiskColor(gridData.grids.find(g => g.grassland_type === gridGrassFilter && g.season === s && g.age_group === a)?.total_risk || 0), color: '#fff', textAlign: 'center', fontWeight: 'bold' }">
+                              {{ gridData.grids.find(g => g.grassland_type === gridGrassFilter && g.season === s && g.age_group === a)?.total_risk?.toFixed(1) || '-' }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      <!-- 维度均值 -->
+                      <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:12px">
+                        <div>
+                          <h5 style="margin:0 0 4px;font-size:11px;color:var(--text-secondary)">季节均值</h5>
+                          <span v-for="(v,s) in gridData.summary.season_avg_risk" :key="s" style="margin-right:8px">{{ s === 'spring' ? '春' : s === 'summer' ? '夏' : s === 'autumn' ? '秋' : '冬' }}: <strong>{{ v }}</strong></span>
+                        </div>
+                        <div>
+                          <h5 style="margin:0 0 4px;font-size:11px;color:var(--text-secondary)">草场均值</h5>
+                          <span v-for="(v,g) in gridData.summary.grassland_avg_risk" :key="g" style="margin-right:8px">{{ g === 'alpine_meadow' ? '草甸' : g === 'alpine_steppe' ? '草原' : '荒漠' }}: <strong>{{ v }}</strong></span>
+                        </div>
+                        <div>
+                          <h5 style="margin:0 0 4px;font-size:11px;color:var(--text-secondary)">年龄均值</h5>
+                          <span v-for="(v,a) in gridData.summary.age_avg_risk" :key="a" style="margin-right:8px">{{ a === 'calf' ? '犊' : a === 'yearling' ? '育' : a === 'young' ? '青' : a === 'adult' ? '成' : '老' }}: <strong>{{ v }}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SHAP 风险解释报告 -->
+                <div class="panel" style="grid-column:1/-1">
+                  <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                      <h3>风险解释报告（SHAP）</h3>
+                      <p style="margin:4px 0 0;font-size:12px;color:var(--text-secondary)">基于 SHAP 可解释性，展示每个特征对风险评分的贡献方向与大小</p>
+                    </div>
+                    <select v-model="explainSelectedRegion" @change="loadExplainData()" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+                      <option value="">选择县</option>
+                      <option v-for="r in (data?.regions || [])" :key="r.id" :value="r.id">{{ r.name }}</option>
+                    </select>
+                  </div>
+                  <div class="panel-body">
+                    <div v-if="explainLoading" style="padding:20px;text-align:center;color:var(--text-secondary);">加载中...</div>
+                    <div v-else-if="!explainData" style="padding:20px;text-align:center;color:var(--text-secondary);">请选择县查看风险解释报告</div>
+                    <div v-else>
+                      <!-- 摘要区 -->
+                      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px">
+                        <div style="padding:12px;background:var(--bg-secondary);border-radius:8px">
+                          <div style="font-size:11px;color:var(--text-secondary)">预测风险分</div>
+                          <div style="font-size:24px;font-weight:700;margin-top:4px">{{ explainData.prediction?.toFixed(1) }}</div>
+                        </div>
+                        <div style="padding:12px;background:var(--bg-secondary);border-radius:8px">
+                          <div style="font-size:11px;color:var(--text-secondary)">风险等级</div>
+                          <div style="font-size:18px;font-weight:600;margin-top:4px" :style="{color: explainData.risk_level === '高' ? 'var(--red)' : explainData.risk_level === '中' ? 'var(--orange)' : 'var(--green)'}">{{ explainData.risk_level }}</div>
+                        </div>
+                        <div style="padding:12px;background:var(--bg-secondary);border-radius:8px">
+                          <div style="font-size:11px;color:var(--text-secondary)">基准值</div>
+                          <div style="font-size:18px;font-weight:600;margin-top:4px">{{ explainData.base_value?.toFixed(1) }}</div>
+                        </div>
+                        <div style="padding:12px;background:var(--bg-secondary);border-radius:8px">
+                          <div style="font-size:11px;color:var(--text-secondary)">SHAP 引擎</div>
+                          <div style="font-size:14px;font-weight:600;margin-top:4px">{{ explainData.shap_available ? 'SHAP TreeExplainer' : '规则权重近似' }}</div>
+                        </div>
+                      </div>
+
+                      <!-- 风险摘要 -->
+                      <div style="padding:14px;background:var(--bg-secondary);border-radius:8px;margin-bottom:16px">
+                        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">风险摘要</div>
+                        <div style="font-size:14px;line-height:1.6">{{ explainData.summary }}</div>
+                      </div>
+
+                      <!-- Top 驱动因素 + 建议 -->
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+                        <div>
+                          <h4 style="margin:0 0 8px;font-size:13px;color:var(--text-secondary)">Top 风险驱动因素</h4>
+                          <div v-for="(d, i) in (explainData.top_drivers || [])" :key="i" style="margin-bottom:10px;padding:8px;background:var(--bg-secondary);border-radius:6px">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                              <strong>{{ d.feature }}</strong>
+                              <span :style="{color: d.shap_value > 0 ? 'var(--red)' : d.shap_value < 0 ? 'var(--green)' : 'var(--text-secondary)', fontWeight: 600}">{{ d.shap_value > 0 ? '↑增险' : d.shap_value < 0 ? '↓减险' : '中性' }}</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-bottom:4px">
+                              <span>值: {{ d.feature_value }}</span>
+                              <span>SHAP: {{ d.shap_value > 0 ? '+' : '' }}{{ d.shap_value }}</span>
+                            </div>
+                            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+                              <div :style="{height: '100%', width: Math.min(100, Math.abs(d.shap_value) * 20) + '%', background: d.shap_value > 0 ? 'var(--red)' : d.shap_value < 0 ? 'var(--green)' : 'var(--text-secondary)'}"></div>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 style="margin:0 0 8px;font-size:13px;color:var(--text-secondary)">针对性建议</h4>
+                          <div v-for="(r, i) in (explainData.recommendations || [])" :key="i" style="margin-bottom:8px;padding:8px;background:var(--bg-secondary);border-radius:6px;display:flex;gap:8px">
+                            <span style="color:var(--blue)">▸</span>
+                            <span>{{ r }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div v-show="page === 'roadmap'">
               <div class="public-page public-page-plain roadmap-page">
                 <section class="plain-page-head">

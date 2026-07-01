@@ -99,6 +99,40 @@ const api = {
     const res = await fetch(`/api/carrying-capacity/daily?region_id=${encodeURIComponent(regionId)}&days=${days}`, { cache: "no-store" });
     return res.json();
   },
+  // 时空网格
+  async gridStatus() {
+    const res = await fetch("/api/grid/status", { cache: "no-store" });
+    return res.json();
+  },
+  async gridAll() {
+    const res = await fetch("/api/grid/all", { cache: "no-store" });
+    return res.json();
+  },
+  async gridRegion(regionId) {
+    const res = await fetch(`/api/grid/${encodeURIComponent(regionId)}`, { cache: "no-store" });
+    return res.json();
+  },
+  async modelExplain(regionId) {
+    const res = await fetch(`/api/model/explain/${encodeURIComponent(regionId)}`, { cache: "no-store" });
+    return res.json();
+  },
+  // 保单画像
+  async portfolioProfile() {
+    const res = await fetch("/api/insurance-portfolio/profile", { cache: "no-store" });
+    return res.json();
+  },
+  async portfolioFarmers() {
+    const res = await fetch("/api/insurance-portfolio/farmers", { cache: "no-store" });
+    return res.json();
+  },
+  async portfolioSynergy() {
+    const res = await fetch("/api/insurance-portfolio/synergy", { cache: "no-store" });
+    return res.json();
+  },
+  async portfolioComprehensive() {
+    const res = await fetch("/api/insurance-portfolio/comprehensive-risk", { cache: "no-store" });
+    return res.json();
+  },
 };
 
 // ============================================================================
@@ -570,12 +604,35 @@ createApp({
       coopDataQuality: "--",
       coopDetailOpen: null,
       coopDetailRow: null,
+      // 保单画像
+      portfolioProfile: null,
+      portfolioFarmers: [],
+      portfolioSynergy: null,
+      portfolioComprehensive: null,
+      portfolioLoading: false,
+      // 灾害预测
+      disasterInput: "",
+      disasterRegions: [],
+      disasterResult: null,
+      disasterLoading: false,
+      disasterError: "",
+      disasterChartRef: null,
       // 预警系统
       warningData: null,
       warningLoading: false,
       warningSelectedRegion: "",
       dailyCapacity: null,
       dailyCapacityLoading: false,
+      // 时空网格
+      gridData: null,
+      gridLoading: false,
+      gridSelectedRegion: "",
+      gridAgeFilter: "adult",
+      gridGrassFilter: "alpine_steppe",
+      // SHAP 风险解释报告
+      explainData: null,
+      explainLoading: false,
+      explainSelectedRegion: "",
     };
   },
 
@@ -1737,6 +1794,38 @@ createApp({
       this.dailyCapacityLoading = false;
     },
 
+    async loadGridData() {
+      if (!this.gridSelectedRegion) return;
+      this.gridLoading = true;
+      try {
+        this.gridData = await api.gridRegion(this.gridSelectedRegion);
+      } catch (e) {
+        console.warn("时空网格加载失败:", e);
+        this.gridData = null;
+      }
+      this.gridLoading = false;
+    },
+
+    gridRiskColor(risk) {
+      if (!risk) return "transparent";
+      if (risk >= 65) return "#EF4444";
+      if (risk >= 50) return "#F59E0B";
+      if (risk >= 40) return "#EAB308";
+      return "#10B981";
+    },
+
+    async loadExplainData() {
+      if (!this.explainSelectedRegion) return;
+      this.explainLoading = true;
+      try {
+        this.explainData = await api.modelExplain(this.explainSelectedRegion);
+      } catch (e) {
+        console.warn("SHAP解释报告加载失败:", e);
+        this.explainData = null;
+      }
+      this.explainLoading = false;
+    },
+
     async loadDisaster(regionId) {
       if (!regionId) return null;
       try {
@@ -1765,6 +1854,11 @@ createApp({
         if (page === "cooperative-ranking" && !this.coopRegions.length) {
           this.coopRegions = (this.data?.regions || []).map(r => ({ id: r.id, name: r.name }));
         }
+        if (page === "insurance-portfolio") this.loadPortfolio();
+        if (page === "disaster-forecast") {
+          if (!this.disasterRegions || !this.disasterRegions.length) this.loadDisasterRegions();
+          this.$nextTick(() => this.renderDisasterChart());
+        }
       });
     },
 
@@ -1789,6 +1883,183 @@ createApp({
       } finally {
         this.coopLoading = false;
       }
+    },
+
+    // ========================================================================
+    // 保单画像
+    // ========================================================================
+
+    async loadPortfolio() {
+      if (this.portfolioLoading) return;
+      this.portfolioLoading = true;
+      try {
+        const [profile, farmers, synergy, comprehensive] = await Promise.all([
+          api.portfolioProfile(),
+          api.portfolioFarmers(),
+          api.portfolioSynergy(),
+          api.portfolioComprehensive(),
+        ]);
+        this.portfolioProfile = profile;
+        this.portfolioFarmers = farmers;
+        this.portfolioSynergy = synergy;
+        this.portfolioComprehensive = comprehensive;
+        this.$nextTick(() => {
+          this.renderPortfolioScaleChart();
+          this.renderPortfolioFarmersChart();
+        });
+      } catch (e) {
+        console.error("loadPortfolio error:", e);
+      } finally {
+        this.portfolioLoading = false;
+      }
+    },
+
+    // ========================================================================
+    // 灾害预测
+    // ========================================================================
+
+    async loadDisasterRegions() {
+      try {
+        const res = await fetch("/api/disaster-forecast/regions", { cache: "no-store" });
+        const data = await res.json();
+        if (data.ok) this.disasterRegions = data.regions || [];
+      } catch (e) {
+        console.error("loadDisasterRegions error:", e);
+      }
+    },
+
+    async runDisasterForecast() {
+      const q = (this.disasterInput || "").trim();
+      if (!q) {
+        this.disasterError = "请输入地区名（如：班戈县 / 拉萨 / 那曲）";
+        return;
+      }
+      this.disasterError = "";
+      this.disasterLoading = true;
+      this.disasterResult = null;
+      try {
+        const url = `/api/disaster-forecast?region=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { cache: "no-store" });
+        const data = await res.json();
+        if (data.ok) {
+          this.disasterResult = data;
+          this.$nextTick(() => this.renderDisasterChart());
+        } else {
+          this.disasterError = data.message || "预测失败";
+        }
+      } catch (e) {
+        this.disasterError = `请求失败: ${e.message}`;
+      } finally {
+        this.disasterLoading = false;
+      }
+    },
+
+    disasterLevelColor(level) {
+      if (level === "高") return "#ea4335";
+      if (level === "中") return "#f9ab00";
+      return "#34a853";
+    },
+
+    renderDisasterChart() {
+      const el = this.$refs.disasterChartRef;
+      if (!el || !this.disasterResult) return;
+      if (typeof echarts === "undefined") return;
+      const chart = echarts.init(el);
+      const weeks = this.disasterResult.composite.weekly.map(w => `第${w.week}周`);
+      const disasterColors = {
+        cold_wave: "#1a73e8",
+        snowstorm: "#00bcd4",
+        drought: "#ff9800",
+        blizzard: "#9c27b0",
+        ecological: "#4caf50",
+      };
+      const series = Object.entries(this.disasterResult.disasters).map(([key, d]) => ({
+        name: d.name,
+        type: "line",
+        smooth: true,
+        symbol: "circle",
+        symbolSize: 6,
+        lineStyle: { width: 2, color: disasterColors[key] },
+        itemStyle: { color: disasterColors[key] },
+        data: d.weekly.map(w => w.risk_score),
+      }));
+      // 综合风险加粗 + 三段置信度背景
+      series.push({
+        name: "综合",
+        type: "line",
+        smooth: true,
+        symbol: "diamond",
+        symbolSize: 8,
+        lineStyle: { width: 3, color: "#c00", type: "dashed" },
+        itemStyle: { color: "#c00" },
+        data: this.disasterResult.composite.weekly.map(w => w.risk_score),
+        markArea: {
+          silent: true,
+          data: [
+            [{ xAxis: "第1周", itemStyle: { color: "rgba(52,168,83,0.08)" } }, { xAxis: "第2周" }],
+            [{ xAxis: "第3周", itemStyle: { color: "rgba(249,171,0,0.08)" } }, { xAxis: "第4周" }],
+            [{ xAxis: "第5周", itemStyle: { color: "rgba(234,67,53,0.08)" } }, { xAxis: "第12周" }],
+          ],
+        },
+      });
+      chart.setOption({
+        tooltip: { trigger: "axis" },
+        legend: { data: series.map(s => s.name), top: 5 },
+        grid: { left: 50, right: 20, top: 50, bottom: 40 },
+        xAxis: { type: "category", data: weeks, axisLabel: { interval: 0 } },
+        yAxis: {
+          type: "value",
+          name: "风险分",
+          min: 0, max: 100,
+          axisLabel: { formatter: "{value}" },
+          splitLine: { lineStyle: { type: "dashed" } },
+        },
+        series,
+      });
+      window.addEventListener("resize", () => chart.resize());
+    },
+
+    renderPortfolioScaleChart() {
+      const chart = makeChart("chart-portfolio-scale");
+      if (!chart || !this.portfolioProfile?.scale_distribution) return;
+      const dist = this.portfolioProfile.scale_distribution;
+      const names = Object.keys(dist);
+      const values = Object.values(dist);
+      chart.setOption({
+        color: ["#2d7d4f"],
+        tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
+        grid: { left: "3%", right: "6%", bottom: "3%", top: "10%", containLabel: true },
+        xAxis: { type: "category", data: names, axisLabel: { color: "#666" } },
+        yAxis: { type: "value", name: "农户数", axisLabel: { color: "#999" }, splitLine: { lineStyle: { color: "#f0f0f0" } } },
+        series: [{
+          type: "bar",
+          data: values.map(v => ({ value: v, itemStyle: { color: "#2d7d4f", borderRadius: [4, 4, 0, 0] } })),
+          barWidth: "50%",
+          label: { show: true, position: "top", color: "#333", fontSize: 13, fontWeight: 700 },
+        }],
+      });
+    },
+
+    renderPortfolioFarmersChart() {
+      const chart = makeChart("chart-portfolio-farmers");
+      if (!chart || !this.portfolioFarmers.length) return;
+      // 取前15名（避免太挤）
+      const top = this.portfolioFarmers.slice(0, 15);
+      const names = top.map(f => f.farmer_name);
+      const scores = top.map(f => f.credit_score);
+      const colors = scores.map(s => s >= 85 ? "#2d7d4f" : s >= 70 ? "#d98a3a" : "#d44a4a");
+      chart.setOption({
+        tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
+        grid: { left: "3%", right: "6%", bottom: "3%", top: "10%", containLabel: true },
+        xAxis: { type: "category", data: names, axisLabel: { color: "#666", rotate: 30 } },
+        yAxis: { type: "value", name: "增信分", min: 0, max: 100, axisLabel: { color: "#999" }, splitLine: { lineStyle: { color: "#f0f0f0" } } },
+        series: [{
+          type: "bar",
+          data: scores.map((v, i) => ({ value: v, itemStyle: { color: colors[i], borderRadius: [4, 4, 0, 0] } })),
+          barWidth: "50%",
+          label: { show: true, position: "top", color: "#333", fontSize: 12, fontWeight: 600 },
+        }],
+      });
     },
 
     scoreLevelClass(score) {
@@ -2442,7 +2713,7 @@ createApp({
 
     async init() {
       const hash = window.location.hash.replace("#", "");
-      const valid = ["home","dashboard","overview","modules","data","roadmap","insurance","supply-chain","green-performance","livelihood"];
+      const valid = ["home","dashboard","overview","modules","data","roadmap","insurance","supply-chain","green-performance","livelihood","cooperative-ranking","insurance-portfolio","disaster-forecast"];
       if (hash && valid.includes(hash)) this.page = hash;
 
       this.data = await api.platform();

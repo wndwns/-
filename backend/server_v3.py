@@ -861,6 +861,44 @@ def create_app() -> FastAPI:
         return get_model().macro_background()
 
     # ======================================================================
+    # SHAP 可解释性 API — 风险解释报告
+    # ======================================================================
+
+    @app.get("/api/model/explain/{region_id}")
+    def model_explain(region_id: str, top_k: int = 8) -> dict[str, Any]:
+        """返回指定区域的 SHAP 风险解释报告。"""
+        try:
+            from models import get_model
+        except ImportError:
+            from backend.models import get_model  # type: ignore[no-redef]
+        return get_model().explain_prediction(region_id, top_k=top_k)
+
+    @app.get("/api/model/explain-all")
+    def model_explain_all() -> list[dict[str, Any]]:
+        """批量返回所有区域的风险解释报告。"""
+        try:
+            from models import get_model
+        except ImportError:
+            from backend.models import get_model  # type: ignore[no-redef]
+        return get_model().explain_batch()
+
+    @app.get("/api/model/backtest")
+    def model_backtest() -> dict[str, Any]:
+        """返回模型回测验证报告。
+
+        报告包含3个层次验证：
+        1. 时间序列交叉验证 (Walk-Forward CV)
+        2. 真实标签前向验证 (2020-2022训练 → 2023预测)
+        3. PSI 特征稳定性验证
+        """
+        import json as _json
+        from pathlib import Path as _Path
+        report_path = _Path(__file__).resolve().parent / "data_store" / "backtest_report.json"
+        if not report_path.exists():
+            return {"error": "backtest_report.json not found", "overall_pass": False}
+        return _json.loads(report_path.read_text(encoding="utf-8"))
+
+    # ======================================================================
     # 数据质量 API
     # ======================================================================
 
@@ -1256,6 +1294,40 @@ def create_app() -> FastAPI:
             "drought": drought,
             "snow": snow,
         }
+
+    # ======================================================================
+    # 时空网格模型 API
+    # ======================================================================
+
+    @app.get("/api/grid/status")
+    def grid_status_api() -> dict[str, Any]:
+        """时空网格模型状态。"""
+        try:
+            from spatio_temporal_grid import grid_status
+        except ImportError:
+            from backend.spatio_temporal_grid import grid_status
+        return grid_status()
+
+    @app.get("/api/grid/all")
+    def grid_all_api() -> list[dict[str, Any]]:
+        """所有县的时空网格摘要。"""
+        try:
+            from spatio_temporal_grid import build_all_grids
+        except ImportError:
+            from backend.spatio_temporal_grid import build_all_grids
+        return build_all_grids()
+
+    @app.get("/api/grid/{region_id}")
+    def grid_region_api(region_id: str) -> dict[str, Any]:
+        """某县的完整时空网格 (3×4×5=60 个网格)。"""
+        try:
+            from spatio_temporal_grid import build_grid
+        except ImportError:
+            from backend.spatio_temporal_grid import build_grid
+        result = build_grid(region_id)
+        if not result.get("grids"):
+            raise HTTPException(status_code=404, detail=f"无数据: {region_id}")
+        return result
 
     # ======================================================================
     # 管理端独立页面

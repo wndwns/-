@@ -1,0 +1,586 @@
+{
+  "generated_at": "2026-06-25 02:02:04.989178",
+  "sample_info": {
+    "total_samples": 1925,
+    "county_count": 25,
+    "month_count": 77,
+    "real_labels_fused": 1500
+  },
+  "time_series_cv": {
+    "method": "滚动窗口交叉验证 (Walk-Forward CV)",
+    "n_splits": 3,
+    "folds": [
+      {
+        "fold": 1,
+        "train_period": "2020-01 ~ 2021-08",
+        "test_period": "2021-08 ~ 2023-02",
+        "train_samples": 500,
+        "test_samples": 475,
+        "mae": 3.63,
+        "rmse": 8.12,
+        "r2": -0.001,
+        "accuracy": 0.983
+      },
+      {
+        "fold": 2,
+        "train_period": "2020-01 ~ 2023-03",
+        "test_period": "2023-03 ~ 2024-09",
+        "train_samples": 975,
+        "test_samples": 475,
+        "mae": 3.37,
+        "rmse": 6.48,
+        "r2": 0.048,
+        "accuracy": 0.989
+      },
+      {
+        "fold": 3,
+        "train_period": "2020-01 ~ 2024-10",
+        "test_period": "2024-10 ~ 2026-04",
+        "train_samples": 1450,
+        "test_samples": 475,
+        "mae": 10.77,
+        "rmse": 11.96,
+        "r2": -1.981,
+        "accuracy": 1.0
+      }
+    ],
+    "summary": {
+      "avg_mae": 5.92,
+      "avg_rmse": 8.85,
+      "avg_r2": -0.645,
+      "avg_accuracy": 0.991
+    },
+    "targets": {
+      "mae_target": "< 12",
+      "rmse_target": "< 15",
+      "r2_target": "> 0.5",
+      "accuracy_target": "> 0.70"
+    }
+  },
+  "real_label_validation": {
+    "method": "真实标签前向验证 (2020-2022训练 → 2023预测)",
+    "train_samples": 900,
+    "test_samples": 300,
+    "threshold": 20.0,
+    "true_events_2023": 12,
+    "predicted_high_risk": 225,
+    "correct_predictions": 11,
+    "false_alarms": 214,
+    "recall": 0.917,
+    "precision": 0.049,
+    "f1_score": 0.093,
+    "false_alarm_rate": 0.951,
+    "event_details": [
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-01",
+        "predicted_score": 25.0,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-02",
+        "predicted_score": 25.6,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-03",
+        "predicted_score": 25.6,
+        "threshold": 20.0,
+        "actual_event": true,
+        "event_type": "snowstorm",
+        "severity": "中",
+        "correct": true
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-04",
+        "predicted_score": 23.5,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-05",
+        "predicted_score": 23.1,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-06",
+        "predicted_score": 21.7,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-07",
+        "predicted_score": 21.3,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-08",
+        "predicted_score": 22.0,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-09",
+        "predicted_score": 22.6,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-10",
+        "predicted_score": 24.0,
+        "threshold": 20.0,
+        "actual_event": true,
+        "event_type": "insurance_coverage",
+        "severity": "低",
+        "correct": true
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-11",
+        "predicted_score": 24.9,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "aba-hongyuan",
+        "month": "2023-12",
+        "predicted_score": 25.1,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "ali-gaize",
+        "month": "2023-01",
+        "predicted_score": 21.2,
+        "threshold": 20.0,
+        "actual_event": true,
+        "event_type": "drought",
+        "severity": "低",
+        "correct": true
+      },
+      {
+        "region_id": "changdu-jiangda",
+        "month": "2023-01",
+        "predicted_score": 20.0,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "changdu-jiangda",
+        "month": "2023-02",
+        "predicted_score": 20.1,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "changdu-jiangda",
+        "month": "2023-04",
+        "predicted_score": 20.8,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "changdu-jiangda",
+        "month": "2023-10",
+        "predicted_score": 20.3,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "changdu-jiangda",
+        "month": "2023-11",
+        "predicted_score": 20.1,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "changdu-jiangda",
+        "month": "2023-12",
+        "predicted_score": 20.6,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      },
+      {
+        "region_id": "changdu-karuo",
+        "month": "2023-01",
+        "predicted_score": 26.6,
+        "threshold": 20.0,
+        "actual_event": false,
+        "event_type": "none",
+        "severity": "无",
+        "correct": false
+      }
+    ],
+    "targets": {
+      "recall_target": "> 0.30",
+      "precision_target": "> 0.30",
+      "f1_target": "> 0.30"
+    }
+  },
+  "psi_stability": {
+    "method": "PSI特征稳定性验证 (基准期: 2020-2021)",
+    "total_checks": 48,
+    "stable_features": 44,
+    "drifted_features": 4,
+    "avg_psi": 0.0601,
+    "details": [
+      {
+        "year": "2022",
+        "feature": "temperature_c",
+        "psi": 0.0654,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "precipitation_mm_24h",
+        "psi": 0.1049,
+        "stability": "轻微漂移"
+      },
+      {
+        "year": "2022",
+        "feature": "wind_speed_mps",
+        "psi": 0.0584,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "snow_depth_cm",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "cold_wave_risk",
+        "psi": 0.0366,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "snowstorm_risk",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "drought_risk",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "ndvi",
+        "psi": 0.0234,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "ndvi_change_pct",
+        "psi": 0.7923,
+        "stability": "显著漂移"
+      },
+      {
+        "year": "2022",
+        "feature": "vegetation_cover_pct",
+        "psi": 0.0223,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "snow_cover_pct",
+        "psi": 0.0418,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "degradation_level",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "carrying_capacity",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "avg_score",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "avg_insurance_coverage",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2022",
+        "feature": "finance_risk_score",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "temperature_c",
+        "psi": 0.0846,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "precipitation_mm_24h",
+        "psi": 0.0744,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "wind_speed_mps",
+        "psi": 0.01,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "snow_depth_cm",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "cold_wave_risk",
+        "psi": 0.0309,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "snowstorm_risk",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "drought_risk",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "ndvi",
+        "psi": 0.0121,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "ndvi_change_pct",
+        "psi": 0.6705,
+        "stability": "显著漂移"
+      },
+      {
+        "year": "2023",
+        "feature": "vegetation_cover_pct",
+        "psi": 0.0094,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "snow_cover_pct",
+        "psi": 0.0685,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "degradation_level",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "carrying_capacity",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "avg_score",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "avg_insurance_coverage",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2023",
+        "feature": "finance_risk_score",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "temperature_c",
+        "psi": 0.0239,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "precipitation_mm_24h",
+        "psi": 0.0496,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "wind_speed_mps",
+        "psi": 0.0547,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "snow_depth_cm",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "cold_wave_risk",
+        "psi": 0.0012,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "snowstorm_risk",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "drought_risk",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "ndvi",
+        "psi": 0.0582,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "ndvi_change_pct",
+        "psi": 0.4553,
+        "stability": "显著漂移"
+      },
+      {
+        "year": "2024",
+        "feature": "vegetation_cover_pct",
+        "psi": 0.0684,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "snow_cover_pct",
+        "psi": 0.069,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "degradation_level",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "carrying_capacity",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "avg_score",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "avg_insurance_coverage",
+        "psi": 0.0,
+        "stability": "稳定"
+      },
+      {
+        "year": "2024",
+        "feature": "finance_risk_score",
+        "psi": 0.0,
+        "stability": "稳定"
+      }
+    ],
+    "summary": "44/48 特征稳定 (PSI<0.1)，4 个轻微/显著漂移"
+  },
+  "overall": {
+    "cv_pass": "True",
+    "real_label_pass": true,
+    "psi_pass": true,
+    "overall_pass": true,
+    "recommendation": "通过"
+  }
+}

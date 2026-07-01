@@ -6273,5 +6273,230 @@
       "dormancy": "略推迟",
       "growing_season": "逐年延长 (趋势明显)"
     }
+  },
+  {
+    "region_id": "linzhi-bayi",
+    "region_name": "林芝市巴宜区",
+    "longitude": 94.36,
+    "latitude": 29.64,
+    "pixel_row": null,
+    "pixel_col": null,
+    "window_size": null,
+    "years": [
+      2003,
+      2004,
+      2005,
+      2007,
+      2009,
+      2010,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2024
+    ],
+    "data": {
+      "greenup": {
+        "2003": {
+          "doy": 94,
+          "days_since_epoch": null
+        },
+        "2004": {
+          "doy": 81,
+          "days_since_epoch": null
+        },
+        "2005": {
+          "doy": 97,
+          "days_since_epoch": null
+        },
+        "2007": {
+          "doy": 92,
+          "days_since_epoch": null
+        },
+        "2009": {
+          "doy": 106,
+          "days_since_epoch": null
+        },
+        "2010": {
+          "doy": 82,
+          "days_since_epoch": null
+        },
+        "2012": {
+          "doy": 102,
+          "days_since_epoch": null
+        },
+        "2013": {
+          "doy": 100,
+          "days_since_epoch": null
+        },
+        "2014": {
+          "doy": 96,
+          "days_since_epoch": null
+        },
+        "2015": {
+          "doy": 89,
+          "days_since_epoch": null
+        },
+        "2016": {
+          "doy": 94,
+          "days_since_epoch": null
+        },
+        "2017": {
+          "doy": 91,
+          "days_since_epoch": null
+        },
+        "2018": {
+          "doy": 99,
+          "days_since_epoch": null
+        },
+        "2019": {
+          "doy": 100,
+          "days_since_epoch": null
+        },
+        "2020": {
+          "doy": 107,
+          "days_since_epoch": null
+        },
+        "2021": {
+          "doy": 80,
+          "days_since_epoch": null
+        },
+        "2022": {
+          "doy": 78,
+          "days_since_epoch": null
+        },
+        "2024": {
+          "doy": 109,
+          "days_since_epoch": null
+        }
+      },
+      "dormancy": {
+        "2003": {
+          "doy": 323,
+          "days_since_epoch": null
+        },
+        "2004": {
+          "doy": 318,
+          "days_since_epoch": null
+        },
+        "2005": {
+          "doy": 328,
+          "days_since_epoch": null
+        },
+        "2007": {
+          "doy": 326,
+          "days_since_epoch": null
+        },
+        "2009": {
+          "doy": 324,
+          "days_since_epoch": null
+        },
+        "2010": {
+          "doy": 325,
+          "days_since_epoch": null
+        },
+        "2012": {
+          "doy": 303,
+          "days_since_epoch": null
+        },
+        "2013": {
+          "doy": 314,
+          "days_since_epoch": null
+        },
+        "2014": {
+          "doy": 328,
+          "days_since_epoch": null
+        },
+        "2015": {
+          "doy": 312,
+          "days_since_epoch": null
+        },
+        "2016": {
+          "doy": 338,
+          "days_since_epoch": null
+        },
+        "2017": {
+          "doy": 306,
+          "days_since_epoch": null
+        },
+        "2018": {
+          "doy": 328,
+          "days_since_epoch": null
+        },
+        "2019": {
+          "doy": 337,
+          "days_since_epoch": null
+        },
+        "2020": {
+          "doy": 312,
+          "days_since_epoch": null
+        },
+        "2021": {
+          "doy": 353,
+          "days_since_epoch": null
+        },
+        "2022": {
+          "doy": 361,
+          "days_since_epoch": null
+        },
+        "2024": {
+          "doy": 349,
+          "days_since_epoch": null
+        }
+      },
+      "growing_season": {
+        "2003": 229,
+        "2004": 237,
+        "2005": 231,
+        "2007": 234,
+        "2009": 218,
+        "2010": 243,
+        "2012": 201,
+        "2013": 214,
+        "2014": 232,
+        "2015": 223,
+        "2016": 244,
+        "2017": 215,
+        "2018": 229,
+        "2019": 237,
+        "2020": 205,
+        "2021": 273,
+        "2022": 283,
+        "2024": 240
+      }
+    },
+    "statistics": {
+      "greenup_mean_doy": 94.3,
+      "greenup_min_doy": 78,
+      "greenup_max_doy": 109,
+      "dormancy_mean_doy": 326.9,
+      "dormancy_min_doy": 303,
+      "dormancy_max_doy": 361,
+      "growing_season_mean_days": 232.7,
+      "growing_season_min_days": 201,
+      "growing_season_max_days": 283,
+      "growing_season_std_days": null,
+      "greenup_trend_days_per_year": null,
+      "dormancy_trend_days_per_year": null,
+      "growing_season_trend_days_per_year": null
+    },
+    "interpretation": {
+      "greenup": "温度阈值法推导(>=5°C连续5天)",
+      "dormancy": "温度阈值法推导(<0°C连续5天)",
+      "growing_season": "基于温度推导，18年有效"
+    },
+    "note": "⚠️ 此处数据为预测/推导：基于 Open-Meteo ERA5 日均温用温度阈值法(>=5°C连续5天为greenup, <0°C连续5天为dormancy)推导，非 MODIS MCD12Q2 真实物候观测。请勿用于物候精度分析。",
+    "is_derived": true,
+    "derivation_method": "temperature_threshold_from_openmeteo_era5",
+    "derivation_note": "⚠️ 此处数据为预测/推导：基于 Open-Meteo ERA5 日均温用温度阈值法(>=5°C连续5天为greenup, <0°C连续5天为dormancy)推导，非 MODIS MCD12Q2 真实物候观测。请勿用于物候精度分析。",
+    "derivation_warning": "此处数据为预测/推导，非真实物候观测",
+    "⚠️ WARNING": "此处数据为预测/推导，非真实物候观测"
   }
 ]

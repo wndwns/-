@@ -1,0 +1,92 @@
+数据获取重试日志 - 2026-06-25 01:10:55
+[2026-06-25 01:10:55] 开始数据获取重试
+[2026-06-25 01:10:55] 目标目录: C:\Users\WH\Desktop\gonghangbei - 副本\public_data\grassland
+[2026-06-25 01:10:55] Edge用户数据: C:\Users\WH\AppData\Local\Microsoft\Edge\User Data
+[2026-06-25 01:10:55] 
+[2026-06-25 01:10:55] ============================================================
+[2026-06-25 01:10:55] 步骤1: 检查网络连接
+[2026-06-25 01:10:55] ============================================================
+[2026-06-25 01:10:56]   resdc.cn: HTTP 200, 耗时 0.39s, URL: https://www.resdc.cn/
+[2026-06-25 01:10:57]   imap.ucas.ac.cn: HTTP 200, 耗时 1.24s, URL: https://imap.ucas.ac.cn/
+[2026-06-25 01:10:57]   百度: HTTP 200, 耗时 0.32s, URL: https://www.baidu.com/
+[2026-06-25 01:10:57] 
+[2026-06-25 01:10:57] ============================================================
+[2026-06-25 01:10:57] 步骤2: 重新尝试 resdc.cn FileID=4069 下载
+[2026-06-25 01:10:57] ============================================================
+[2026-06-25 01:11:11] 访问 https://www.resdc.cn/data.aspx?DATAID=355 ...
+[2026-06-25 01:11:11]   页面响应: HTTP 200
+[2026-06-25 01:11:11]   当前URL: https://www.resdc.cn/data.aspx?DATAID=355
+[2026-06-25 01:11:14] 检查登录状态...
+[2026-06-25 01:11:14]   找到用户元素: 使用本数据的用户
+[2026-06-25 01:11:14]   Cookies数量: 1
+[2026-06-25 01:11:14]     ASP.NET_SessionId: 0a1bi15falv54tdarkxdfcep...
+[2026-06-25 01:11:14] 
+[2026-06-25 01:11:14] 尝试用 requests + cookies 下载 FileID=4069...
+[2026-06-25 01:11:14]   请求URL: https://www.resdc.cn/download.aspx?FileID=4069
+[2026-06-25 01:11:14]   请求方法: GET
+[2026-06-25 01:11:14]   User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)...
+[2026-06-25 01:11:15]   响应状态码: 200
+[2026-06-25 01:11:15]   响应头:
+[2026-06-25 01:11:15]     Cache-Control: private
+[2026-06-25 01:11:15]     Content-Type: text/html; charset=gb2312
+[2026-06-25 01:11:15]     Server: IIS
+[2026-06-25 01:11:15]     X-AspNet-Version: 0
+[2026-06-25 01:11:15]     X-Powered-By: WAF/2.0
+[2026-06-25 01:11:15]     Date: Wed, 24 Jun 2026 17:11:12 GMT
+[2026-06-25 01:11:15]     Content-Length: 8637
+[2026-06-25 01:11:15]   Content-Type: text/html; charset=gb2312
+[2026-06-25 01:11:15]   Content-Length: 8637
+[2026-06-25 01:11:15]   实际内容大小: 8637 字节
+[2026-06-25 01:11:15]   响应是HTML页面，不是文件
+[2026-06-25 01:11:15]   HTML已保存: C:\Users\WH\Desktop\gonghangbei - 副本\public_data\grassland\resdc_4069_response.html
+[2026-06-25 01:11:15]   HTML内容前500字符: 
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>
+	Դѧƽ̨
+</title>
+    <link type="text/css" rel="stylesheet" href="/css/bootstrap.min.css" />
+    <link type="text/css" rel="stylesheet" href="/css/Login.css" />
+    <link type="text/css" rel="stylesheet" href="/css/Common.css" />
+    <link type="text/css" rel="stylesheet" href="/css/AchieveList.css" />
+   
+[2026-06-25 01:11:16] 
+[2026-06-25 01:11:16] ============================================================
+[2026-06-25 01:11:16] 步骤3: 探索 resdc.cn 免费数据
+[2026-06-25 01:11:16] ============================================================
+[2026-06-25 01:11:17] 搜索 resdc.cn 草地相关数据...
+[2026-06-25 01:12:17] 搜索失败: Page.goto: Timeout 60000ms exceeded.
+Call log:
+  - navigating to "https://www.resdc.cn/search.aspx?q=%E8%8D%89%E5%9C%B0", waiting until "networkidle"
+
+[2026-06-25 01:12:17] 
+[2026-06-25 01:12:17] 检查用户点数...
+[2026-06-25 01:12:28] 检查点数失败: Page.goto: net::ERR_HTTP2_PROTOCOL_ERROR at https://www.resdc.cn/User/UserEdit.aspx
+Call log:
+  - navigating to "https://www.resdc.cn/User/UserEdit.aspx", waiting until "networkidle"
+
+[2026-06-25 01:12:28] 
+[2026-06-25 01:12:28] ============================================================
+[2026-06-25 01:12:28] 步骤4: 重新尝试 imap.ucas.ac.cn 数据获取
+[2026-06-25 01:12:28] ============================================================
+[2026-06-25 01:12:29] 访问 https://imap.ucas.ac.cn/front/tibet ...
+[2026-06-25 01:12:38]   页面响应: HTTP 200
+[2026-06-25 01:12:38]   当前URL: https://imap.ucas.ac.cn/front/tibet
+[2026-06-25 01:12:48]   截图已保存
+[2026-06-25 01:12:48] 检查登录状态...
+[2026-06-25 01:12:48]   未登录状态
+[2026-06-25 01:12:48] 
+[2026-06-25 01:12:48] 监听网络请求...
+[2026-06-25 01:12:48] 尝试触发API请求...
+[2026-06-25 01:12:48]   点击按钮: 青藏高原草地植被图
+[2026-06-25 01:12:50] 
+捕获到 0 个API请求:
+[2026-06-25 01:12:51] 
+[2026-06-25 01:12:51] ============================================================
+[2026-06-25 01:12:51] 汇总
+[2026-06-25 01:12:51] ============================================================
+[2026-06-25 01:12:51] 网络连接: 正常
+[2026-06-25 01:12:51] resdc.cn FileID=4069: 失败
+[2026-06-25 01:12:51] 日志文件: C:\Users\WH\Desktop\gonghangbei - 副本\public_data\grassland\download_log.txt

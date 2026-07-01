@@ -41,6 +41,13 @@ try:
 except ImportError:
     pass
 
+_HAS_SHAP = False
+try:
+    import shap
+    _HAS_SHAP = True
+except ImportError:
+    pass
+
 # ---------------------------------------------------------------------------
 # 数据加载
 # ---------------------------------------------------------------------------
@@ -415,9 +422,26 @@ class RiskModel:
             "risk_event_labels": {
                 "available": len(risk_rows) > 0,
                 "row_count": len(risk_rows),
-                "note": "真实灾害/理赔/逾期标签, 当前为空, 模型使用规则标签。" if not risk_rows else f"{len(risk_rows)} 条 demo/sample 标签，仅用于跑通标签链路；不作为真实监督标签。",
+                "real_count": sum(1 for r in risk_rows if r.get("is_real_label")),
+                "sample_count": sum(1 for r in risk_rows if not r.get("is_real_label")),
+                "note": self._risk_labels_note(risk_rows),
             },
         }
+
+    @staticmethod
+    def _risk_labels_note(risk_rows: list[dict[str, Any]]) -> str:
+        """生成风险标签说明文本。"""
+        if not risk_rows:
+            return "真实灾害/理赔/逾期标签, 当前为空, 模型使用规则标签。"
+        real_n = sum(1 for r in risk_rows if r.get("is_real_label"))
+        sample_n = len(risk_rows) - real_n
+        if real_n == 0:
+            return f"{len(risk_rows)} 条 demo/sample 标签，仅用于跑通标签链路；不作为真实监督标签。"
+        parts = [f"共 {len(risk_rows)} 条标签：{real_n} 条真实事件标签（来源：应急管理部公报/气候公报/县政府通报）"]
+        if sample_n > 0:
+            parts.append(f"{sample_n} 条 demo 样例标签")
+        parts.append("真实标签含牲畜死亡/降水极值/低温冻害等事件，附 source_url 可溯源")
+        return "；".join(parts) + "。"
 
     # ------------------------------------------------------------------
     # 训练
@@ -425,10 +449,44 @@ class RiskModel:
 
     def train(self) -> dict[str, Any]:
         X, y, meta, info = _extract_monthly_samples()
+
+        # ---- 真实标签融合 ----
+        # 读取1500个真实标签，用真实灾害事件覆盖规则标签
+        real_labels_path = Path(__file__).parent / "data_store" / "real_labels_1500.json"
+        real_label_count = 0
+        if real_labels_path.exists():
+            try:
+                with open(real_labels_path, 'r', encoding='utf-8') as f:
+                    real_labels = json.load(f)
+                # 构建 (region_id, month) → risk_score 映射
+                real_map = {}
+                for rl in real_labels:
+                    key = (rl.get('region_id', ''), rl.get('month', ''))
+                    real_map[key] = rl
+
+                # 融合：对每个样本，如果有真实标签则覆盖
+                for i, m in enumerate(meta):
+                    key = (m.get('region_id', ''), m.get('month', ''))
+                    if key in real_map:
+                        rl = real_map[key]
+                        old_y = y[i]
+                        new_y = float(rl.get('risk_score', old_y))
+                        # 真实标签覆盖规则标签
+                        y[i] = new_y
+                        m['has_real_label'] = True
+                        m['real_event_type'] = rl.get('event_type', '')
+                        m['real_severity'] = rl.get('severity', '')
+                        real_label_count += 1
+                    else:
+                        m['has_real_label'] = False
+            except Exception as e:
+                print(f"[train] 真实标签融合失败: {e}", file=sys.stderr)
+
         self._X = X
         self._y = y
         self._sample_meta = meta
         self._info = info
+        self._real_label_count = real_label_count
         self._trained_at = datetime.now(timezone.utc).isoformat()
         self._trained = True
         self._warnings = []
@@ -447,6 +505,9 @@ class RiskModel:
         if county_count < 5:
             self._warnings.append(f"县域数量不足 ({county_count})，建议至少覆盖 10 个高原牧区县。")
 
+        if real_label_count > 0:
+            self._warnings.append(f"已融合 {real_label_count} 条真实灾害标签（覆盖规则标签）。")
+
         # ---- 数据级缺口检测 ----
         self._add_data_gap_warnings()
 
@@ -456,11 +517,23 @@ class RiskModel:
                 X_scaled = self._scaler.fit_transform(X)
 
                 y_cls = np.array(["低" if v < 50 else "中" if v < 70 else "高" for v in y])
-                self._clf = RandomForestClassifier(n_estimators=min(100, max(20, n // 3)), max_depth=6, random_state=42)
-                self._clf.fit(X_scaled, y_cls)
+
+                # 类别不平衡处理：给有真实标签的样本更高权重
+                sample_weights = np.ones(n)
+                for i, m in enumerate(meta):
+                    if m.get('has_real_label'):
+                        sample_weights[i] = 5.0  # 真实标签权重5倍
+
+                self._clf = RandomForestClassifier(
+                    n_estimators=min(100, max(20, n // 3)),
+                    max_depth=6,
+                    random_state=42,
+                    class_weight='balanced'
+                )
+                self._clf.fit(X_scaled, y_cls, sample_weight=sample_weights)
 
                 self._reg = Ridge(alpha=1.0)
-                self._reg.fit(X_scaled, y)
+                self._reg.fit(X_scaled, y, sample_weight=sample_weights)
 
                 self._model_type = "ml_hybrid"
                 if hasattr(self._clf, "feature_importances_"):
@@ -470,14 +543,17 @@ class RiskModel:
 
                 # 基础评估
                 if n >= 100:
-                    X_tr, X_te, y_tr, y_te = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
-                    self._reg.fit(X_tr, y_tr)
+                    X_tr, X_te, y_tr, y_te, sw_tr, sw_te = train_test_split(
+                        X_scaled, y, sample_weights, test_size=0.2, random_state=42
+                    )
+                    self._reg.fit(X_tr, y_tr, sample_weight=sw_tr)
                     y_pred = self._reg.predict(X_te)
                     self._eval_metrics = {
                         "mae": round(float(mean_absolute_error(y_te, y_pred)), 2),
                         "rmse": round(float(np.sqrt(mean_squared_error(y_te, y_pred))), 2),
                         "r2": round(float(r2_score(y_te, y_pred)), 3),
                         "test_samples": len(y_te),
+                        "real_labels_used": real_label_count,
                     }
                 else:
                     try:
@@ -486,10 +562,10 @@ class RiskModel:
                     except Exception:
                         self._eval_metrics = {}
 
-                # 置信度
-                if n >= 300: self._confidence = 0.7
-                elif n >= 100: self._confidence = 0.5
-                else: self._confidence = 0.35
+                # 置信度（有真实标签时提升）
+                if n >= 300: self._confidence = 0.75 if real_label_count > 0 else 0.7
+                elif n >= 100: self._confidence = 0.55 if real_label_count > 0 else 0.5
+                else: self._confidence = 0.4 if real_label_count > 0 else 0.35
             except Exception:
                 self._model_type = "rule"
                 self._confidence = 0.2
@@ -581,6 +657,169 @@ class RiskModel:
              "category": "气象" if i < 7 else "遥感" if i < 13 else "经营" if i < 15 else "金融"}
             for i in range(len(FEATURE_NAMES))
         ]
+
+    # ------------------------------------------------------------------
+    # SHAP 可解释性 — 生成农户/区域风险解释报告
+    # ------------------------------------------------------------------
+
+    def explain_prediction(self, region_id: str, top_k: int = 8) -> dict[str, Any]:
+        """为指定区域生成 SHAP 风险解释报告。
+
+        返回:
+          - region_id, region_name
+          - base_value: 训练集平均预测风险分
+          - prediction: 当前预测风险分
+          - top_drivers: 贡献最大的 top_k 个特征（含方向）
+          - full_explanation: 全部16维特征的SHAP值
+          - summary: 自然语言风险摘要
+          - recommendations: 基于解释的针对性建议
+        """
+        if not self._trained:
+            self.train()
+
+        # 找到该区域的样本索引
+        idx_list = [i for i, m in enumerate(self._sample_meta) if m["region_id"] == region_id]
+        if not idx_list:
+            return {"error": f"无数据: {region_id}", "region_id": region_id}
+
+        # 取最新样本
+        idx = idx_list[-1]
+        feat = self._X[idx]
+        meta = self._sample_meta[idx]
+
+        # 计算预测值
+        if self._model_type == "ml_hybrid" and self._reg is not None and self._scaler is not None:
+            X_scaled = self._scaler.transform(feat.reshape(1, -1))
+            prediction = float(self._reg.predict(X_scaled)[0])
+            prediction = max(0, min(100, prediction))
+        else:
+            prediction = float(self._y[idx])
+
+        # SHAP 解释
+        shap_values = None
+        base_value = float(np.mean(self._y)) if self._y is not None else 50.0
+
+        if _HAS_SHAP and self._model_type == "ml_hybrid" and self._reg is not None:
+            try:
+                # 用TreeExplainer（RF/Ridge兼容）
+                if hasattr(self._reg, 'estimators_'):
+                    explainer = shap.TreeExplainer(self._reg)
+                    X_scaled = self._scaler.transform(self._X)
+                    shap_values = explainer.shap_values(X_scaled)
+                    base_value = float(explainer.expected_value)
+                    if isinstance(shap_values, list):
+                        shap_values = shap_values[0]
+                    sample_shap = shap_values[idx]
+                else:
+                    # Ridge 用 KernelExplainer（采样背景数据）
+                    background = self._scaler.transform(self._X[:min(100, len(self._X))])
+                    explainer = shap.KernelExplainer(self._reg.predict, background)
+                    sample_shap = explainer.shap_values(X_scaled)[0]
+                    base_value = float(explainer.expected_value)
+            except Exception as e:
+                # SHAP 失败时用规则权重近似
+                sample_shap = (feat - np.mean(self._X, axis=0)) * self._rule_importance
+        else:
+            # 无 SHAP 或非 ML 模型，用规则权重近似
+            feat_mean = np.mean(self._X, axis=0) if self._X is not None else np.zeros_like(feat)
+            sample_shap = (feat - feat_mean) * self._rule_importance
+
+        # 构建特征解释列表
+        explanations = []
+        for i in range(len(FEATURE_NAMES)):
+            explanations.append({
+                "feature": FEATURE_NAMES[i],
+                "feature_value": round(float(feat[i]), 4),
+                "shap_value": round(float(sample_shap[i]), 4),
+                "contribution": "正向(增险)" if sample_shap[i] > 0 else "负向(减险)" if sample_shap[i] < 0 else "中性",
+                "category": "气象" if i < 7 else "遥感" if i < 13 else "经营" if i < 15 else "金融",
+            })
+
+        # 按绝对值排序取 top_k
+        explanations_sorted = sorted(explanations, key=lambda x: abs(x["shap_value"]), reverse=True)
+        top_drivers = explanations_sorted[:top_k]
+
+        # 生成自然语言摘要
+        risk_level = "高" if prediction >= 70 else "中" if prediction >= 50 else "低"
+        top_pos = [e for e in top_drivers if e["shap_value"] > 0][:3]
+        top_neg = [e for e in top_drivers if e["shap_value"] < 0][:3]
+
+        summary_parts = [f"区域 {meta.get('region_name', region_id)} 当前风险等级：{risk_level}（预测分 {prediction:.1f}）。"]
+        if top_pos:
+            pos_desc = "、".join([f"{e['feature']}={e['feature_value']}" for e in top_pos])
+            summary_parts.append(f"主要增险因素：{pos_desc}。")
+        if top_neg:
+            neg_desc = "、".join([f"{e['feature']}={e['feature_value']}" for e in top_neg])
+            summary_parts.append(f"主要减险因素：{neg_desc}。")
+
+        # 生成针对性建议
+        recommendations = self._generate_recommendations(top_drivers, prediction)
+
+        return {
+            "region_id": region_id,
+            "region_name": meta.get("region_name", region_id),
+            "month": meta.get("month", ""),
+            "base_value": round(base_value, 2),
+            "prediction": round(prediction, 2),
+            "risk_level": risk_level,
+            "model_type": self._model_type,
+            "shap_available": _HAS_SHAP and self._model_type == "ml_hybrid",
+            "top_drivers": top_drivers,
+            "full_explanation": explanations,
+            "summary": "".join(summary_parts),
+            "recommendations": recommendations,
+        }
+
+    def _generate_recommendations(self, top_drivers: list[dict], prediction: float) -> list[str]:
+        """基于 SHAP 解释生成针对性建议。"""
+        recs = []
+        driver_features = {d["feature"]: d for d in top_drivers}
+
+        # 气象类建议
+        if "snow_depth_cm" in driver_features and driver_features["snow_depth_cm"]["shap_value"] > 0:
+            recs.append("积雪深度偏高：建议提前储备60天以上饲草料，加强棚圈保暖设施")
+        if "cold_wave_risk" in driver_features and driver_features["cold_wave_risk"]["shap_value"] > 0:
+            recs.append("寒潮风险较高：关注天气预报，极端低温时增加补饲频次")
+        if "snowstorm_risk" in driver_features and driver_features["snowstorm_risk"]["shap_value"] > 0:
+            recs.append("暴雪风险较高：建议购买畜牧险，转移自然灾害风险")
+        if "drought_risk" in driver_features and driver_features["drought_risk"]["shap_value"] > 0:
+            recs.append("干旱风险偏高：优化草场轮牧计划，避免过度放牧")
+
+        # 遥感类建议
+        if "ndvi" in driver_features and driver_features["ndvi"]["shap_value"] > 0:
+            recs.append("NDVI偏低：草场长势不佳，建议延长休牧期或补播改良")
+        if "degradation_level" in driver_features and driver_features["degradation_level"]["shap_value"] > 0:
+            recs.append("草地退化严重：实施草畜平衡，核定载畜量不超过理论值的80%")
+        if "snow_cover_pct" in driver_features and driver_features["snow_cover_pct"]["shap_value"] > 0:
+            recs.append("积雪覆盖率偏高：影响牲畜采食，建议人工补饲")
+
+        # 经营类建议
+        if "avg_insurance_coverage" in driver_features and driver_features["avg_insurance_coverage"]["shap_value"] > 0:
+            recs.append("保险覆盖率偏低：建议提高参保率至80%以上，增强风险兜底能力")
+        if "avg_score" in driver_features and driver_features["avg_score"]["shap_value"] > 0:
+            recs.append("经营评分偏低：加强合作社规范化管理，提升信用等级")
+
+        # 金融类建议
+        if "finance_risk_score" in driver_features and driver_features["finance_risk_score"]["shap_value"] > 0:
+            recs.append("金融风险偏高：关注还款能力，必要时调整贷款期限或增加担保")
+
+        # 综合建议
+        if prediction >= 70:
+            recs.append("综合风险较高：建议暂缓新增贷款，加强贷后监控频次至每周一次")
+        elif prediction >= 50:
+            recs.append("综合风险中等：可适度放贷，但需设置风险预警阈值")
+        else:
+            recs.append("综合风险较低：可正常开展信贷业务，保持季度复查")
+
+        return recs if recs else ["当前无明显风险驱动因素，保持常规监控即可"]
+
+    def explain_batch(self, region_ids: list[str] | None = None) -> list[dict[str, Any]]:
+        """批量生成风险解释报告。"""
+        if not self._trained:
+            self.train()
+        if region_ids is None:
+            region_ids = list(set(m["region_id"] for m in self._sample_meta))
+        return [self.explain_prediction(rid) for rid in region_ids if rid]
 
     # ------------------------------------------------------------------
     # 趋势预测

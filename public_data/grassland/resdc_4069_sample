@@ -1,0 +1,98 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>
+	资源环境科学与数据平台
+</title>
+    <link type="text/css" rel="stylesheet" href="/css/bootstrap.min.css" />
+    <link type="text/css" rel="stylesheet" href="/css/Login.css" />
+    <link type="text/css" rel="stylesheet" href="/css/Common.css" />
+    <link type="text/css" rel="stylesheet" href="/css/AchieveList.css" />
+    <link type="text/css" rel="stylesheet" href="/css/Datalist.css" />
+    <link type="text/css" rel="stylesheet" href="/css/DataSearch.css" />
+    <link type="text/css" rel="stylesheet" href="/css/Other.css" />
+    <link type="text/css" rel="stylesheet" href="/css/thickbox.css" />
+    <script type="text/javascript" src="/js/jquery-1.11.0.min.js"></script>
+    <script type="text/javascript" src="/js/thickbox-compressed.js"></script>
+    <script type="text/javascript">
+        tb_pathToImage = '/picture/loading.gif';
+        $(function () {
+            $('#nav').find('li:last').css({ background: 'none' });
+        });
+    </script>
+    
+</head>
+<body>
+    <form method="post" action="./download.aspx?FileID=4069" id="form1">
+<div class="aspNetHidden">
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwULLTE1MjQ5ODA0NjkPZBYCZg9kFgICAw9kFgJmDxYCHgdWaXNpYmxlaGRku6FKUmVHUFpV3mT99XrkPIOlK1ji1DjSY6pySYrOHC8=" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['form1'];
+if (!theForm) {
+    theForm = document.form1;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<script>alert('您的当日可下载文件数量超限，如需继续下载，请完善信息并绑定手机号码。');window.opener=null;window.open('','_self');window.close();</script>
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="E0C68A58" />
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="/wEdAAIEVdwzqamAGJ63qnuSYms9udhBfptXgzY44mLGEIiUJhkpnDKvLZP+1bWSbFx7PTVOIcWDcpJyS8C8J/N7Fq2B" />
+</div>
+    <div id="body">
+            <div id="Top">
+                <ul id="Menu" style="margin-bottom:0px;">
+                    <li><a target="_self" href="/">网站首页</a></li>
+                    
+                    <li><a target="_self" href="/DOI/">数据出版</a></li>
+                    <li><a target="_self" href="/DataSearch.aspx">数据搜索</a></li>
+                    
+                    
+                    
+                    <li><a target="_blank" href="/LandsatSearch/">中分遥感影像查询</a></li>
+                    
+                    
+                    <li><a target="_self" href="/DatalistHeitudi.aspx">黑土地专题数据集</a></li>
+                    <li><a target="_self" href="/BookList.aspx">专业图书</a></li>
+                    
+                    <li><a target="_self" href="/TutorialList.aspx">视频教程</a></li>
+                    <li><a target="_self" href="/Otherachieve.aspx">其他成果</a></li>
+                    <li><a target="_self" href="/NewsInfo.aspx?NewsID=15">帮助中心</a></li>
+                </ul>
+                
+                <div id="userInfo" class="memberLogin">
+                    <span id="lbl_name"></span>
+                    <a id="userCenter" href="/User/UserEdit.aspx" class="userCenter">会员中心</a>
+                    <a onclick="return confirm(&#39;确定退出吗？&#39;);" id="QuitBtn" class="quit" href="javascript:__doPostBack(&#39;ctl00$QuitBtn&#39;,&#39;&#39;)">退出</a>
+                </div>
+                
+            </div>
+            
+    <span id="ContentPlaceHolder1_Label1"></span>
+
+            <div id="footer">
+                Copyright &copy; 2014-2025 中国科学院地理科学与资源研究所 版权所有<br />
+                技术与服务支持：北京宇世蓝图信息技术有限公司<br />
+                备案编号：<a href="https://beian.miit.gov.cn/" target="_blank">京ICP备05002838号-36</a> &nbsp; <a href="https://beian.mps.gov.cn/#/query/webSearch?code=11010502055484" rel="noreferrer" target="_blank">京公网安备11010502055484</a><br />
+                地址:北京市朝阳区大屯路甲11号 邮编:100101<br />
+                &nbsp;</div>
+        </div>
+    </form>
+</body>
+</html>

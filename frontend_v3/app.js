@@ -52,6 +52,10 @@ const api = {
       : safeFetch("/api/warning/ndvi"),
   carryingCapacityDaily: (regionId, days = 30) =>
     safeFetch(`/api/carrying-capacity/daily?region_id=${encodeURIComponent(regionId)}&days=${days}`),
+  gridStatus: () => safeFetch("/api/grid/status"),
+  gridAll: () => safeFetch("/api/grid/all"),
+  gridRegion: (regionId) => safeFetch(`/api/grid/${encodeURIComponent(regionId)}`),
+  modelExplain: (regionId) => safeFetch(`/api/model/explain/${encodeURIComponent(regionId)}`),
 };
 
 // ============================================================================
@@ -501,6 +505,10 @@ async function initRisk() {
       sel3.addEventListener("change", () => loadRegionDetail(sel3.value));
     }
     if (state.regions.length) loadRegionDetail(state.regions[0].id);
+    // 时空网格
+    await initGrid();
+    // SHAP 风险解释报告
+    await initExplain();
   } catch (e) {
     console.error("[risk] init 失败:", e);
   }
@@ -1018,6 +1026,225 @@ async function loadMonitorAlerts() {
     });
   } catch (e) {
     showEmpty("monitor-alerts", "预警加载失败", e.message);
+  }
+}
+
+// ============================================================================
+// 时空网格
+// ============================================================================
+
+function gridRiskColor(risk) {
+  if (!risk) return "transparent";
+  if (risk >= 65) return "#EF4444";
+  if (risk >= 50) return "#F59E0B";
+  if (risk >= 40) return "#EAB308";
+  return "#10B981";
+}
+
+async function initGrid() {
+  const sel = el("grid-region-select");
+  if (sel && !sel._bound) {
+    sel._bound = true;
+    // 填充县列表
+    if (!state.regions.length) {
+      try { state.regions = await api.regions(); } catch {}
+    }
+    state.regions.forEach((r) => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = r.name;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", () => loadGridData());
+  }
+  const ageSel = el("grid-age-select");
+  if (ageSel && !ageSel._bound) {
+    ageSel._bound = true;
+    ageSel.addEventListener("change", () => loadGridData());
+  }
+  // 默认加载第一个县
+  if (sel && sel.options.length > 0 && !sel.value) {
+    sel.selectedIndex = 0;
+  }
+  if (sel && sel.value) await loadGridData();
+}
+
+// ============================================================================
+// SHAP 风险解释报告
+// ============================================================================
+
+async function initExplain() {
+  const sel = el("explain-region-select");
+  if (sel && !sel._bound) {
+    sel._bound = true;
+    if (!state.regions.length) {
+      try { state.regions = await api.regions(); } catch {}
+    }
+    state.regions.forEach((r) => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = r.name;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", () => loadExplain(sel.value));
+  }
+  if (sel && sel.options.length > 0 && !sel.value) {
+    sel.selectedIndex = 0;
+  }
+  if (sel && sel.value) await loadExplain(sel.value);
+}
+
+async function loadExplain(regionId) {
+  const loading = el("explain-loading");
+  const content = el("explain-content");
+  if (loading) loading.style.display = "";
+  if (content) content.style.display = "none";
+
+  try {
+    const data = await api.modelExplain(regionId);
+    if (data.error) {
+      if (loading) loading.innerHTML = `<p class="empty-state-desc">${data.error}</p>`;
+      return;
+    }
+
+    // 摘要区
+    setText("explain-prediction", data.prediction?.toFixed(1) || "--");
+    const levelEl = el("explain-level");
+    if (levelEl) {
+      levelEl.textContent = data.risk_level || "--";
+      levelEl.style.color = data.risk_level === "高" ? "#EF4444" : data.risk_level === "中" ? "#F59E0B" : "#10B981";
+    }
+    setText("explain-base", data.base_value?.toFixed(1) || "--");
+    setText("explain-engine", data.shap_available ? "SHAP TreeExplainer" : "规则权重近似");
+
+    // 风险摘要
+    setText("explain-summary", data.summary || "--");
+
+    // Top 驱动因素
+    const driversEl = el("explain-drivers");
+    if (driversEl) {
+      driversEl.innerHTML = (data.top_drivers || []).map((d) => {
+        const color = d.shap_value > 0 ? "#EF4444" : d.shap_value < 0 ? "#10B981" : "#6B7280";
+        const barWidth = Math.min(100, Math.abs(d.shap_value) * 20);
+        const direction = d.shap_value > 0 ? "↑增险" : d.shap_value < 0 ? "↓减险" : "中性";
+        return `
+          <div style="margin-bottom:10px;padding:8px;background:var(--bg-secondary);border-radius:6px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-weight:600">${d.feature}</span>
+              <span style="color:${color};font-weight:600">${direction}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-bottom:4px">
+              <span>值: ${d.feature_value}</span>
+              <span>SHAP: ${d.shap_value > 0 ? "+" : ""}${d.shap_value}</span>
+            </div>
+            <div style="height:4px;background:var(--bg-tertiary,#E5E7EB);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${barWidth}%;background:${color}"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // 建议
+    const recsEl = el("explain-recommendations");
+    if (recsEl) {
+      recsEl.innerHTML = (data.recommendations || []).map((r) => `
+        <div style="margin-bottom:8px;padding:8px;background:var(--bg-secondary);border-radius:6px;display:flex;gap:8px">
+          <span style="color:#3B82F6">▸</span>
+          <span>${r}</span>
+        </div>
+      `).join("");
+    }
+
+    if (loading) loading.style.display = "none";
+    if (content) content.style.display = "";
+  } catch (e) {
+    console.warn("[explain] 加载失败:", e);
+    if (loading) loading.innerHTML = `<p class="empty-state-desc">加载失败: ${e.message}</p>`;
+  }
+}
+
+async function loadGridData() {
+  const regionId = el("grid-region-select")?.value;
+  const ageGroup = el("grid-age-select")?.value || "adult";
+  if (!regionId) return;
+
+  try {
+    const data = await api.gridRegion(regionId);
+    if (!data || !data.grids) return;
+
+    // 摘要
+    const summary = el("grid-summary");
+    if (summary) {
+      const s = data.summary;
+      summary.innerHTML = `
+        <span>网格数: <strong>${data.n_grids}</strong></span>
+        <span>平均风险: <strong>${s.avg_risk}</strong></span>
+        <span>风险分布: <strong style="color:#EF4444">${s.risk_distribution["高"]} 高</strong> / <strong style="color:#F59E0B">${s.risk_distribution["中"]} 中</strong> / <strong style="color:#10B981">${s.risk_distribution["低"]} 低</strong></span>
+        <span>最高: <strong style="color:#EF4444">${s.max_risk}</strong></span>
+        <span>最低: <strong style="color:#10B981">${s.min_risk}</strong></span>
+      `;
+    }
+
+    // 草场 × 季节表
+    const glTypes = ["alpine_meadow", "alpine_steppe", "alpine_desert"];
+    const glNames = { alpine_meadow: "高寒草甸", alpine_steppe: "高寒草原", alpine_desert: "高寒荒漠" };
+    const seasons = ["spring", "summer", "autumn", "winter"];
+    const sNames = { spring: "春", summer: "夏", autumn: "秋", winter: "冬" };
+    const glTable = el("grid-table-gl")?.querySelector("tbody");
+    if (glTable) {
+      glTable.innerHTML = "";
+      glTypes.forEach((gl) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td><strong>${glNames[gl]}</strong></td>`;
+        seasons.forEach((s) => {
+          const grid = data.grids.find((g) => g.grassland_type === gl && g.season === s && g.age_group === ageGroup);
+          const risk = grid?.total_risk || 0;
+          const td = document.createElement("td");
+          td.textContent = risk ? risk.toFixed(1) : "-";
+          td.style.cssText = `background:${gridRiskColor(risk)};color:#fff;text-align:center;font-weight:bold`;
+          tr.appendChild(td);
+        });
+        glTable.appendChild(tr);
+      });
+    }
+
+    // 季节 × 年龄表 (用高寒草原)
+    const ages = ["calf", "yearling", "young", "adult", "old"];
+    const aNames = { calf: "犊", yearling: "育", young: "青", adult: "成", old: "老" };
+    const ageTable = el("grid-table-age")?.querySelector("tbody");
+    if (ageTable) {
+      ageTable.innerHTML = "";
+      seasons.forEach((s) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td><strong>${sNames[s]}</strong></td>`;
+        ages.forEach((a) => {
+          const grid = data.grids.find((g) => g.grassland_type === "alpine_steppe" && g.season === s && g.age_group === a);
+          const risk = grid?.total_risk || 0;
+          const td = document.createElement("td");
+          td.textContent = risk ? risk.toFixed(1) : "-";
+          td.style.cssText = `background:${gridRiskColor(risk)};color:#fff;text-align:center;font-weight:bold`;
+          tr.appendChild(td);
+        });
+        ageTable.appendChild(tr);
+      });
+    }
+
+    // 维度均值
+    const dims = el("grid-dims");
+    if (dims) {
+      const s = data.summary;
+      const seasonStr = Object.entries(s.season_avg_risk).map(([k, v]) => `${sNames[k] || k}: <strong>${v}</strong>`).join("  ");
+      const glStr = Object.entries(s.grassland_avg_risk).map(([k, v]) => `${glNames[k] || k}: <strong>${v}</strong>`).join("  ");
+      const ageStr = Object.entries(s.age_avg_risk).map(([k, v]) => `${aNames[k] || k}: <strong>${v}</strong>`).join("  ");
+      dims.innerHTML = `
+        <div><span style="color:var(--text-secondary)">季节均值:</span> ${seasonStr}</div>
+        <div><span style="color:var(--text-secondary)">草场均值:</span> ${glStr}</div>
+        <div><span style="color:var(--text-secondary)">年龄均值:</span> ${ageStr}</div>
+      `;
+    }
+  } catch (e) {
+    console.error("[grid] 加载失败:", e);
   }
 }
 
