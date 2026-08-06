@@ -133,6 +133,10 @@ const api = {
     const res = await fetch("/api/insurance-portfolio/comprehensive-risk", { cache: "no-store" });
     return res.json();
   },
+  async portfolioDueDiligence() {
+    const res = await fetch("/api/insurance-portfolio/due-diligence", { cache: "no-store" });
+    return res.json();
+  },
 };
 
 // ============================================================================
@@ -186,9 +190,9 @@ function heroImage(scene) {
 function buildHeroSlides() {
   return [
     { scene: "snow", kicker: "ICBC 绿色金融", title: "牧融绿链", desc: "面向高原牧区，把气象遥感、经营台账、授信还款、产业链资金和保险协同转化为工行客户经理可执行的风险评估结论。", image: "" },
-    { scene: "grassland", kicker: "授信准入", title: "让高原畜牧数据进入工行风控链路", desc: "从缺抵押、难核验、灾害风险高的牧区场景出发，形成主体准入、额度建议、人工复核和暂停增额策略。", image: "" },
+    { scene: "grassland", kicker: "授信准入", title: "让高原畜牧数据进入工行风控链路", desc: "从缺抵押、难核验、灾害风险高的牧区场景出发，形成风险筛查、证据核验和客户经理处置清单。", image: "" },
     { scene: "river", kicker: "贷后管理", title: "从放款到回款的闭环监测", desc: "围绕贷款用途、饲草采购、活体交易、物流回款和保险保障，支撑工行贷后核查和风险处置。", image: "" },
-    { scene: "sunset", kicker: "银保协同", title: "绿色信贷与保险减损联动", desc: "用雪灾、草场退化、NDVI 和理赔记录识别风险缓释能力，沉淀绿色金融绩效和普惠服务价值。", image: "" },
+    { scene: "sunset", kicker: "银保协同", title: "绿色信贷与保险资料核验", desc: "用雪灾、草场退化、NDVI 和待核验理赔资料形成风险筛查清单，沉淀可复核的普惠服务证据。", image: "" },
   ];
 }
 
@@ -609,6 +613,7 @@ createApp({
       portfolioFarmers: [],
       portfolioSynergy: null,
       portfolioComprehensive: null,
+      portfolioDueDiligence: null,
       portfolioLoading: false,
       // 灾害预测
       disasterInput: "",
@@ -875,9 +880,9 @@ createApp({
     },
     icbcRoleCards() {
       return [
-        { step: "01", title: "授信准入", desc: "客户经理选择县域或主体，查看综合风险分、证据链和额度建议。" },
+        { step: "01", title: "授信准入", desc: "客户经理选择县域或主体，查看风险筛查结果、来源证据和待核验字段。" },
         { step: "02", title: "资金用途核验", desc: "贷款资金绑定饲草采购、活体交易和物流回款，减少资金空转。" },
-        { step: "03", title: "贷后预警", desc: "NDVI、积雪、回款、逾期和保险覆盖异常进入工行处置队列。" },
+        { step: "03", title: "贷后预警", desc: "NDVI、积雪、回款、逾期和保险资料异常进入客户经理人工核查队列。" },
         { step: "04", title: "银保协同", desc: "承保、出险、查勘、理赔结果回流贷后策略，形成风险缓释闭环。" },
       ];
     },
@@ -1288,7 +1293,7 @@ createApp({
         card("forage_supply_demand", "Geodoi 饲草供需", "2000-2020 全国/区域年度宏观饲草供需。", "真实宏观"),
         card("business_subjects", "经营主体台账", "合作社、家庭牧场、供应商经营信息。", "样例待替换"),
         card("finance_credit", "工行授信与保险台账", "授信、用信、还款、逾期、保单信息。", "样例待替换"),
-        card("risk_event_labels", "真实风险标签", "灾害、理赔、逾期标签，决定模型是否能做监督预测。", "待接入"),
+        card("risk_event_labels", "来源事件样本", "带来源 URL 的公开灾害事件；其余月份保持未确认。", "42 条来源事件"),
         card("insurance_claims", "银保理赔查勘", "出险、查勘、理赔金额和贷后回流动作。", "脱敏样例"),
         card("supply_chain_orders", "产业链订单台账", "饲草采购、活体交易、物流验收和关联授信。", "脱敏样例"),
         card("supply_chain_payments", "工行资金流向", "定向支付、收款方、到账状态和用途核验。", "脱敏样例"),
@@ -1301,14 +1306,14 @@ createApp({
         { label: "TPDC CMFD 气象", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "weather_data")?.row_count || 0), note: "县域月度温度/降水/风速" },
         { label: "MODIS/TPDC 遥感", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "remote_sensing_data")?.row_count || 0), note: "NDVI、积雪、退化、载畜量字段" },
         { label: "Geodoi 宏观饲草", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "forage_supply_demand")?.row_count || 0), note: "年度区域参考，不参与训练" },
-        { label: "真实标签", value: this.dataAssetCards.find((c) => c.key === "risk_event_labels")?.row_count || 0, note: "灾害/理赔/逾期标签待补" },
+        { label: "来源事件", value: 42, note: "公开灾害事件；不等于完整灾害或贷损标签" },
       ];
     },
     moduleLoopItems() {
       return [
         { step: "01", title: "数据接入", desc: "接入气象遥感、经营主体、授信还款、保险协同和产业链台账。" },
         { step: "02", title: "工行准入", desc: "形成授信对象池、综合风险分、主风险因子和可解释证据链。" },
-        { step: "03", title: "额度判断", desc: "结合生态约束、经营现金流、保险覆盖和用信率给出额度建议。" },
+        { step: "03", title: "人工核验", desc: "结合生态证据、经营资料、保险合同和用信记录形成核验清单。" },
         { step: "04", title: "贷后预警", desc: "对寒潮、积雪、NDVI 异常、逾期和回款异常触发核查任务。" },
         { step: "05", title: "绩效回流", desc: "沉淀绿色信贷投放、风险减量、银保协同和边疆民生绩效。" },
       ];
@@ -1347,7 +1352,7 @@ createApp({
         { label: "真实数据行", value: this.formatNumber(total.real_rows || 0), note: "气象、遥感、宏观饲草供需" },
         { label: "样例数据行", value: this.formatNumber(total.sample_rows || 0), note: "经营主体、工行授信和保险台账仍需替换" },
         { label: "模型样本", value: this.formatNumber(this.modelStatus.n_samples || 0), note: `${this.modelStatus.county_count || 0} 县 / ${this.modelStatus.month_count || 0} 月` },
-        { label: "真实标签", value: this.dataAssetCards.find((c) => c.key === "risk_event_labels")?.row_count || 0, note: "当前为规则弱标签" },
+        { label: "来源事件", value: 42, note: "其余月份为未确认状态，不等于无灾" },
       ];
     },
     insuranceRows() {
@@ -1359,7 +1364,7 @@ createApp({
         repayment: row.repayment,
         overdue: row.overdue,
         used: row.used,
-        action: row.overdue > 0 ? "优先贷后核查" : Number(String(row.insurance).replace("%", "")) < 65 ? "补充保险缓释" : row.action,
+        action: row.overdue > 0 ? "优先贷后核查" : Number(String(row.insurance).replace("%", "")) < 65 ? "核验保险资料" : row.action,
       })).slice(0, 12);
     },
     insuranceSummary() {
@@ -1374,9 +1379,9 @@ createApp({
       const claimAmount = claims.reduce((sum, row) => sum + (Number(row.claim_amount) || 0), 0);
       return [
         { label: "授信主体", value: this.formatNumber(this.insuranceSummary.count), note: "经营主体样例池" },
-        { label: "平均保险覆盖", value: this.insuranceSummary.coverage, note: "sample/demo 台账聚合" },
-        { label: "低覆盖主体", value: this.insuranceSummary.low, note: "低于 65% 需补充缓释" },
-        { label: "理赔记录", value: this.formatNumber(claims.length), note: `脱敏样例，赔付 ${claimAmount.toFixed(1)} 万` },
+        { label: "样例覆盖字段", value: this.insuranceSummary.coverage, note: "仅作资料核验线索" },
+        { label: "待核验主体", value: this.insuranceSummary.low, note: "需补齐合同和责任范围" },
+        { label: "理赔样例", value: this.formatNumber(claims.length), note: `脱敏流程数据，赔付 ${claimAmount.toFixed(1)} 万` },
       ];
     },
     insuranceEvidence() {
@@ -1389,12 +1394,12 @@ createApp({
         .slice(0, 2);
       return [
         {
-          group: "承保",
-          title: `${this.insuranceSummary.coverage} 平均保险覆盖`,
+          group: "资料核验",
+          title: `${this.insuranceSummary.coverage} 样例覆盖字段`,
           rows: [
-            `低覆盖主体 ${this.insuranceSummary.low} 个`,
-            lowNames.length ? `需补保：${lowNames.join("、")}` : "暂无低覆盖主体",
-            "保单字段接入后进入贷前准入与额度判断",
+            `待核验主体 ${this.insuranceSummary.low} 个`,
+            lowNames.length ? `需核验：${lowNames.join("、")}` : "暂无待核验主体",
+            "需补齐保单号、保额、责任范围后才能进入人工授信核验",
           ],
           state: this.insuranceSummary.low > 0 ? "warn" : "ok",
         },
@@ -1404,7 +1409,7 @@ createApp({
           rows: [
             `气象：${this.latestWeatherSummary[1]?.value || "-"} / ${this.latestWeatherSummary[2]?.value || "-"}`,
             `遥感：NDVI ${this.latestRemoteSummary[1]?.value || "-"}`,
-            "寒潮、积雪、NDVI 异常进入银保协同观察名单",
+            "寒潮、积雪、NDVI 异常进入客户经理人工核查名单",
           ],
           state: "ok",
         },
@@ -1413,7 +1418,7 @@ createApp({
           title: `${claims.length || 0} 条理赔/查勘样例`,
           rows: [
             `查勘中 ${surveying} 条，样例赔付 ${claimAmount.toFixed(1)} 万元`,
-            "理赔结果回流贷后核查、风险缓释和额度策略",
+            "理赔结果接入后再回流贷后核查；当前仅展示流程",
             "当前仅作流程演示，不作为真实理赔结论",
           ],
           state: claims.length ? "ok" : "warn",
@@ -1422,23 +1427,21 @@ createApp({
     },
     insuranceActions() {
       return [
-        { priority: "P1", title: "低覆盖主体补保", desc: "对保险覆盖低于 65% 的主体提示客户经理补充保单或提高保障额度。" },
+        { priority: "P1", title: "保险资料核验", desc: "对覆盖字段缺失或偏低的主体，提示客户经理核验保单号、保额、期限和责任范围。" },
         { priority: "P1", title: "灾害触发查勘", desc: "当气象、积雪、NDVI 异常与授信主体重叠时，推送银保协同查勘名单。" },
         { priority: "DATA", title: "理赔接口补齐", desc: "当前理赔数据为接口预留，后续接入真实 claim_id、claim_amount、claim_date 后回流风险模型。" },
       ];
     },
     insuranceAssessmentRows() {
       return this.insuranceRows.slice(0, 8).map((row, idx) => {
-        const coverage = Number(String(row.insurance || "").replace("%", "")) || 0;
-        const score = Math.max(48, Math.min(78, Math.round((72 - coverage * 0.18 + Number(row.overdue || 0) * 8) * 10) / 10));
         return {
           key: `${row.name}-${idx}`,
           object: row.name,
           type: row.type || "授信主体",
-          score,
-          level: score >= 70 ? "高风险" : score >= 55 ? "中风险" : "低风险",
+          score: null,
+          level: "待核验",
           exposure: row.used || 0,
-          driver: Number(row.overdue || 0) > 0 ? "逾期/保险" : coverage < 65 ? "保险覆盖" : "承保正常",
+          driver: Number(row.overdue || 0) > 0 ? "逾期待核验" : "保险资料待核验",
           action: row.action,
         };
       });
@@ -1893,16 +1896,18 @@ createApp({
       if (this.portfolioLoading) return;
       this.portfolioLoading = true;
       try {
-        const [profile, farmers, synergy, comprehensive] = await Promise.all([
+        const [profile, farmers, synergy, comprehensive, dueDiligence] = await Promise.all([
           api.portfolioProfile(),
           api.portfolioFarmers(),
           api.portfolioSynergy(),
           api.portfolioComprehensive(),
+          api.portfolioDueDiligence(),
         ]);
         this.portfolioProfile = profile;
         this.portfolioFarmers = farmers;
         this.portfolioSynergy = synergy;
         this.portfolioComprehensive = comprehensive;
+        this.portfolioDueDiligence = dueDiligence;
         this.$nextTick(() => {
           this.renderPortfolioScaleChart();
           this.renderPortfolioFarmersChart();

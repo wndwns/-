@@ -931,7 +931,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/insurance-portfolio/farmers")
     def insurance_farmers() -> list[dict[str, Any]]:
-        """21户农户增信评分列表（按增信分降序）。"""
+        """21户主体资料完整度列表（按资料分降序）。"""
         try:
             from insurance_portfolio import get_farmers
         except ImportError:
@@ -952,7 +952,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/insurance-portfolio/synergy")
     def insurance_synergy() -> dict[str, Any]:
-        """银保协同场景数据（农行承保→工行放贷→保险兜底）。"""
+        """银保协同核验清单，不推导未经核验的风险减损比例。"""
         try:
             from insurance_portfolio import get_synergy
         except ImportError:
@@ -961,12 +961,21 @@ def create_app() -> FastAPI:
 
     @app.get("/api/insurance-portfolio/comprehensive-risk")
     def insurance_comprehensive_risk() -> dict[str, Any]:
-        """综合风险评估 = 环境风险 + 保险增信。"""
+        """环境风险筛查与保险/授信资料核验状态。"""
         try:
             from insurance_portfolio import get_comprehensive_risk
         except ImportError:
             from backend.insurance_portfolio import get_comprehensive_risk  # type: ignore[no-redef]
         return get_comprehensive_risk()
+
+    @app.get("/api/insurance-portfolio/due-diligence")
+    def insurance_due_diligence() -> dict[str, Any]:
+        """返回聚合事实、来源和待核验字段组成的客户经理案例。"""
+        try:
+            from insurance_portfolio import get_due_diligence_case
+        except ImportError:
+            from backend.insurance_portfolio import get_due_diligence_case  # type: ignore[no-redef]
+        return get_due_diligence_case()
 
     # ======================================================================
     # 饲料需求估算 API（方案B: 日值正弦插值 + NDVI修正）

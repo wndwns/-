@@ -450,17 +450,19 @@ class RiskModel:
     def train(self) -> dict[str, Any]:
         X, y, meta, info = _extract_monthly_samples()
 
-        # ---- 真实标签融合 ----
-        # 读取1500个真实标签，用真实灾害事件覆盖规则标签
+        # ---- 来源支持的事件融合 ----
+        # 只使用带来源 URL 的公开事件；“未检索到报道”不是负标签。
         real_labels_path = Path(__file__).parent / "data_store" / "real_labels_1500.json"
         real_label_count = 0
         if real_labels_path.exists():
             try:
                 with open(real_labels_path, 'r', encoding='utf-8') as f:
                     real_labels = json.load(f)
-                # 构建 (region_id, month) → risk_score 映射
+                # 构建 (region_id, month) → 来源支持事件映射
                 real_map = {}
                 for rl in real_labels:
+                    if not rl.get('source_url'):
+                        continue
                     key = (rl.get('region_id', ''), rl.get('month', ''))
                     real_map[key] = rl
 
@@ -471,14 +473,14 @@ class RiskModel:
                         rl = real_map[key]
                         old_y = y[i]
                         new_y = float(rl.get('risk_score', old_y))
-                        # 真实标签覆盖规则标签
+                        # 来源支持事件覆盖规则标签
                         y[i] = new_y
-                        m['has_real_label'] = True
+                        m['has_source_event_label'] = True
                         m['real_event_type'] = rl.get('event_type', '')
                         m['real_severity'] = rl.get('severity', '')
                         real_label_count += 1
                     else:
-                        m['has_real_label'] = False
+                        m['has_source_event_label'] = False
             except Exception as e:
                 print(f"[train] 真实标签融合失败: {e}", file=sys.stderr)
 
@@ -506,7 +508,9 @@ class RiskModel:
             self._warnings.append(f"县域数量不足 ({county_count})，建议至少覆盖 10 个高原牧区县。")
 
         if real_label_count > 0:
-            self._warnings.append(f"已融合 {real_label_count} 条真实灾害标签（覆盖规则标签）。")
+            self._warnings.append(
+                f"已融合 {real_label_count} 条带来源 URL 的公开灾害事件；其余月份保持未知，不作为真实无灾标签。"
+            )
 
         # ---- 数据级缺口检测 ----
         self._add_data_gap_warnings()
@@ -521,8 +525,8 @@ class RiskModel:
                 # 类别不平衡处理：给有真实标签的样本更高权重
                 sample_weights = np.ones(n)
                 for i, m in enumerate(meta):
-                    if m.get('has_real_label'):
-                        sample_weights[i] = 5.0  # 真实标签权重5倍
+                    if m.get('has_source_event_label'):
+                        sample_weights[i] = 5.0  # 来源支持事件权重5倍
 
                 self._clf = RandomForestClassifier(
                     n_estimators=min(100, max(20, n // 3)),
@@ -917,8 +921,10 @@ class RiskModel:
     def label_info(self) -> dict[str, Any]:
         """返回模型标签来源说明。"""
         return {
-            "label_type": "rule_label",
-            "has_real_disaster_labels": False,
+            "label_type": "weak_label_with_source_events",
+            "has_real_disaster_labels": True,
+            "real_disaster_label_count": 42,
+            "unknown_month_count": 1458,
             "has_real_claims_overdue_labels": False,
             "is_rule_risk_score": True,
             "label_features": [
@@ -929,14 +935,14 @@ class RiskModel:
             ],
             "weak_label_available": True,
             "weak_label_description": (
-                "基于真实环境异常构建的弱标签: "
+                "基于真实环境异常构建的弱标签，加上42条带来源 URL 的公开灾害事件: "
                 "低温异常、降水异常、NDVI同比下降、积雪高值、"
-                "退化等级、载畜量低值。弱标签不等于真实灾害/损失/逾期标签。"
+                "退化等级、载畜量低值。其余1458个月份为未确认状态，不等于真实无灾。"
             ),
             "note": (
-                "当前模型是'真实环境数据 + 规则风险标签'的弱监督/评分模型，"
+                "当前模型是'环境数据 + 规则弱标签 + 少量来源支持事件'的筛查模型，"
                 "不应宣称已经完成真实灾害预测或贷款逾期预测。"
-                "如需真实标签，需要接入历史灾害记录、保险理赔记录、银行逾期记录。"
+                "如需业务效果评估，需要接入完整灾害、保险理赔和银行逾期记录。"
             ),
         }
 
