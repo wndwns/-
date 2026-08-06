@@ -960,11 +960,12 @@ createApp({
       return (this.data?.subjects || []).map((subject) => {
         const finance = financeByName.get(subject.name) || {};
         const regionRisk = this.regionalRiskRows.find((row) => row.region_id === subject.region_id) || {};
+        const needsVerification = ["real_insurance", "asset_register_reference"].includes(subject.data_source) || ["real_insurance", "asset_register_reference"].includes(finance.data_source);
         const line = Number(finance.credit_line) || Number(subject.credit_value) || 0;
         const used = Number(finance.used_credit) || Number(subject.credit_value) || 0;
         const usage = line ? used / line : 0;
         const score = Number(subject.score) || 0;
-        const riskScore = Math.max(0, Math.min(100, 100 - score + usage * 35 + (Number(finance.overdue_times) || 0) * 12 + Number(regionRisk.predicted_score || 0) * 0.12));
+        const riskScore = needsVerification ? null : Math.max(0, Math.min(100, 100 - score + usage * 35 + (Number(finance.overdue_times) || 0) * 12 + Number(regionRisk.predicted_score || 0) * 0.12));
         return {
           key: subject.name,
           name: subject.name,
@@ -985,13 +986,14 @@ createApp({
           post_loan_action: finance.post_loan_action || "",
           insurance_status: finance.insurance_status || "",
           sample_note: subject.sample_note || finance.sample_note || "",
+          needsVerification,
           is_sample: subject.is_sample === true || finance.is_sample === true || subject.data_source === "sample" || finance.data_source === "sample",
-          riskScore: Number(riskScore.toFixed(1)),
+          riskScore: riskScore === null ? null : Number(riskScore.toFixed(1)),
           regionRiskScore: Number(regionRisk.predicted_score || 0),
           regionRiskDriver: regionRisk.primary_driver || "-",
-          action: this.decisionForScore(riskScore, Number(finance.overdue_times) || 0),
+          action: needsVerification ? "人工核验" : this.decisionForScore(riskScore, Number(finance.overdue_times) || 0),
         };
-      }).sort((a, b) => b.riskScore - a.riskScore);
+      }).sort((a, b) => (b.riskScore ?? -1) - (a.riskScore ?? -1));
     },
     assessmentObjects() {
       const search = this.assessmentSearch.trim().toLowerCase();
@@ -1003,8 +1005,8 @@ createApp({
           title: row.name,
           sub: `${row.region} / ${row.type}`,
           score: row.riskScore,
-          level: this.levelForScore(row.riskScore),
-          driver: row.overdue > 0 ? "逾期记录" : row.regionRiskDriver,
+          level: row.needsVerification ? "待核验" : this.levelForScore(row.riskScore),
+          driver: row.needsVerification ? "资产登记资料" : row.overdue > 0 ? "逾期记录" : row.regionRiskDriver,
           action: row.action,
           raw: row,
         }))
@@ -1181,14 +1183,14 @@ createApp({
         object: row.name,
         type: "主体",
         score: row.riskScore,
-        level: this.levelForScore(row.riskScore),
+        level: row.needsVerification ? "待核验" : this.levelForScore(row.riskScore),
         exposure: row.used,
-        driver: row.overdue > 0 ? "逾期记录" : row.regionRiskDriver,
+        driver: row.needsVerification ? "资产登记资料" : row.overdue > 0 ? "逾期记录" : row.regionRiskDriver,
         admission: this.creditDecisionBrief("subject", row.riskScore, row).admission,
         limitPolicy: this.creditDecisionBrief("subject", row.riskScore, row).limitPolicy,
         action: row.action,
       }));
-      return [...regionRows, ...subjectRows].sort((a, b) => b.score - a.score);
+      return [...regionRows, ...subjectRows].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
     },
     assessmentStats() {
       const scores = this.assessmentDetailRows.map((row) => Number(row.score) || 0);
@@ -1756,12 +1758,12 @@ createApp({
           object: row.name,
           type: "主体",
           score: row.riskScore,
-          level: this.levelForScore(row.riskScore),
+          level: row.needsVerification ? "待核验" : this.levelForScore(row.riskScore),
           exposure: row.used,
-          driver: row.overdue > 0 ? "逾期记录" : row.regionRiskDriver,
+          driver: row.needsVerification ? "资产登记资料" : row.overdue > 0 ? "逾期记录" : row.regionRiskDriver,
           action: row.action,
         }));
-      return [...regionRows, ...subjectRows].sort((a, b) => b.score - a.score).slice(0, 12);
+      return [...regionRows, ...subjectRows].sort((a, b) => (b.score ?? -1) - (a.score ?? -1)).slice(0, 12);
     },
   },
 
@@ -2277,6 +2279,7 @@ createApp({
         if (n >= 55) return { admission: "审慎准入", limitPolicy: "系数0.90" };
         return { admission: "正常准入", limitPolicy: "系数1.00" };
       }
+      if (row.needsVerification) return { admission: "资料待核验", limitPolicy: "不生成额度建议" };
       const line = Number(row.line ?? row.credit_line ?? row.credit_value ?? 0) || 0;
       const used = Number(row.used ?? row.used_credit ?? 0) || 0;
       const insurance = Number(String(row.insurance ?? row.insurance_coverage ?? "0").replace("%", "")) || 0;
@@ -2350,6 +2353,14 @@ createApp({
       }
 
       const row = assessment.raw || {};
+      if (row.needsVerification) {
+        return [
+          { key: "admission", step: "01", title: "能不能贷", value: "资料待核验", note: "当前仅有牲畜资产登记参考记录。", basis: "不含授信审批、还款和保险合同字段。", state: "warn" },
+          { key: "limit", step: "02", title: "贷多少", value: "不生成额度建议", note: "先核验授信、还款和保险合同资料。", basis: "资产登记不能单独作为额度依据。", state: "warn" },
+          { key: "postLoan", step: "03", title: "贷后有没有风险", value: "人工复核", note: "环境信号只用于筛查和任务派发。", basis: "需客户经理补充核验记录。", state: "warn" },
+          { key: "disposal", step: "04", title: "出风险怎么处置", value: "建立核验任务", note: "核对耳标、保险合同和实际经营资料。", basis: "不输出自动审批或赔付结论。", state: "warn" },
+        ];
+      }
       const line = Number(row.line || 0) || 0;
       const used = Number(row.used || 0) || 0;
       const usage = Number(row.usage || 0) || 0;

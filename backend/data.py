@@ -72,7 +72,7 @@ def _read(store_table: str, db_query: str, sample_data: list[dict[str, Any]]) ->
     return list(sample_data)
 
 
-_LINZHI_ENSURE_ENABLED = True   # 始终将林芝数据补入（基于1135户真实保单）
+_LINZHI_ENSURE_ENABLED = True   # 始终补入林芝资产登记参考数据（1135条耳标记录）
 
 
 def _ensure_linzhi_data(rows: list[dict[str, Any]], data_type: str) -> None:
@@ -86,7 +86,7 @@ def _ensure_linzhi_data(rows: list[dict[str, Any]], data_type: str) -> None:
             "station": "林芝市国家基准气候站", "observed_at": "2026-05-21 08:00",
             "temperature_c": 9.5, "precipitation_mm_24h": 3.2, "wind_speed_mps": 2.8,
             "snow_depth_cm": 3, "cold_wave_risk": "低", "snowstorm_risk": "低",
-            "drought_risk": "低", "data_source": "real_insurance_1135",
+            "drought_risk": "低", "data_source": "asset_register_reference",
         })
     elif data_type == "remote":
         rows.append({
@@ -94,7 +94,7 @@ def _ensure_linzhi_data(rows: list[dict[str, Any]], data_type: str) -> None:
             "scene_date": "2026-05-20", "ndvi": 0.62, "ndvi_change": "+2.1%",
             "vegetation_cover": "72%", "snow_cover": "8%",
             "grassland_type": "山地灌丛草甸", "degradation_level": "基本稳定",
-            "carrying_capacity_sheep_unit": 28500, "data_source": "real_insurance_1135",
+            "carrying_capacity_sheep_unit": 28500, "data_source": "asset_register_reference",
         })
 
 
@@ -114,14 +114,14 @@ _SAMPLE_WEATHER = [
     {"region_id": "naqu-bange", "region_name": "那曲市班戈县", "station": "班戈县高原气象站", "observed_at": "2026-05-21 08:00", "temperature_c": -3.8, "precipitation_mm_24h": 11.6, "wind_speed_mps": 8.2, "snow_depth_cm": 18, "cold_wave_risk": "高", "snowstorm_risk": "高", "drought_risk": "低", "data_source": "sample"},
     {"region_id": "changdu-luolong", "region_name": "昌都市洛隆县", "station": "洛隆县牧区气象站", "observed_at": "2026-05-21 08:00", "temperature_c": 2.4, "precipitation_mm_24h": 4.8, "wind_speed_mps": 5.1, "snow_depth_cm": 7, "cold_wave_risk": "中", "snowstorm_risk": "中", "drought_risk": "低", "data_source": "sample"},
     {"region_id": "rikaze-xietongmen", "region_name": "日喀则市谢通门县", "station": "谢通门县生态监测站", "observed_at": "2026-05-21 08:00", "temperature_c": 5.7, "precipitation_mm_24h": 1.2, "wind_speed_mps": 3.6, "snow_depth_cm": 2, "cold_wave_risk": "低", "snowstorm_risk": "低", "drought_risk": "中", "data_source": "sample"},
-    {"region_id": "linzhi-bayi", "region_name": "林芝市巴宜区", "station": "林芝市国家基准气候站", "observed_at": "2026-05-21 08:00", "temperature_c": 9.5, "precipitation_mm_24h": 3.2, "wind_speed_mps": 2.8, "snow_depth_cm": 3, "cold_wave_risk": "低", "snowstorm_risk": "低", "drought_risk": "低", "data_source": "real_insurance"},
+    {"region_id": "linzhi-bayi", "region_name": "林芝市巴宜区", "station": "林芝市国家基准气候站", "observed_at": "2026-05-21 08:00", "temperature_c": 9.5, "precipitation_mm_24h": 3.2, "wind_speed_mps": 2.8, "snow_depth_cm": 3, "cold_wave_risk": "低", "snowstorm_risk": "低", "drought_risk": "低", "data_source": "asset_register_reference"},
 ]
 
 _SAMPLE_REMOTE = [
     {"region_id": "naqu-bange", "region_name": "那曲市班戈县", "scene_date": "2026-05-20", "ndvi": 0.34, "ndvi_change": "-8.6%", "vegetation_cover": "42%", "snow_cover": "31%", "grassland_type": "高寒草甸", "degradation_level": "中度退化", "carrying_capacity_sheep_unit": 18200, "data_source": "sample"},
     {"region_id": "changdu-luolong", "region_name": "昌都市洛隆县", "scene_date": "2026-05-20", "ndvi": 0.47, "ndvi_change": "-3.2%", "vegetation_cover": "55%", "snow_cover": "18%", "grassland_type": "山地草甸", "degradation_level": "轻度退化", "carrying_capacity_sheep_unit": 23600, "data_source": "sample"},
     {"region_id": "rikaze-xietongmen", "region_name": "日喀则市谢通门县", "scene_date": "2026-05-20", "ndvi": 0.52, "ndvi_change": "+1.4%", "vegetation_cover": "61%", "snow_cover": "11%", "grassland_type": "河谷草地", "degradation_level": "基本稳定", "carrying_capacity_sheep_unit": 19800, "data_source": "sample"},
-    {"region_id": "linzhi-bayi", "region_name": "林芝市巴宜区", "scene_date": "2026-05-20", "ndvi": 0.62, "ndvi_change": "+2.1%", "vegetation_cover": "72%", "snow_cover": "8%", "grassland_type": "山地灌丛草甸", "degradation_level": "基本稳定", "carrying_capacity_sheep_unit": 28500, "data_source": "real_insurance"},
+    {"region_id": "linzhi-bayi", "region_name": "林芝市巴宜区", "scene_date": "2026-05-20", "ndvi": 0.62, "ndvi_change": "+2.1%", "vegetation_cover": "72%", "snow_cover": "8%", "grassland_type": "山地灌丛草甸", "degradation_level": "基本稳定", "carrying_capacity_sheep_unit": 28500, "data_source": "asset_register_reference"},
 ]
 
 _SAMPLE_SUBJECTS = [
@@ -129,7 +129,7 @@ _SAMPLE_SUBJECTS = [
     {"name": "德吉牦牛养殖联合体", "region_id": "changdu-luolong", "region_name": "昌都市洛隆县", "subject_type": "联合体", "cattle_count": 910, "sheep_count": 1500, "grassland_mu": 62000, "credit_amount": "180 万元", "credit_value": 180, "score": 76, "insurance_coverage": "71%", "status": "关注回款", "loan_use": "活体交易", "data_source": "sample"},
     {"name": "央金家庭牧场", "region_id": "naqu-bange", "region_name": "那曲市班戈县", "subject_type": "家庭牧场", "cattle_count": 380, "sheep_count": 600, "grassland_mu": 18000, "credit_amount": "65 万元", "credit_value": 65, "score": 68, "insurance_coverage": "58%", "status": "需补保险", "loan_use": "补饲", "data_source": "sample"},
     {"name": "仁青冷链供草中心", "region_id": "rikaze-xietongmen", "region_name": "日喀则市谢通门县", "subject_type": "供应商", "cattle_count": 0, "sheep_count": 0, "grassland_mu": 0, "credit_amount": "120 万元", "credit_value": 120, "score": 79, "insurance_coverage": "75%", "status": "正常监控", "loan_use": "饲草采购", "data_source": "sample"},
-    {"name": "百巴村牦牛养殖合作社", "region_id": "linzhi-bayi", "region_name": "林芝市巴宜区", "subject_type": "行政村集体", "cattle_count": 1135, "sheep_count": 0, "grassland_mu": 120000, "credit_amount": "500 万元", "credit_value": 500, "score": 91, "insurance_coverage": "88%", "status": "正常监控", "loan_use": "牦牛养殖扩产（保单覆盖1135户）", "data_source": "real_insurance"},
+    {"name": "百巴村牦牛养殖合作社", "region_id": "linzhi-bayi", "region_name": "林芝市巴宜区", "subject_type": "行政村集体", "cattle_count": 1135, "sheep_count": 0, "grassland_mu": 120000, "credit_amount": "500 万元", "credit_value": 500, "score": 91, "insurance_coverage": "待核验", "status": "待人工核验", "loan_use": "牦牛养殖扩产（资产登记参考）", "data_source": "asset_register_reference"},
 ]
 
 _SAMPLE_FINANCE = [
@@ -137,7 +137,7 @@ _SAMPLE_FINANCE = [
     {"subject_name": "德吉牦牛养殖联合体", "credit_line": 250, "used_credit": 180, "interest_rate": "4.50%", "term_months": 24, "repayment_status": "关注", "overdue_times": 1, "data_source": "sample", "policies": [{"type": "牦牛养殖保险", "insured_qty": 910, "coverage": "71%"}]},
     {"subject_name": "央金家庭牧场", "credit_line": 80, "used_credit": 65, "interest_rate": "4.60%", "term_months": 12, "repayment_status": "正常", "overdue_times": 0, "data_source": "sample", "policies": [{"type": "牦牛养殖保险", "insured_qty": 380, "coverage": "58%"}]},
     {"subject_name": "仁青冷链供草中心", "credit_line": 150, "used_credit": 120, "interest_rate": "4.35%", "term_months": 18, "repayment_status": "正常", "overdue_times": 0, "data_source": "sample", "policies": [{"type": "仓储财产保险", "insured_qty": 0, "coverage": "75%"}]},
-    {"subject_name": "百巴村牦牛养殖合作社", "credit_line": 600, "used_credit": 500, "interest_rate": "3.85%", "term_months": 36, "repayment_status": "正常", "overdue_times": 0, "data_source": "real_insurance", "policies": [{"type": "养殖险牛", "insured_qty": 1135, "coverage": "88%"}, {"type": "草场保险", "insured_qty": 120000, "coverage": "100%"}]},
+    {"subject_name": "百巴村牦牛养殖合作社", "credit_line": 600, "used_credit": 500, "interest_rate": "待核验", "term_months": None, "repayment_status": "待核验", "overdue_times": None, "data_source": "asset_register_reference", "policies": []},
 ]
 
 # ============================================================================
@@ -149,7 +149,7 @@ def get_weather(region_id: str | None = None) -> list[dict[str, Any]]:
     for r in rows:
         if "region_name" not in r or not r.get("region_name"):
             r["region_name"] = _REGION_NAMES.get(r.get("region_id", ""), r.get("region_id", ""))
-    # 确保林芝数据始终可用（真实保单来源，1140行样本数据）
+    # 确保林芝数据始终可用（资产登记参考，不代表保险合同或授信记录）
     _ensure_linzhi_data(rows, "weather")
     if region_id:
         return [r for r in rows if r.get("region_id") == region_id]
@@ -352,7 +352,7 @@ _FALLBACK_REGIONS = [
     {"id": "naqu-bange", "name": "那曲市班戈县", "type": "冬春补饲重点区", "risk_level": "高", "metrics": {"生态风险指数": "72", "草畜平衡压力": "偏高", "NDVI较常年": "-8.6%", "积雪覆盖": "31%", "授信余额": "1,860 万元", "保险覆盖率": "78%"}, "suggestion": "样例数据，仅用于演示。"},
     {"id": "changdu-luolong", "name": "昌都市洛隆县", "type": "产业链协同提升区", "risk_level": "中", "metrics": {"生态风险指数": "64", "草畜平衡压力": "可控", "NDVI较常年": "-3.2%", "积雪覆盖": "18%", "授信余额": "1,220 万元", "保险覆盖率": "69%"}, "suggestion": "样例数据，仅用于演示。"},
     {"id": "rikaze-xietongmen", "name": "日喀则市谢通门县", "type": "绿色绩效观察区", "risk_level": "低", "metrics": {"生态风险指数": "58", "草畜平衡压力": "较低", "NDVI较常年": "+1.4%", "积雪覆盖": "11%", "授信余额": "930 万元", "保险覆盖率": "62%"}, "suggestion": "样例数据，仅用于演示。"},
-    {"id": "linzhi-bayi", "name": "林芝市巴宜区", "type": "绿色金融示范区", "risk_level": "低", "metrics": {"生态风险指数": "42", "草畜平衡压力": "低", "NDVI较常年": "+2.1%", "积雪覆盖": "8%", "授信余额": "3,200 万元", "保险覆盖率": "88%"}, "suggestion": "源自1135户真实保单数据，保险覆盖率全区最高。"},
+    {"id": "linzhi-bayi", "name": "林芝市巴宜区", "type": "绿色金融示范区", "risk_level": "低", "metrics": {"生态风险指数": "42", "草畜平衡压力": "低", "NDVI较常年": "+2.1%", "积雪覆盖": "8%", "授信余额": "3,200 万元", "保险覆盖率": "待核验"}, "suggestion": "含1135条牲畜资产登记参考记录；保险合同与授信信息待人工核验。"},
 ]
 
 _REGION_NAMES: dict[str, str] = {}

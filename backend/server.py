@@ -853,7 +853,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/model/label-info")
     def model_label_info() -> dict[str, Any]:
-        """返回模型标签来源说明（规则标签/弱标签/真实标签）。"""
+        """返回模型标签来源说明（规则标签/弱标签/来源支持事件）。"""
         try:
             from models import get_model
         except ImportError:
@@ -902,22 +902,24 @@ def create_app() -> FastAPI:
 
     @app.get("/api/model/backtest")
     def model_backtest() -> dict[str, Any]:
-        """返回模型回测验证报告。
-
-        报告包含3个层次验证：
-        1. 时间序列交叉验证 (Walk-Forward CV)
-        2. 真实标签前向验证 (2020-2022训练 → 2023预测)
-        3. PSI 特征稳定性验证
-        """
+        """返回历史实验材料，不能作为业务效果验证。"""
         import json as _json
         from pathlib import Path as _Path
         report_path = _Path(__file__).resolve().parent / "data_store" / "backtest_report.json"
         if not report_path.exists():
             return {"error": "backtest_report.json not found", "overall_pass": False}
-        return _json.loads(report_path.read_text(encoding="utf-8"))
+        report = _json.loads(report_path.read_text(encoding="utf-8"))
+        report["overall_pass"] = False
+        report["report_status"] = "not_valid_for_business_decision"
+        report["limitations"] = [
+            "仅有42条带来源URL的公开灾害事件，其余月份为未确认状态。",
+            "缺少真实保险理赔、授信和逾期记录，不能验证业务效果。",
+            "历史实验精确率和F1不满足业务决策要求。",
+        ]
+        return report
 
     # ======================================================================
-    # 保单画像与增信评分 API（百巴村1135条真实保单）
+    # 资产登记资料核验 API（百巴村1135条耳标记录）
     # ======================================================================
 
     @app.get("/api/insurance-portfolio/profile")
