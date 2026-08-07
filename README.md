@@ -13,9 +13,11 @@ backend/
   models.py              模型层（规则 + sklearn 混合预测）
   store.py               JSON 文件存储层（backend/data_store/*.json）
   db.py                  MySQL 连接池（可选）
+  credit_decision.py     授信与贷后唯一金额纯计算模块
+  test_credit_decision.py  授信测算黄金样例与边界回归检查
   schema.sql / seed_data.sql   MySQL 建表 + 种子数据（可选）
 frontend/
-  index.html             前台 SPA 主页
+  index.html             前台 SPA 主页（默认进入授信与贷后工作台）
   app.js                 前台 Vue 3 + ECharts 应用逻辑
   styles.css             前台样式
   admin.html             管理端独立页面
@@ -35,9 +37,25 @@ python -m pip install -r requirements.txt
 python .\backend\server.py
 ```
 
-- 前台主页：http://127.0.0.1:8000
+- 前台主页：http://127.0.0.1:8000（默认进入授信与贷后工作台）
 - 管理端：http://127.0.0.1:8000/admin
 - API 文档：http://127.0.0.1:8000/docs
+
+## 授信与贷后测算接口
+
+前端“授信与贷后工作台”通过以下接口完成主体选择与唯一金额测算：
+
+```text
+GET  /api/credit-cases                        案例列表（主案例 + 百巴村控制案例）
+POST /api/credit-decision/evaluate            唯一授信测算
+```
+
+- `feasible / infeasible / blocked` 均返回 HTTP 200，业务状态在响应 `status` 字段。
+- 输入分组或字段非法返回 422。
+- 案例文件缺失、为空或损坏返回 500（`credit_case_unavailable`），不回退到伪造结果。
+- 测算逻辑集中在 `backend/credit_decision.py`，金额以元计算、仅最后向下取整到 1 万元；
+  保险、RF/Ridge、四维综合分与旧风险乘数不进入金额主链。
+- 案例数据为比赛样例（`backend/data_store/credit_cases.json`），不是真实工行客户资料。
 
 ## 外部天气与地图 API
 

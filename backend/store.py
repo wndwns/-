@@ -136,6 +136,14 @@ TABLES: dict[str, dict[str, Any]] = {
         ],
         "required": ["metric_id", "metric_type"],
     },
+    "credit_cases": {
+        "file": "credit_cases.json",
+        "label": "授信测算案例（比赛样例）",
+        "columns": [
+            "id", "name", "region_id", "case_type", "data_status",
+        ],
+        "required": ["id", "name"],
+    },
 }
 
 # 类型转换
@@ -186,6 +194,32 @@ def read_table(table: str) -> list[dict[str, Any]]:
         return []
     except (json.JSONDecodeError, OSError):
         return []
+
+
+class CreditCaseUnavailableError(Exception):
+    """授信测算案例文件缺失、为空或损坏时抛出。"""
+
+
+def read_credit_cases() -> dict[str, Any]:
+    """读取授信测算案例（credit_cases.json）。
+
+    Returns:
+        {"cases": {case_id: {...}}, "_note": ...}
+
+    Raises:
+        CreditCaseUnavailableError: 文件缺失、为空或损坏时抛出，
+        由 server 转换为 HTTP 500（credit_case_unavailable），不回退到伪造结果。
+    """
+    path = _file_path("credit_cases")
+    if not path.exists():
+        raise CreditCaseUnavailableError("授信测算案例文件缺失")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise CreditCaseUnavailableError("授信测算案例文件损坏或无法读取") from exc
+    if not isinstance(data, dict) or not isinstance(data.get("cases"), dict) or not data["cases"]:
+        raise CreditCaseUnavailableError("授信测算案例文件为空或结构无效")
+    return data
 
 
 def write_table(table: str, rows: list[dict[str, Any]]) -> int:

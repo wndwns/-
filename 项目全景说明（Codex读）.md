@@ -512,10 +512,10 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 
 ### 9.5 当前页面
 
-主 SPA 有 14 个逻辑页面：
+主 SPA 有 14 个逻辑页面（2026-08-07 深化后名称）：
 
 1. 首页。
-2. 风险评估。
+2. 授信与贷后工作台（原“风险评估”，默认进入页）。
 3. 平台概览。
 4. 业务模块。
 5. 模块详情。
@@ -526,10 +526,10 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 10. 绿色绩效。
 11. 边疆民生。
 12. 合作社排序。
-13. 保单/资产画像。
+13. 资产/保险资料核验（原“保单/资产画像”）。
 14. 灾害预测。
 
-风险评估页已经形成“对象池 → 证据 → 四个业务问题 → 客户经理工作流”的主交互。
+风险评估页已经形成“对象池 → 证据 → 四个业务问题 → 客户经理工作流”的主交互。深化实施后，该页顶部新增“授信与贷后工作台”（主体选择、可编辑参数、三情景摘要、唯一建议金额、月度现金流明细、贷后核查建议），原风险评估内容保留在该页下方作为辅助视图。导航按“核心业务 / 生态证据 / 辅助能力”三组组织，14 个页面全部保留，首页从辅助导航可达。
 
 ### 9.6 管理端
 
@@ -923,3 +923,37 @@ git diff --check
 ---
 
 本文应随主流程、数据口径、额度规则或真实性边界的变化同步更新。只改页面文案而不更新本文，会再次造成项目认知偏差。
+
+## 21. 深化实施记录（2026-08-07，分支 <code>codex/credit-decision-deepening</code>）
+
+按《项目深化优化方案（实施前待批准）.md》完成唯一授信金额主链实施。正式入口不变：<code>backend/server.py + frontend/</code>。
+
+### 21.1 新增文件
+
+- <code>backend/data_store/credit_cases.json</code>：授信测算案例（班戈县绿色牧业合作社主案例 + 百巴村资料不足控制案例），全部为比赛样例/样例假设/政策假设。
+- <code>backend/credit_decision.py</code>：唯一授信纯计算模块，只公开 <code>evaluate_credit_case()</code>。包含草场/储草分池守恒、牲畜月度干物质需求、必要饲草采购与成本、融资前/融资后现金流、基准合格融资需求、标准雪灾偿债支持上限、唯一建议金额、复合极端脆弱性、<code>feasible/infeasible/blocked</code> 判定。金额使用 Decimal，仅最后向下取整到 1 万元。
+- <code>backend/test_credit_decision.py</code>：黄金样例与边界回归检查（14 项），覆盖黄金输出、复合极端、不可行反例、取整边界、百巴村阻断、保险/旧模型隔离、草畜守恒与情景单调性。
+
+### 21.2 修改文件
+
+- <code>backend/store.py</code>：登记 <code>credit_cases</code> 逻辑表；新增 <code>read_credit_cases()</code>（文件缺失/损坏抛 <code>CreditCaseUnavailableError</code>）。
+- <code>backend/server.py</code>：新增 <code>GET /api/credit-cases</code> 与 <code>POST /api/credit-decision/evaluate</code>。业务状态（feasible/infeasible/blocked）返回 200；输入校验失败返回 422；案例文件不可用返回 500（<code>credit_case_unavailable</code>）。
+- <code>frontend/index.html</code>：风险评估页顶部新增“授信与贷后工作台”；导航改为“核心业务 / 生态证据 / 辅助能力”三组；页面更名（风险评估→授信与贷后工作台、保单画像→资产/保险资料核验）；修正“1135 条真实保单”等不实文案为“21 户主体、1135 头牦牛资产/耳标登记参考，保险合同待核验”。
+- <code>frontend/app.js</code>：默认入口改为授信与贷后工作台（无 hash 时进入）；新增案例列表加载、唯一测算请求（单请求、10 秒超时、显式“重新测算”按钮）、状态与展示逻辑；导航分组数据。
+- <code>frontend/styles.css</code>：工作台与导航分组样式，桌面/移动端响应式（390px 单列、月度表容器内横向滚动）。
+- <code>README.md</code>：更新实际入口与新增接口说明。
+
+### 21.3 行为要点
+
+- 唯一建议新增贷款 = <code>floor_10000(min(基准合格融资需求, 标准雪灾偿债支持上限, 统一授信可用额度, 样例产品上限))</code>；先精确比较后取整，取整后不足必要外部资金时返回 <code>infeasible</code>，不输出正的推荐金额。
+- 复合极端只揭示脆弱性与核查建议，不生成第二个金额。
+- 保险第一版不进入现金流、融资需求、偿债上限与建议金额；RF/Ridge、四维综合分、旧风险乘数不进入金额主链。
+- 黄金案例：唯一建议 900000 元、新增贷款利息 34020 元、标准雪灾 DSCR≈1.2416、偿债支持上限≈988716.52 元、12 个月峰值贷款余额 2560000 元。
+- 百巴村因缺少合同与金融资料返回 <code>blocked</code>，不输出金额，只给缺失材料清单与尽调方向。
+
+### 21.4 验证结果（2026-08-07）
+
+- <code>python -m compileall backend</code> 通过；<code>backend/test_credit_decision.py</code> 14/14 通过；<code>backend/test_truthful_outputs.py</code> 通过；<code>node --check frontend/app.js</code> 通过。
+- API 路径验证：黄金 feasible 200、百巴村 blocked 200、未知案例/非法输入/负值 422、案例文件缺失 500（<code>credit_case_unavailable</code>）。
+- 性能：纯计算预热后 100 次 P95≈0.88ms；本地 API 20 次 P95≈5.45ms。
+- 浏览器验证：桌面 1440×900 与移动 390×844 下工作台无水平溢出（月度表在容器内横向滚动）、无区块重叠、按钮可用；主案例显示唯一金额 90 万元，切换百巴村正确显示阻断与缺失清单。

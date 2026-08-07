@@ -104,6 +104,12 @@ class DataSourceConfigPayload(BaseModel):
     extra_config: dict[str, Any] = Field(default_factory=dict)
 
 
+class CreditDecisionEvaluateRequest(BaseModel):
+    """授信测算请求：选择案例 + 本次试算输入（不持久化）。"""
+    case_id: str
+    inputs: dict[str, Any] = Field(default_factory=dict)
+
+
 # ---------------------------------------------------------------------------
 # data 模块导入（兼容直接运行和模块运行）
 # ---------------------------------------------------------------------------
@@ -1563,6 +1569,116 @@ def create_app() -> FastAPI:
             return {"ok": True, "regions": regions, "count": len(regions)}
         except Exception as exc:
             return {"ok": False, "message": str(exc), "regions": []}
+
+    # ======================================================================
+    # 授信与贷后工作台 - 唯一授信测算
+    # ======================================================================
+
+    _CREDIT_INPUT_SECTIONS = {
+        "pasture", "livestock", "operating", "procurement", "debt",
+        "credit", "product", "rate_yuan_per_year", "draw_plan", "repay_plan",
+    }
+
+    def _validate_credit_inputs(raw: dict[str, Any]) -> dict[str, Any]:
+        """校验本次试算输入：结构必须为 {section: {field: value}}。
+
+        未知分组、非字典值、负数值一律返回 422，不静默修正。
+        """
+        if not isinstance(raw, dict):
+            raise HTTPException(status_code=422, detail="inputs 必须是对象")
+        validated: dict[str, Any] = {}
+        for section, fields in raw.items():
+            if section not in _CREDIT_INPUT_SECTIONS:
+                raise HTTPException(status_code=422, detail=f"未知输入分组: {section}")
+            if not isinstance(fields, dict):
+                raise HTTPException(status_code=422, detail=f"输入分组 {section} 必须是对象")
+            for key, value in fields.items():
+                if isinstance(value, bool):
+                    continue
+                if isinstance(value, (int, float)):
+                    if value < 0:
+                        raise HTTPException(status_code=422, detail=f"{section}.{key} 不能为负")
+                    continue
+                if not isinstance(value, (str, list)):
+                    raise HTTPException(status_code=422, detail=f"{section}.{key} 类型不受支持")
+            validated[section] = fields
+        return validated
+
+    def _jsonable(obj: Any) -> Any:
+        """递归把 Decimal 转为 float，便于 JSON 响应。"""
+        from decimal import Decimal as _Decimal
+        if isinstance(obj, _Decimal):
+            return float(obj)
+        if isinstance(obj, dict):
+            return {k: _jsonable(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_jsonable(v) for v in obj]
+        if isinstance(obj, tuple):
+            return [_jsonable(v) for v in obj]
+        return obj
+
+    @app.post("/api/credit-decision/evaluate")
+    def credit_decision_evaluate(payload: CreditDecisionEvaluateRequest) -> dict[str, Any]:
+        """授信与贷后工作台唯一测算接口。
+
+        - feasible / infeasible / blocked 均返回 HTTP 200（业务状态在 body.status）。
+        - 输入分组或字段非法返回 422。
+        - 案例文件缺失、为空或损坏返回 500（credit_case_unavailable）。
+        """
+        try:
+            from credit_decision import evaluate_credit_case as _evaluate_credit
+        except ImportError:
+            from backend.credit_decision import evaluate_credit_case as _evaluate_credit  # type: ignore[no-redef]
+        try:
+            from store import read_credit_cases, CreditCaseUnavailableError
+        except ImportError:
+            from backend.store import read_credit_cases, CreditCaseUnavailableError  # type: ignore[no-redef]
+
+        try:
+            store_data = read_credit_cases()
+        except CreditCaseUnavailableError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "credit_case_unavailable", "message": str(exc)},
+            )
+
+        case = (store_data.get("cases") or {}).get(payload.case_id)
+        if not case:
+            raise HTTPException(status_code=422, detail=f"未知案例 case_id: {payload.case_id}")
+
+        validated = _validate_credit_inputs(payload.inputs)
+        result = _evaluate_credit(case, validated)
+        return _jsonable(result)
+
+    @app.get("/api/credit-cases")
+    def list_credit_cases() -> dict[str, Any]:
+        """返回授信测算案例列表（仅元数据，不含业务明细）。"""
+        try:
+            from store import read_credit_cases, CreditCaseUnavailableError
+        except ImportError:
+            from backend.store import read_credit_cases, CreditCaseUnavailableError  # type: ignore[no-redef]
+
+        try:
+            store_data = read_credit_cases()
+        except CreditCaseUnavailableError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "credit_case_unavailable", "message": str(exc)},
+            )
+
+        cases = []
+        for item in (store_data.get("cases") or {}).values():
+            if not isinstance(item, dict):
+                continue
+            cases.append({
+                "id": item.get("id", ""),
+                "name": item.get("name", ""),
+                "region_name": item.get("region_name", ""),
+                "case_type": item.get("case_type", ""),
+                "blocked": bool(item.get("blocked")),
+            })
+        cases.sort(key=lambda c: c["id"])
+        return {"cases": cases, "count": len(cases)}
 
     # ======================================================================
     # 404 兜底

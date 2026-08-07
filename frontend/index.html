@@ -25,19 +25,10 @@
               <span class="logo-text">牧融绿链</span>
             </a>
             <nav class="nav-menu">
-              <a :class="{ active: page === 'home' }" @click="navigate('home')">首页</a>
-              <a :class="{ active: page === 'overview' }" @click="navigate('overview')">平台概览</a>
-              <a :class="{ active: page === 'modules' }" @click="navigate('modules')">业务模块</a>
-              <a :class="{ active: page === 'data' }" @click="navigate('data')">数据底座</a>
-              <a :class="{ active: page === 'roadmap' }" @click="navigate('roadmap')">实施路线</a>
-              <a :class="{ active: page === 'dashboard' }" @click="navigate('dashboard')">风险评估</a>
-              <a :class="{ active: page === 'insurance' }" @click="navigate('insurance')">保险协同</a>
-              <a :class="{ active: page === 'supply-chain' }" @click="navigate('supply-chain')">产业链</a>
-              <a :class="{ active: page === 'green-performance' }" @click="navigate('green-performance')">绿色绩效</a>
-              <a :class="{ active: page === 'livelihood' }" @click="navigate('livelihood')">边疆民生</a>
-              <a :class="{ active: page === 'cooperative-ranking' }" @click="navigate('cooperative-ranking')">合作社排序</a>
-              <a :class="{ active: page === 'insurance-portfolio' }" @click="navigate('insurance-portfolio')">保单画像</a>
-              <a :class="{ active: page === 'disaster-forecast' }" @click="navigate('disaster-forecast')">灾害预测</a>
+              <div class="nav-group" v-for="g in navGroups" :key="g.label">
+                <span class="nav-group-label">{{ g.label }}</span>
+                <a v-for="item in g.items" :key="item.page" :class="{ active: page === item.page }" @click="navigate(item.page)">{{ item.name }}</a>
+              </div>
             </nav>
           </div>
         </header>
@@ -218,8 +209,183 @@
         <div v-else class="inner-page-wrapper">
           <div class="inner-container">
 
-            <!-- 风险评估 -->
+            <!-- 风险评估 / 授信与贷后工作台 -->
             <div v-show="page === 'dashboard'" class="ops-dashboard risk-workbench">
+
+              <!-- ===== 授信与贷后工作台（深化主入口） ===== -->
+              <section class="credit-workbench">
+                <div class="cw-head">
+                  <div class="cw-title">
+                    <span class="ops-eyebrow">Credit & Post-Loan Workbench</span>
+                    <h1>授信与贷后工作台</h1>
+                    <p>基准情景确定合格融资需求 · 标准雪灾确定偿债支持上限 · 复合极端仅作压力提示 · 全链只生成一个正式推荐金额</p>
+                  </div>
+                  <div class="cw-controls">
+                    <label>测算主体：</label>
+                    <select v-model="creditCaseId" @change="loadCreditCase">
+                      <option v-for="c in creditCases" :key="c.id" :value="c.id">{{ c.name }}（{{ c.region_name }}）</option>
+                    </select>
+                    <button class="btn-main" @click="runCreditEvaluation" :disabled="creditEvaluating">{{ creditEvaluating ? '测算中…' : '重新测算' }}</button>
+                  </div>
+                </div>
+
+                <div v-if="creditError" class="cw-error">
+                  <span>⚠ {{ creditError }}</span>
+                  <button class="terminal-btn" @click="runCreditEvaluation">重试</button>
+                </div>
+
+                <template v-if="creditResult">
+                  <div class="cw-tags">
+                    <span v-for="(v, k) in creditResult.data_status" :key="k"><b>{{ k }}</b>{{ v }}</span>
+                  </div>
+
+                  <div class="cw-scenarios">
+                    <div class="cw-scenario" v-for="sc in creditScenarioCards" :key="sc.key" :class="sc.cls">
+                      <h3>{{ sc.label }}</h3>
+                      <div class="cw-sc-kv" v-for="row in sc.rows" :key="row.label">
+                        <span>{{ row.label }}</span><strong>{{ row.value }}</strong>
+                      </div>
+                      <p v-if="sc.note" class="cw-sc-note">{{ sc.note }}</p>
+                    </div>
+                  </div>
+
+                  <div class="cw-result" :class="'cw-' + creditResult.status">
+                    <template v-if="creditResult.status === 'feasible'">
+                      <div class="cw-result-main">
+                        <span>唯一建议新增贷款金额</span>
+                        <strong>{{ formatWan(creditResult.recommended_amount_yuan) }}<em> 万元</em></strong>
+                      </div>
+                      <div class="cw-result-meta">
+                        <div><span>新增贷款利息</span><b>{{ formatMoney(creditResult.new_loan_interest_yuan) }} 元</b></div>
+                        <div><span>标准雪灾 DSCR</span><b>{{ Number(creditResult.dscr).toFixed(4) }}</b></div>
+                        <div><span>标准雪灾最低现金月份</span><b>{{ creditResult.snow_cashflow.min_cash_month }}</b></div>
+                        <div><span>12 个月峰值贷款余额</span><b>{{ formatWan(creditResult.snow_cashflow.peak_loan_balance_yuan) }} 万元</b></div>
+                        <div><span>金额瓶颈</span><b>{{ creditResult.limits.bottleneck }}</b></div>
+                      </div>
+                      <p class="cw-result-reason">{{ creditResult.reason }}</p>
+                    </template>
+                    <template v-else-if="creditResult.status === 'infeasible'">
+                      <div class="cw-result-main bad">
+                        <span>当前条件下无可行贷款方案</span><strong>—</strong>
+                      </div>
+                      <div class="cw-result-meta">
+                        <div><span>必要采购最低外部资金</span><b>{{ formatWan(creditResult.qualified_demand.min_external_financing_yuan) }} 万元</b></div>
+                        <div><span>标准雪灾可承受贷款上限</span><b>{{ formatWan(creditResult.limits.affordable_limit_yuan) }} 万元</b></div>
+                        <div><span>资金缺口</span><b class="bad">{{ formatWan(creditResult.gap_yuan) }} 万元</b></div>
+                      </div>
+                      <p class="cw-result-reason">{{ creditResult.reason }}</p>
+                      <p class="cw-result-hint">补充采购前可用的自有资金、补贴、供应商账期、采购锁价或调整经营回款安排后，可重新测算。</p>
+                    </template>
+                    <template v-else>
+                      <div class="cw-result-main bad">
+                        <span>资料不足，停止金额测算</span><strong>—</strong>
+                      </div>
+                      <div class="cw-missing">
+                        <p>{{ creditResult.message }}</p>
+                        <ul><li v-for="m in creditResult.missing_materials" :key="m">{{ m }}</li></ul>
+                        <p class="cw-result-hint">补齐关键材料后由客户经理重新核验，再进入金额测算。</p>
+                      </div>
+                    </template>
+                  </div>
+
+                  <div v-if="creditResult.status !== 'blocked'" class="cw-grid">
+                    <div class="cw-card">
+                      <h3>主体与草场参数（可编辑，修改后标记未核验）</h3>
+                      <div class="cw-form">
+                        <label>总经营草场（亩）<input type="number" v-model.number="creditForm.total_mu" min="0" step="100" /></label>
+                        <label>已确认采购自有资金（万元）<input type="number" v-model.number="creditForm.own_funds_wan" min="0" step="1" /></label>
+                        <label>样例产品上限（万元）<input type="number" v-model.number="creditForm.product_cap_wan" min="0" step="1" /></label>
+                        <label>DSCR 阈值<input type="number" v-model.number="creditForm.dscr_threshold" min="1" step="0.01" /></label>
+                      </div>
+                      <p v-if="creditUserModified" class="cw-unverified">用户提供、未核验（本次试算不持久化，刷新后恢复样例默认值）</p>
+                    </div>
+                    <div class="cw-card">
+                      <h3>饲草供需（基准情景）</h3>
+                      <div class="cw-kv"><span>全年基准干物质需求</span><b>{{ formatKg(creditResult.monthly_scenarios.baseline.total_demand_kg) }} 千克</b></div>
+                      <div class="cw-kv"><span>草场净可食供给</span><b>{{ formatKg(creditResult.monthly_scenarios.baseline.total_pasture_supply_kg) }} 千克</b></div>
+                      <div class="cw-kv"><span>必要外购饲草</span><b>{{ formatKg(creditResult.monthly_scenarios.baseline.total_purchase_kg) }} 千克</b></div>
+                      <div class="cw-kv"><span>期末安全储草</span><b>{{ formatKg(creditResult.monthly_scenarios.baseline.safety_storage_kg) }} 千克</b></div>
+                    </div>
+                    <div class="cw-card">
+                      <h3>采购资金与授信约束</h3>
+                      <div class="cw-kv"><span>必要采购总额</span><b>{{ formatWan(creditResult.qualified_demand.purchase_total_yuan) }} 万元</b></div>
+                      <div class="cw-kv"><span>已确认自有采购资金</span><b>{{ formatWan(creditResult.qualified_demand.own_funds_yuan) }} 万元</b></div>
+                      <div class="cw-kv"><span>最低外部融资需求</span><b>{{ formatWan(creditResult.qualified_demand.min_external_financing_yuan) }} 万元</b></div>
+                      <div class="cw-kv"><span>标准雪灾偿债支持上限</span><b>{{ formatWan(creditResult.limits.snow_support_limit_yuan) }} 万元</b></div>
+                      <div class="cw-kv"><span>统一授信可用额度</span><b>{{ formatWan(creditResult.limits.credit_available_yuan) }} 万元</b></div>
+                      <div class="cw-kv"><span>样例产品上限</span><b>{{ formatWan(creditResult.limits.product_cap_yuan) }} 万元</b></div>
+                    </div>
+                  </div>
+
+                  <div v-if="creditResult.status !== 'blocked'" class="cw-card cw-composite">
+                    <h3>复合极端情景（压力提示 · 不生成第二个推荐金额）</h3>
+                    <div class="cw-kv-row">
+                      <div class="cw-kv"><span>饲草采购成本</span><b>{{ formatMoney(creditResult.composite.purchase_cost_yuan) }} 元</b></div>
+                      <div class="cw-kv"><span>可用于偿债经营现金</span><b>{{ formatMoney(creditResult.composite.available_cash_yuan) }} 元</b></div>
+                      <div class="cw-kv"><span>建议金额下 DSCR</span><b>{{ Number(creditResult.composite.dscr).toFixed(4) }}</b></div>
+                      <div class="cw-kv"><span>{{ creditResult.composite.min_cash_month }} 月末现金</span><b>{{ formatMoney(creditResult.composite.min_cash_yuan) }} 元</b></div>
+                      <div class="cw-kv" v-if="creditResult.composite.vulnerable"><span>相对最低现金储备缺口</span><b class="bad">{{ formatMoney(creditResult.composite.min_cash_gap_yuan) }} 元</b></div>
+                    </div>
+                    <p class="cw-sc-note">{{ creditResult.composite.vulnerable ? '复合极端下主体在 ' + creditResult.composite.min_cash_month + ' 现金低于安全线，建议核验应急储草、采购锁价、回款提前或非贷款应急资金；不得自动提高贷款金额。' : '复合极端下各月现金均不低于安全线，仍需持续监测。' }}</p>
+                  </div>
+
+                  <div v-if="creditResult.status !== 'blocked'" class="cw-card cw-monthly">
+                    <div class="cw-monthly-head">
+                      <h3>12 个月现金流明细（融资后）</h3>
+                      <div class="cw-tabs">
+                        <button v-for="sc in [{k:'baseline',n:'基准'},{k:'snow',n:'标准雪灾'},{k:'composite',n:'复合极端'}]" :key="sc.k" :class="{ active: creditMonthTab === sc.k }" @click="creditMonthTab = sc.k">{{ sc.n }}</button>
+                      </div>
+                    </div>
+                    <div class="terminal-table-wrap compact">
+                      <table class="terminal-table cw-month-table">
+                        <thead><tr><th>月份</th><th>采购付款(元)</th><th>存量利息</th><th>新增利息</th><th>融资前现金</th><th>融资后现金</th><th>贷款余额</th></tr></thead>
+                        <tbody>
+                          <tr v-for="r in creditMonthlyRows" :key="r.month" :class="{ 'cw-low': Number(r.cash_after_financing_yuan) < creditMinReserve }">
+                            <td><strong>{{ r.month }}</strong></td>
+                            <td>{{ formatMoney(r.purchase_cost_yuan) }}</td>
+                            <td>{{ formatMoney(r.existing_interest_yuan) }}</td>
+                            <td>{{ formatMoney(r.new_loan_interest_yuan) }}</td>
+                            <td>{{ formatMoney(r.cash_before_financing_yuan) }}</td>
+                            <td>{{ formatMoney(r.cash_after_financing_yuan) }}</td>
+                            <td>{{ formatMoney(r.loan_balance_yuan) }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="terminal-table-wrap compact cw-storage-table">
+                      <table class="terminal-table">
+                        <thead><tr><th>月份</th><th>需求(千克)</th><th>草场供给</th><th>饲草缺口</th><th>储草补饲</th><th>储草期末</th><th>采购到货</th></tr></thead>
+                        <tbody>
+                          <tr v-for="r in creditStorageRows" :key="r.month">
+                            <td><strong>{{ r.month }}</strong></td>
+                            <td>{{ formatKg(r.demand_kg) }}</td>
+                            <td>{{ formatKg(r.pasture_growth_kg) }}</td>
+                            <td>{{ formatKg(r.forage_gap_kg) }}</td>
+                            <td>{{ formatKg(r.storage_supplement_kg) }}</td>
+                            <td>{{ formatKg(r.storage_balance_kg) }}</td>
+                            <td>{{ formatKg(r.purchase_kg) }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div v-if="creditResult.status !== 'blocked'" class="cw-card cw-check">
+                    <h3>贷后核查建议（人工核查任务建议，不自动处置）</h3>
+                    <ul>
+                      <li v-for="a in creditCheckActions" :key="a">{{ a }}</li>
+                    </ul>
+                    <p class="cw-sc-note">单一环境信号不得自动触发停贷、收贷或压降额度；最终决定由客户经理和审批人员完成。</p>
+                  </div>
+
+                  <div class="cw-disclosure">
+                    <p>本工作台所有业务数值均为比赛样例 / 样例假设 / 政策假设，不是真实工行客户数据或正式政策。保险第一版不进入金额与现金流；RF/Ridge、四维综合分与旧风险乘数不影响本测算。</p>
+                  </div>
+                </template>
+
+                <div v-else-if="!creditError && !creditEvaluating" class="cw-loading">请选择测算主体，然后点击“重新测算”。</div>
+              </section>
+
               <section class="risk-public-summary">
                 <div class="risk-kpis">
                   <div v-for="item in publicRiskKpis" :key="item.label" class="public-kpi-card" :class="{ danger: item.danger }">
@@ -1451,12 +1617,12 @@
               </div>
             </div>
 
-            <!-- 保单画像与增信评分 -->
+            <!-- 资产/保险资料核验 -->
             <div v-show="page === 'insurance-portfolio'">
               <div class="public-page public-page-plain">
                 <section class="plain-page-head">
-                  <h1>保单画像与增信评分</h1>
-                  <p>百巴村1135条真实保单 · 21户牧民 · 农行承保→工行放贷→保险兜底</p>
+                  <h1>资产/保险资料核验</h1>
+                  <p>百巴村21户主体 · 1135头牦牛资产/耳标登记参考 · 保险合同待核验</p>
                 </section>
 
                 <!-- 画像统计卡片 -->
@@ -1464,17 +1630,17 @@
                   <div class="stats-card">
                     <span class="stats-num">{{ portfolioProfile.total_policies }}</span>
                     <span class="stats-unit">条</span>
-                    <span class="stats-label">保单总数</span>
+                    <span class="stats-label">资产/耳标登记记录</span>
                   </div>
                   <div class="stats-card">
                     <span class="stats-num">{{ portfolioProfile.farmer_count }}</span>
                     <span class="stats-unit">户</span>
-                    <span class="stats-label">投保农户</span>
+                    <span class="stats-label">登记农户</span>
                   </div>
                   <div class="stats-card">
                     <span class="stats-num">{{ portfolioProfile.total_cattle }}</span>
                     <span class="stats-unit">头</span>
-                    <span class="stats-label">投保牦牛</span>
+                    <span class="stats-label">登记牦牛</span>
                   </div>
                   <div class="stats-card">
                     <span class="stats-num">{{ portfolioProfile.avg_herd_size }}</span>
@@ -1489,22 +1655,22 @@
 
                 <!-- 银保协同场景 -->
                 <section v-if="portfolioSynergy" style="margin-bottom:24px;">
-                  <h2 style="margin-bottom:12px;">银保协同场景</h2>
+                  <h2 style="margin-bottom:12px;">银保协同场景（资料状态待核验）</h2>
                   <div class="news-grid">
                     <div class="news-card">
                       <div class="news-tag tag-green">{{ portfolioSynergy.insurance_bank }}</div>
-                      <h3>承保方</h3>
-                      <p>{{ portfolioSynergy.total_cattle_insured }}头{{ portfolioSynergy.livestock_type }}已承保</p>
+                      <h3>登记方</h3>
+                      <p>{{ portfolioSynergy.total_cattle_insured }}头{{ portfolioSynergy.livestock_type }}资产/耳标登记参考</p>
                     </div>
                     <div class="news-card">
                       <div class="news-tag tag-green">{{ portfolioSynergy.lending_bank }}</div>
-                      <h3>放贷方</h3>
-                      <p>{{ portfolioSynergy.farmer_count }}户牧民牦牛养殖贷款</p>
+                      <h3>金融用途</h3>
+                      <p>{{ portfolioSynergy.farmer_count }}户主体的授信与还款资料待核验</p>
                     </div>
                     <div class="news-card">
-                      <div class="news-tag tag-orange">兜底{{ portfolioSynergy.risk_reduction_pct }}%</div>
-                      <h3>风险缩减</h3>
-                      <p>保险兜底总额约{{ (portfolioSynergy.total_insurance_coverage/10000).toFixed(1) }}万元</p>
+                      <div class="news-tag tag-orange">{{ portfolioSynergy.risk_reduction_pct === null || portfolioSynergy.risk_reduction_pct === undefined ? '待核验' : '兜底' + portfolioSynergy.risk_reduction_pct + '%' }}</div>
+                      <h3>风险缓释</h3>
+                      <p>保险合同、保额与赔付记录待核验，第一版不进入贷款金额测算</p>
                     </div>
                   </div>
                   <div style="background:#f6f9f6;padding:16px;border-radius:8px;margin-top:12px;">
@@ -1517,7 +1683,7 @@
 
                 <!-- 综合风险 -->
                 <section v-if="portfolioComprehensive" style="margin-bottom:24px;">
-                  <h2 style="margin-bottom:12px;">百巴村综合风险评估</h2>
+                  <h2 style="margin-bottom:12px;">百巴村资料核验状态</h2>
                   <div style="background:#f6f9f6;padding:16px;border-radius:8px;">
                     <p style="margin:6px 0;">
                       环境风险评分：
@@ -1526,7 +1692,7 @@
                     </p>
                     <p style="margin:6px 0;">
                       保险增信缩减风险敞口：
-                      <strong>{{ portfolioComprehensive.insurance_synergy.risk_reduction_pct }}%</strong>
+                      <strong>{{ portfolioComprehensive.insurance_synergy.risk_reduction_pct ?? '待核验' }}%</strong>
                     </p>
                     <p style="margin:6px 0;">
                       综合风险评分：
