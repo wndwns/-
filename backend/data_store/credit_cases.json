@@ -24,6 +24,7 @@
         "winter_net_dm_kg_per_mu": 29,
         "initial_storage_kg": 234520,
         "safety_storage_kg": 104720,
+        "monthly_growth_reference_total_mu": 42000,
         "monthly_growth_kg": [
           10000, 10000, 20000, 60000, 150000, 260000,
           350000, 350000, 250000, 180000, 80000, 30000
@@ -58,7 +59,7 @@
       },
       "debt": {
         "existing_loan_yuan": 1660000,
-        "rate_yuan_per_year": 0.042,
+        "annual_rate": 0.042,
         "repayment_status": "正常",
         "repay_plan": {
           "2027-10": 0.5,
@@ -78,7 +79,7 @@
         "term_months": 12,
         "note": "样例产品条款，非工行真实产品政策"
       },
-      "rate_yuan_per_year": 0.042,
+      "annual_rate": 0.042,
       "draw_plan": {
         "2027-01": 0.6,
         "2027-02": 0.4

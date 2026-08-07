@@ -142,11 +142,12 @@ const api = {
     const res = await fetch("/api/credit-cases", { cache: "no-store" });
     return res.json();
   },
-  async creditEvaluate(caseId, inputs = {}) {
+  async creditEvaluate(caseId, inputs = {}, signal) {
     const res = await fetch("/api/credit-decision/evaluate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ case_id: caseId, inputs }),
+      signal,
     });
     return res;
   },
@@ -2406,7 +2407,6 @@ createApp({
           const main = this.creditCases.find((c) => !c.blocked) || this.creditCases[0];
           this.creditCaseId = main.id;
           await this.loadCreditCase();
-          await this.runCreditEvaluation();
         }
       } catch (e) {
         this.creditError = "案例列表加载失败：" + (e && e.message ? e.message : e);
@@ -2419,20 +2419,12 @@ createApp({
       this.creditUserModified = false;
       this.creditForm = { total_mu: 42000, own_funds_wan: 35, product_cap_wan: 120, dscr_threshold: 1.2 };
       this.$nextTick(() => { this._skipCreditFormWatch = false; });
-      const selected = this.creditCases.find((c) => c.id === this.creditCaseId);
-      if (selected && selected.blocked) this.runCreditEvaluation();
     },
     buildCreditInputs() {
       if (!this.creditUserModified) return {};
       const total = Number(this.creditForm.total_mu) || 0;
       const inputs = {};
-      // 42000 样例按 24000/14000/4000 拆分；用户修改总面积后按原比例拆分
-      inputs.pasture = {
-        total_mu: total,
-        summer_mu: Math.round(total * (24000 / 42000)),
-        winter_mu: Math.round(total * (14000 / 42000)),
-        non_use_mu: Math.round(total * (4000 / 42000)),
-      };
+      inputs.pasture = { total_mu: total };
       inputs.operating = { own_purchase_funds_yuan: (Number(this.creditForm.own_funds_wan) || 0) * 10000 };
       inputs.credit = {
         product_cap_yuan: (Number(this.creditForm.product_cap_wan) || 0) * 10000,
@@ -2449,8 +2441,7 @@ createApp({
       const timer = setTimeout(() => controller.abort(), 10000); // 10 秒超时
       try {
         const inputs = this.buildCreditInputs();
-        const res = await api.creditEvaluate(this.creditCaseId, inputs || {});
-        clearTimeout(timer);
+        const res = await api.creditEvaluate(this.creditCaseId, inputs || {}, controller.signal);
         if (!res.ok) {
           let msg = `请求失败（${res.status}）`;
           try {
@@ -2466,11 +2457,11 @@ createApp({
         }
         this.creditResult = await res.json();
       } catch (e) {
-        clearTimeout(timer);
         this.creditError = e && e.name === "AbortError"
           ? "测算请求超时（10 秒），请重试"
           : "网络错误：" + (e && e.message ? e.message : e);
       } finally {
+        clearTimeout(timer);
         this.creditEvaluating = false;
       }
     },

@@ -85,7 +85,7 @@ def test_golden_monthly_storage_balance():
     # 任意月份储草不为负
     for row in baseline["rows"]:
         assert row["storage_balance_kg"] >= 0, f"储草出现负库存: {row['month']}"
-        assert row["forage_gap_kg"] >= 0
+        assert row["forage_gap_kg"] == 0, f"采购到货后仍有饲草缺口: {row['month']}"
 
 
 # ---------------------------------------------------------------------------
@@ -135,6 +135,7 @@ def test_floor_boundary_infeasible():
     assert result["status"] == "infeasible", f"取整边界状态应为 infeasible，实际 {result['status']}"
     assert result["recommended_amount_yuan"] is None or result["recommended_amount_yuan"] == 0
     _assert_close(result["qualified_demand"]["min_external_financing_yuan"], 895000, 0.01, "取整边界必要外部资金")
+    _assert_close(result["gap_yuan"], 5000, 0.01, "取整后的实际资金缺口")
 
 
 # ---------------------------------------------------------------------------
@@ -233,6 +234,27 @@ def test_user_input_override_changes_result():
     _assert_close(result["qualified_demand"]["min_external_financing_yuan"], 1050000, 0.01, "覆盖后必要外部资金")
 
 
+def test_area_override_changes_supply_and_purchase():
+    case = _load_main()
+    base = evaluate_credit_case(case)
+    result = evaluate_credit_case(case, {"pasture": {"total_mu": 21000}})
+    _assert_close(result["monthly_scenarios"]["baseline"]["pasture_growth_scale"], 0.5, 0.0001, "草场面积缩放")
+    assert result["monthly_scenarios"]["baseline"]["total_pasture_supply_kg"] < base["monthly_scenarios"]["baseline"]["total_pasture_supply_kg"]
+    assert result["qualified_demand"]["purchase_total_yuan"] > base["qualified_demand"]["purchase_total_yuan"]
+
+
+def test_cash_reserve_blocks_decision():
+    case = _load_main()
+    # 总经营现金不变，但将 20 万元回款从 1 月后移至 12 月。
+    case["operating"]["monthly_net_cash_yuan"][0] -= 200000
+    case["operating"]["monthly_net_cash_yuan"][11] += 200000
+    result = evaluate_credit_case(case)
+    assert result["status"] == "infeasible"
+    assert result["recommended_amount_yuan"] is None
+    assert result["snow_cashflow"]["min_cash_yuan"] < result["snow_cashflow"]["minimum_cash_reserve_yuan"]
+    assert result["snow_cashflow"]["cash_reserve_gap_yuan"] > 0
+
+
 # ---------------------------------------------------------------------------
 # 主入口
 # ---------------------------------------------------------------------------
@@ -253,6 +275,8 @@ def main():
         test_no_negative_inventory_in_snow,
         test_monthly_cashflow_rows_present,
         test_user_input_override_changes_result,
+        test_area_override_changes_supply_and_purchase,
+        test_cash_reserve_blocks_decision,
     ]
     failed = 0
     for t in tests:

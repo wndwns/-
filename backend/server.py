@@ -14,6 +14,7 @@ API 文档: http://127.0.0.1:8000/docs
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 import uuid
@@ -1574,34 +1575,37 @@ def create_app() -> FastAPI:
     # 授信与贷后工作台 - 唯一授信测算
     # ======================================================================
 
-    _CREDIT_INPUT_SECTIONS = {
-        "pasture", "livestock", "operating", "procurement", "debt",
-        "credit", "product", "rate_yuan_per_year", "draw_plan", "repay_plan",
+    _CREDIT_INPUT_RULES = {
+        "pasture": {"total_mu": (1, None)},
+        "operating": {"own_purchase_funds_yuan": (0, None)},
+        "credit": {
+            "product_cap_yuan": (1, None),
+            "dscr_threshold": (1.10, 1.30),
+        },
     }
 
     def _validate_credit_inputs(raw: dict[str, Any]) -> dict[str, Any]:
-        """校验本次试算输入：结构必须为 {section: {field: value}}。
-
-        未知分组、非字典值、负数值一律返回 422，不静默修正。
-        """
+        """校验前端允许覆盖的字段、单位和范围。"""
         if not isinstance(raw, dict):
             raise HTTPException(status_code=422, detail="inputs 必须是对象")
         validated: dict[str, Any] = {}
         for section, fields in raw.items():
-            if section not in _CREDIT_INPUT_SECTIONS:
+            allowed = _CREDIT_INPUT_RULES.get(section)
+            if allowed is None:
                 raise HTTPException(status_code=422, detail=f"未知输入分组: {section}")
             if not isinstance(fields, dict):
                 raise HTTPException(status_code=422, detail=f"输入分组 {section} 必须是对象")
+            validated[section] = {}
             for key, value in fields.items():
-                if isinstance(value, bool):
-                    continue
-                if isinstance(value, (int, float)):
-                    if value < 0:
-                        raise HTTPException(status_code=422, detail=f"{section}.{key} 不能为负")
-                    continue
-                if not isinstance(value, (str, list)):
-                    raise HTTPException(status_code=422, detail=f"{section}.{key} 类型不受支持")
-            validated[section] = fields
+                limits = allowed.get(key)
+                if limits is None:
+                    raise HTTPException(status_code=422, detail=f"未知输入字段: {section}.{key}")
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                    raise HTTPException(status_code=422, detail=f"{section}.{key} 必须是有限数值")
+                lower, upper = limits
+                if value < lower or (upper is not None and value > upper):
+                    raise HTTPException(status_code=422, detail=f"{section}.{key} 超出允许范围")
+                validated[section][key] = value
         return validated
 
     def _jsonable(obj: Any) -> Any:
