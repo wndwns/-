@@ -574,6 +574,7 @@ createApp({
       loading: true,
       data: null,
       page: "dashboard",
+      dashboardTab: "credit",
       selectedModule: null,
       dataTab: "weather",
       scrolled: false,

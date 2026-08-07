@@ -211,9 +211,13 @@
 
             <!-- 风险评估 / 授信与贷后工作台 -->
             <div v-show="page === 'dashboard'" class="ops-dashboard risk-workbench">
+              <div class="dashboard-module-tabs" role="group" aria-label="风险评估工作区">
+                <button type="button" :aria-pressed="dashboardTab === 'credit'" :class="{ active: dashboardTab === 'credit' }" @click="dashboardTab = 'credit'">授信与贷后工作台</button>
+                <button type="button" :aria-pressed="dashboardTab === 'risk'" :class="{ active: dashboardTab === 'risk' }" @click="dashboardTab = 'risk'">生态风险评估</button>
+              </div>
 
               <!-- ===== 授信与贷后工作台（深化主入口） ===== -->
-              <section class="credit-workbench">
+              <section v-show="dashboardTab === 'credit'" class="credit-workbench">
                 <div class="cw-head">
                   <div class="cw-title">
                     <span class="ops-eyebrow">Credit & Post-Loan Workbench</span>
@@ -386,7 +390,7 @@
                 <div v-else-if="!creditError && !creditEvaluating" class="cw-loading">请选择测算主体，然后点击“重新测算”。</div>
               </section>
 
-              <section class="risk-public-summary">
+              <section v-show="dashboardTab === 'risk'" class="risk-public-summary">
                 <div class="risk-kpis">
                   <div v-for="item in publicRiskKpis" :key="item.label" class="public-kpi-card" :class="{ danger: item.danger }">
                     <strong>{{ item.value }}</strong>

@@ -5459,6 +5459,39 @@ input, select, textarea { font: inherit; }
   border-radius: 12px;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
 }
+.dashboard-module-tabs {
+  width: min(1180px, 100%);
+  display: flex;
+  gap: 8px;
+  margin: 24px auto 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-module-tabs button {
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dashboard-module-tabs button:hover,
+.dashboard-module-tabs button:focus-visible {
+  border-color: var(--border);
+  color: var(--green-dark);
+  outline: none;
+}
+
+.dashboard-module-tabs button.active {
+  border-color: var(--green);
+  background: #eef8f2;
+  color: var(--green-dark);
+}
+
 .cw-head {
   display: flex;
   align-items: flex-start;
@@ -5746,6 +5779,8 @@ input, select, textarea { font: inherit; }
   .cw-result-meta, .cw-kv-row { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
+  .dashboard-module-tabs { flex-direction: column; }
+  .dashboard-module-tabs button { width: 100%; text-align: left; }
   .credit-workbench { padding: 14px; min-width: 0; max-width: 100%; }
   .cw-head { flex-direction: column; min-width: 0; }
   .cw-title { min-width: 0; }
