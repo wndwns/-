@@ -571,6 +571,7 @@ createApp({
       data: null,
       page: "dashboard",
       dashboardTab: "credit",
+      creditSubTab: "assessment",
       selectedModule: null,
       dataTab: "weather",
       scrolled: false,
@@ -3009,6 +3010,13 @@ createApp({
     },
     async loadLiveWeather() {
       try { this.liveWeather = await api.openMeteoNow(31.36, 90.01); } catch (_) {}
+    },
+
+    switchCreditSubTab(tab) {
+      this.creditSubTab = tab;
+      if (tab === 'risk') {
+        this.$nextTick(() => { this.renderDashboardChartsSoon(); });
+      }
     },
 
     async init() {

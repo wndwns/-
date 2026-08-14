@@ -6227,3 +6227,110 @@ input, select, textarea { font: inherit; }
   border-radius: 2px;
   opacity: 0.3;
 }
+
+
+/* ==========================================================================
+   Credit Workbench Sub-Tabs (方案一: Tab 分区)
+   ========================================================================== */
+
+.cw-subtabs {
+  display: flex; gap: 4px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+}
+.cw-subtabs button {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.cw-subtabs button:hover { background: var(--bg-alt); }
+.cw-subtabs button.active { background: var(--text); color: #fff; }
+.cw-subtab-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  font-size: 10px; font-weight: 600;
+  background: var(--bg-deep); color: var(--text-secondary);
+}
+.cw-subtabs button.active .cw-subtab-num { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.9); }
+
+.cw-subtab-content { animation: cw-fade 0.2s ease; }
+@keyframes cw-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Workbench 2-column layout: pool + content */
+.cw-workbench-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.cw-workbench-layout .assessment-pool {
+  position: sticky; top: 60px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
+/* Simplified pool item: only name + score + tooltip */
+.cw-pool-item .ao-main { flex: 1; }
+.cw-pool-item .ao-meta { display: none; }
+.cw-pool-item .ao-tooltip {
+  display: none;
+  position: absolute;
+  left: 100%; top: 0; z-index: 50;
+  background: var(--text); color: #fff;
+  padding: 6px 10px; border-radius: 6px;
+  font-size: 11px; white-space: nowrap;
+  margin-left: 8px;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.cw-pool-item .ao-tooltip::after {
+  content: ""; position: absolute; right: 100%; top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent; border-right-color: var(--text);
+}
+.cw-pool-item:hover { position: relative; }
+.cw-pool-item:hover .ao-tooltip { display: block; }
+
+/* Risk content (Tab 2) */
+.cw-risk-content {
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+/* Evidence content (Tab 3) */
+.cw-evidence-content { min-height: 400px; }
+.cw-evidence-panel { position: relative; }
+
+/* Merged data + model summary */
+.cw-data-summary {
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+}
+.cw-summary-box {
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.cw-summary-box strong { color: var(--text); font-weight: 600; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .cw-workbench-layout { grid-template-columns: 1fr; }
+  .cw-workbench-layout .assessment-pool { position: static; max-height: 300px; }
+}
