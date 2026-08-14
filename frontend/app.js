@@ -3016,7 +3016,11 @@ createApp({
       const valid = ["home","dashboard","data","insurance","supply-chain","green-performance","livelihood","cooperative-ranking","insurance-portfolio","disaster-forecast"];
       if (hash && valid.includes(hash)) this.page = hash;
 
-      this.data = await api.platform();
+      try {
+        this.data = await api.platform();
+      } catch (_) {
+        this.data = { slides: [], modules: [], closed_loop: {}, regions: [], stats: {}, highlights: [] };
+      }
       if (Array.isArray(this.data.slides) && this.data.slides.length) {
         this.heroSlides = this.data.slides.map((slide, idx) => ({
           scene: slide.scene || ["snow", "grassland", "river", "sunset"][idx % 4],
