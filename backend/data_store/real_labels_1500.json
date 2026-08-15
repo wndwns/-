@@ -14667,17 +14667,19 @@
   {
     "region_id": "yushu-zaduo",
     "month": "2021-06",
-    "label": 0,
-    "risk_score": 20,
-    "severity": "无",
-    "event_type": "none",
+    "label": 1,
+    "risk_score": 80,
+    "severity": "高",
+    "event_type": "lightning",
     "loss_amount": 0,
     "claim_amount": 0,
-    "source": "默认（无公开灾害报道）",
+    "source": "中国气象灾害年鉴2022 第173页",
     "source_url": "",
-    "note": "该月无公开灾害事件报道，标记为无灾害",
+    "note": "2021年6月17日，杂多县结多乡巴麻村一社9名牧民采挖虫草时遭雷击，2人死亡；年鉴未列县级直接经济损失。",
     "is_real_label": true,
-    "data_source": "real_negative"
+    "data_source": "real",
+    "source_kind": "yearbook",
+    "verified": true
   },
   {
     "region_id": "yushu-zaduo",

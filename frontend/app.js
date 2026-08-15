@@ -377,7 +377,7 @@ function renderPublicRadar(row) {
       splitArea: { areaStyle: { color: ["#fbfdfb", "#ffffff"] } },
     },
     series: [{
-      name: "6维风险子分",
+      name: "授信四维评分",
       type: "radar",
       data: [{
         value: dims.map((item) => item.value),
@@ -414,9 +414,10 @@ function renderOverviewMix(rows) {
       itemStyle: { borderColor: "#fff", borderWidth: 3 },
       label: { color: "#26332b", formatter: "{b}\n{d}%" },
       data: [
-        { name: "公开/派生/待核验", value: rows?.real_rows || 0 },
+        { name: "环境观测真实", value: rows?.observed_rows || 0 },
+        { name: "业务数据", value: rows?.business_rows || 0 },
+        { name: "派生数据", value: rows?.derived_rows || 0 },
         { name: "样例数据", value: rows?.sample_rows || 0 },
-        { name: "模拟数据", value: rows?.simulated_rows || 0 },
       ],
     }],
   });
@@ -1021,8 +1022,8 @@ createApp({
     },
     overviewInfographic() {
       return [
-        { icon: "EO", title: "环境监测", items: ["县域气象月度数据", "草地植被与退化监测", "积雪深度与载畜量", "灾害预测与预警"] },
-        { icon: "ML", title: "智能风控", items: ["机器学习风险评估", "六维规则评分引擎", "风险因子可解释", "县域风险精准预测"] },
+        { icon: "EO", title: "环境监测", items: ["县域气象月度数据", "草地植被与退化监测", "积雪深度与载畜量", "灾害风险趋势与规则预警"] },
+        { icon: "ML", title: "智能风控", items: ["弱标签风险排序", "授信四维评分", "风险因子可解释", "人工核验优先级"] },
         { icon: "GF", title: "授信决策", items: ["融资需求智能测算", "雪灾偿债压力测试", "极端天气压力测试", "推荐授信金额"] },
         { icon: "IN", title: "银保协同", items: ["保单画像与核验", "理赔证据回流", "风险缓释闭环", "普惠牧区服务"] },
       ];
@@ -1030,9 +1031,9 @@ createApp({
     systemHealthItems() {
       return [
         {
-          label: "数据闭环",
-          value: this.percent(this.modelStatus.real_data_ratio || 0),
-          state: (this.modelStatus.real_data_ratio || 0) >= 0.9 ? "ok" : "warn",
+          label: "环境观测",
+          value: this.percent(this.modelStatus.observed_data_ratio || 0),
+          state: (this.modelStatus.observed_data_ratio || 0) >= 0.9 ? "ok" : "warn",
         },
         {
           label: "模型状态",
@@ -1363,25 +1364,24 @@ createApp({
         const driverVal = (key) => Number(drivers.find((item) => item.key === key)?.value || 0);
         const regionSubjects = this.creditSubjectRows.filter((item) => item.region_id === row.region_id);
         const avgSubjectScore = regionSubjects.length ? avg(regionSubjects.map((item) => Number(item.score) || 0)) : 75;
-        const avgCoverage = regionSubjects.length
-          ? avg(regionSubjects.map((item) => Number(String(item.insurance || "0").replace("%", "")) || 0))
-          : 70;
-        const overdue = regionSubjects.reduce((sum, item) => sum + (Number(item.overdue) || 0), 0);
         const usage = regionSubjects.length ? avg(regionSubjects.map((item) => Number(item.usage) || 0)) : 0.6;
+        // 授信四维口径：0.40×工商 + 0.30×生态 + 0.20×气象 + 0.10×经营。
+        // 工商维度目前是待替换的高仿真数据，其他维度来自当前接入数据或规则映射。
         const dimScores = [
-          { name: "信用", value: Math.round(Math.min(100, Math.max(0, 100 - avgSubjectScore + overdue * 12 + usage * 20))) },
-          { name: "经营", value: Math.round(Math.min(100, Math.max(0, 100 - avgSubjectScore + usage * 18))) },
-          { name: "生态", value: Math.round(Math.min(100, driverVal("remote") * 3.8 + 30)) },
-          { name: "气象", value: Math.round(Math.min(100, driverVal("weather") * 4.2 + 28)) },
-          { name: "金融", value: Math.round(Math.min(100, driverVal("finance") * 3.4 + overdue * 10 + usage * 18)) },
-          { name: "保险", value: Math.round(Math.min(100, Math.max(0, 95 - avgCoverage + overdue * 8))) },
+          { name: "工商", value: Math.round(Math.min(100, Math.max(0, avgSubjectScore - usage * 18))) },
+          { name: "生态", value: Math.round(Math.min(100, Math.max(0, 100 - (driverVal("remote") * 3.8 + 30)))) },
+          { name: "气象", value: Math.round(Math.min(100, Math.max(0, 100 - (driverVal("weather") * 4.2 + 28)))) },
+          { name: "经营", value: Math.round(Math.min(100, Math.max(0, avgSubjectScore - usage * 12))) },
         ];
+        const byName = Object.fromEntries(dimScores.map((item) => [item.name, item.value]));
+        const fourDimScore = byName["工商"] * 0.40 + byName["生态"] * 0.30 + byName["气象"] * 0.20 + byName["经营"] * 0.10;
         return {
           ...row,
-          display_score: normalized.toFixed(1),
-          display_level: normalized >= 70 ? "高风险" : normalized >= 55 ? "中风险" : "低风险",
+          model_risk_score: normalized.toFixed(1),
+          display_score: fourDimScore.toFixed(1),
+          display_level: fourDimScore >= 70 ? "较优" : fourDimScore >= 55 ? "需复核" : "关注",
           dim_scores: dimScores,
-          dim_summary: `信用/经营基于主体评分和用信率，生态/气象来自模型因子，金融/保险来自授信、逾期和覆盖率。`,
+          dim_summary: `授信四维评分 = 0.40×工商 + 0.30×生态 + 0.20×气象 + 0.10×经营；工商为高仿真待替换数据，不等同模型风险排序。`,
         };
       });
     },
@@ -1436,7 +1436,7 @@ createApp({
         card("forage_supply_demand", "Geodoi 饲草供需", "2000-2020 全国/区域年度宏观饲草供需。", "真实宏观"),
         card("business_subjects", "经营主体台账", "合作社、家庭牧场、供应商经营信息。", "样例待替换"),
         card("finance_credit", "工行授信与保险台账", "授信、用信、还款、逾期、保单信息。", "样例待替换"),
-        card("risk_event_labels", "来源事件样本", "带来源 URL 的公开灾害事件；其余月份保持未确认。", "127 条来源事件"),
+        card("risk_event_labels", "来源事件样本", "附公开 URL 或年鉴页码凭证的灾害事件；其余月份保持未确认。", "128 条来源事件"),
         card("insurance_claims", "银保理赔查勘", "出险、查勘、理赔金额和贷后回流动作。", "脱敏样例"),
         card("supply_chain_orders", "产业链订单台账", "饲草采购、活体交易、物流验收和关联授信。", "脱敏样例"),
         card("supply_chain_payments", "工行资金流向", "定向支付、收款方、到账状态和用途核验。", "脱敏样例"),
@@ -1449,7 +1449,7 @@ createApp({
         { label: "TPDC CMFD 气象", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "weather_data")?.row_count || 0), note: "县域月度温度/降水/风速" },
         { label: "MODIS/TPDC 遥感", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "remote_sensing_data")?.row_count || 0), note: "NDVI、积雪、退化、载畜量字段" },
         { label: "Geodoi 宏观饲草", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "forage_supply_demand")?.row_count || 0), note: "年度区域参考，不参与训练" },
-        { label: "来源事件", value: 42, note: "公开灾害事件；不等于完整灾害或贷损标签" },
+        { label: "来源事件", value: 128, note: "128 条来源支持事件；其余月份未确认，不等于无灾" },
       ];
     },
     moduleLoopItems() {
@@ -1492,10 +1492,10 @@ createApp({
     overviewMetrics() {
       const total = this.dataQuality?.total || {};
       return [
-        { label: "非样例来源行", value: this.formatNumber((total.real_rows || 0) + (total.simulated_rows || 0)), note: "公开观测、派生或待核验来源，不等同真实业务数据" },
-        { label: "样例数据行", value: this.formatNumber(total.sample_rows || 0), note: "经营主体、工行授信和保险台账仍需替换" },
-        { label: "模型样本", value: this.formatNumber(this.modelStatus.n_samples || 0), note: `${this.modelStatus.county_count || 0} 县 / ${this.modelStatus.month_count || 0} 月` },
-        { label: "来源事件", value: 42, note: "其余月份为未确认状态，不等于无灾" },
+        { label: "环境观测真实", value: this.formatNumber(total.observed_rows || 0), note: "公开气象/遥感观测，不含业务或派生数据" },
+        { label: "业务数据", value: this.formatNumber(total.business_rows || 0), note: "业务来源需按证据边界单独核验" },
+        { label: "派生数据", value: this.formatNumber(total.derived_rows || 0), note: "由原始数据计算，不等同实测" },
+        { label: "样例数据", value: this.formatNumber(total.sample_rows || 0), note: "经营主体、工行授信和保险台账仍需替换" },
       ];
     },
     insuranceRows() {

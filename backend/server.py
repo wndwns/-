@@ -1137,6 +1137,10 @@ def create_app() -> FastAPI:
         total_sample = 0
         total_real = 0
         total_simulated = 0
+        total_categories = {"observed": 0, "business": 0, "derived": 0, "sample": 0}
+        observed_sources = {"tpdc", "modis", "mod13q1.061", "cma", "real", "gldas", "era5", "ncep", "geodoi", "openmeteo"}
+        business_sources = {"real_insurance", "asset_register_reference", "bank_business", "insurance_business"}
+        truthy = {"true", "1", "yes", "t"}
 
         for table_name, table_def in TABLES.items():
             rows = read_table(table_name)
@@ -1144,6 +1148,19 @@ def create_app() -> FastAPI:
             sample_count = sum(1 for r in rows if str(r.get("data_source", "")).lower() == "sample")
             simulated_count = sum(1 for r in rows if str(r.get("data_source", "")).lower() == "simulated")
             real_count = n - sample_count - simulated_count
+            category_counts = {"observed": 0, "business": 0, "derived": 0, "sample": 0}
+            for r in rows:
+                src = str(r.get("data_source", "sample")).lower().strip()
+                if str(r.get("is_sample", "")).lower() in truthy or src in {"sample", "simulated"}:
+                    category_counts["sample"] += 1
+                elif str(r.get("is_derived", "")).lower() in truthy or src.endswith("_derived"):
+                    category_counts["derived"] += 1
+                elif src in business_sources:
+                    category_counts["business"] += 1
+                elif src in observed_sources:
+                    category_counts["observed"] += 1
+                else:
+                    category_counts["sample"] += 1
             if table_name in {
                 "insurance_claims", "supply_chain_orders", "supply_chain_payments",
                 "post_loan_workflow", "green_performance_metrics",
@@ -1220,8 +1237,12 @@ def create_app() -> FastAPI:
                 "label": table_def.get("label", table_name),
                 "row_count": n,
                 "sample_rows": sample_count,
-                "real_rows": real_count,
+                "real_rows": category_counts["observed"],
+                "observed_rows": category_counts["observed"],
+                "business_rows": category_counts["business"],
+                "derived_rows": category_counts["derived"],
                 "simulated_rows": simulated_count,
+                "source_category_counts": category_counts,
                 "date_range": [dates[0], dates[-1]] if dates else [],
                 "region_count": len(regions),
                 "month_count": len(months),
@@ -1233,15 +1254,21 @@ def create_app() -> FastAPI:
             total_sample += sample_count
             total_real += real_count
             total_simulated += simulated_count
+            for key in total_categories:
+                total_categories[key] += category_counts[key]
 
         report["total"] = {
             "total_rows": total_rows,
-            "sample_rows": total_sample,
-            "real_rows": total_real,
+            "sample_rows": total_categories["sample"],
+            "real_rows": total_categories["observed"],
+            "observed_rows": total_categories["observed"],
+            "business_rows": total_categories["business"],
+            "derived_rows": total_categories["derived"],
             "simulated_rows": total_simulated,
-            "real_data_ratio": round(total_real / max(1, total_rows), 2),
-            "non_sample_source_ratio": round((total_real + total_simulated) / max(1, total_rows), 2),
-            "source_ratio_note": "非样例来源统计包含公开观测、派生、模拟或待核验来源，不等同于真实业务数据占比。",
+            "source_category_counts": total_categories,
+            "real_data_ratio": round(total_categories["observed"] / max(1, total_rows), 2),
+            "non_sample_source_ratio": round((total_categories["observed"] + total_categories["business"] + total_categories["derived"]) / max(1, total_rows), 2),
+            "source_ratio_note": "统计分为环境观测真实、业务、派生、样例四类；业务来源不等同环境观测，派生数据不等同实测。",
         }
         return report
 

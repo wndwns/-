@@ -1,0 +1,62 @@
+[
+  {
+    "region_id": "yushu-chengduo",
+    "event_month": "2020-01",
+    "event_type": "snowstorm",
+    "severity": "高",
+    "loss_amount": 16214000,
+    "source": "中国气象灾害年鉴2021 第179页",
+    "source_url": "",
+    "source_kind": "yearbook",
+    "note": "2020年1月2日称多县清水河、珍秦乡、扎朵镇雪灾；年鉴载明死亡牲畜2069头（只）、直接经济损失1621.4万元。损失金额为县级明确值。",
+    "verified": true
+  },
+  {
+    "region_id": "yushu-zaduo",
+    "event_month": "2020-06",
+    "event_type": "lightning",
+    "severity": "高",
+    "loss_amount": null,
+    "source": "中国气象灾害年鉴2021 第65页",
+    "source_url": "",
+    "source_kind": "yearbook",
+    "note": "2020年6月18日17时，玉树州杂多县扎青乡6人在采挖虫草时遭雷击，1人身亡、5人受伤；年鉴未列县级直接经济损失。",
+    "verified": true
+  },
+  {
+    "region_id": "naqu-nierong",
+    "event_month": "2020-01",
+    "event_type": "snowstorm",
+    "severity": "中",
+    "loss_amount": null,
+    "source": "中国气象灾害年鉴2021 第172页",
+    "source_url": "",
+    "source_kind": "yearbook",
+    "note": "年鉴明确列出聂荣县属于2020年西藏雪灾波及的13个县（区），全区统计为0.4万人受灾、死亡牲畜1837头（只、匹）、直接经济损失200万元；县级发生月份及损失未单列，本条按年鉴年度概述暂归1月，合入前需人工复核月份。",
+    "verified": true
+  },
+  {
+    "region_id": "ganzi-seda",
+    "event_month": "2021-06",
+    "event_type": "hail_and_heavy_rain",
+    "severity": "中",
+    "loss_amount": null,
+    "source": "中国气象灾害年鉴2022 第45页",
+    "source_url": "",
+    "source_kind": "yearbook",
+    "note": "2021年6月19—21日，四川阿坝、甘孜、凉山3州8县遭风雹、暴雨；年鉴明确色达县最大冰雹直径9毫米。共同灾区直接经济损失2200余万元，未给出色达县分项损失。",
+    "verified": true
+  },
+  {
+    "region_id": "yushu-zaduo",
+    "event_month": "2021-06",
+    "event_type": "lightning",
+    "severity": "高",
+    "loss_amount": null,
+    "source": "中国气象灾害年鉴2022 第173页",
+    "source_url": "",
+    "source_kind": "yearbook",
+    "note": "2021年6月17日，杂多县结多乡巴麻村一社9名牧民采挖虫草时遭雷击，2人死亡；年鉴未列县级直接经济损失。",
+    "verified": true
+  }
+]

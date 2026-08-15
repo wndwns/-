@@ -617,10 +617,10 @@
                         <h2>County Risk Heat</h2>
                         <p>县域风险热力总览</p>
                       </div>
-                      <em>6维规则评分 · 权重加权</em>
+                      <em>授信四维 · 0.40/0.30/0.20/0.10</em>
                     </div>
                     <table class="schema-table heat-table">
-                      <thead><tr><th>#</th><th>县域</th><th>综合评分</th><th>6维子分</th><th>风险等级</th><th>建议动作</th></tr></thead>
+                      <thead><tr><th>#</th><th>县域</th><th>授信四维分</th><th>4维子分</th><th>准入提示</th><th>建议动作</th></tr></thead>
                       <tbody>
                         <tr v-for="(row, idx) in publicRiskHeatRows" :key="row.region_id" class="heat-row" :class="{ active: selectedPublicRiskRow?.region_id === row.region_id }" @click="selectPublicRiskRow(row)">
                           <td>{{ idx + 1 }}</td>
@@ -635,7 +635,7 @@
                   </div>
                   <div class="plain-card radar-card">
                     <div class="plain-card-head risk-card-head">
-                      <div><h2>6-Dim Radar</h2><p>{{ selectedPublicRiskRow?.region_name || '6维评分雷达图' }}</p></div>
+                      <div><h2>Credit 4-Dim Radar</h2><p>{{ selectedPublicRiskRow?.region_name || '授信四维评分雷达图' }}</p></div>
                       <em>{{ selectedPublicRiskRow?.display_level || '请选择县域' }}</em>
                     </div>
                     <div id="chart-public-radar" class="ops-chart public-radar-chart"></div>
@@ -644,6 +644,11 @@
                     </div>
                     <p class="radar-note">{{ selectedPublicRiskRow?.dim_summary || '点击左侧县域查看对应雷达图。' }}</p>
                   </div>
+                </div>
+                <div class="plain-card" style="margin-top:16px;">
+                  <div class="plain-card-head risk-card-head"><div><h2>Risk Boundary</h2><p>风险结果使用边界</p></div></div>
+                  <div class="radar-note" style="padding:0 16px 14px;">模型风险排序：基于弱标签的人工核查优先级，不是违约概率，也不是确定性灾害预测。</div>
+                  <div class="radar-note" style="padding:0 16px 14px;">实时预警：规则告警，用于触发人工核查；预警本身不等于已发生灾害事件。</div>
                 </div>
                 <div class="plain-card trend-card">
                   <div class="plain-card-head risk-card-head">
@@ -704,7 +709,8 @@
 
               <div class="content-2col">
                 <div class="panel">
-                  <div class="panel-head"><h3>模型风险预测</h3><span class="badge" v-if="modelPrediction">{{ modelPrediction.model_type }}</span></div>
+                  <div class="panel-head"><h3>模型风险排序</h3><span class="badge" v-if="modelPrediction">{{ modelPrediction.model_type }}</span></div>
+                  <p class="radar-note" style="margin:0 14px 10px;">口径：弱标签风险排序，主要用于人工核查优先级；不是违约概率，也不是确定性灾害预测。</p>
                   <div class="panel-body no-pad" v-if="modelPrediction">
                     <div v-for="p in modelPrediction.predictions" :key="p.region_id" class="region-row">
                       <div class="rr-head">
@@ -725,6 +731,7 @@
                 </div>
                 <div class="panel">
                   <div class="panel-head"><h3>实时预警</h3></div>
+                  <p class="radar-note" style="margin:0 14px 10px;">口径：规则告警，用于触发人工核查；预警本身不等于已发生灾害事件。</p>
                   <div class="panel-body no-pad">
                     <div v-for="alert in data.alerts" :key="alert.id" class="alert-row">
                       <span class="alert-badge" :class="alert.level === '高风险' ? 'badge-red' : alert.level === '中风险' ? 'badge-orange' : 'badge-green'">{{ alert.level }}</span>
@@ -1539,8 +1546,9 @@
             <div v-show="page === 'disaster-forecast'">
               <div class="public-page public-page-plain">
                 <section class="plain-page-head">
-                  <h1>灾害预测 · 未来3个月</h1>
+                  <h1>灾害风险趋势 · 未来3个月</h1>
                   <p>输入任意地区名 → 自动拉取 Open-Meteo 数据 → 5灾种12周风险趋势</p>
+                  <p class="radar-note">口径：基于外部数据的历史统计/短期预报生成风险趋势；外部服务失败时降级为历史同期参考，不构成灾害确定性预测。</p>
                 </section>
 
                 <!-- 输入区 -->
@@ -1841,6 +1849,7 @@
                 <tbody><tr v-for="f in data.finance" :key="f.subject_name"><td><strong>{{ f.subject_name }}</strong></td><td>{{ f.credit_line }}</td><td>{{ f.used_credit }}</td><td>{{ f.rate }}</td><td>{{ f.term_months }}</td><td><span class="tag" :class="f.repayment_status === '正常' ? 'tag-green' : 'tag-orange'">{{ f.repayment_status }}</span></td><td>{{ f.overdue_times }}</td><td>{{ f.policies.map(p => p.type).join('、') }}</td></tr></tbody>
               </table></div></div></div>
 
+              <p v-if="dataTab === 'warning'" class="radar-note" style="margin:12px 0;">口径：实时预警为规则告警，用于触发人工核查；预警本身不等于已发生灾害事件。</p>
               <div v-if="dataTab === 'warning'" class="content-2col">
                 <!-- GDI 退化风险 -->
                 <div class="panel">

@@ -63,3 +63,12 @@
 - 前端 app.js init 不再 await loadModelData，首页先渲染、模型数据后台加载。
 - 实测：/api/platform 12.7s → 20~64ms；/api/model/predict 2.95s → 缓存后约 37ms（首调 ~1.9s 构建）；gzip 均生效。
 - 测试 28 passed；8001 已重启生效。
+
+## 2026-08-15 年鉴纸质凭证合入
+
+- 5 条年鉴候选按 `(region_id, month)` 与现有来源事件去重，4 条重复、1 条净新增：`yushu-zaduo / 2021-06 / lightning`，来源《中国气象灾害年鉴2022 第173页》，杂多县结多乡巴麻村一社牧民采挖虫草遭雷击，2 人死亡，`loss_amount=0`，高风险分 80。
+- 已在 `backend/models.py` 顶层增加 `_is_source_event(rl)`：有 `source_url`，或 `source_kind == "yearbook"` 且 `verified is True`。`train()` 的 real_map、`label_info()` 的 real_count、`event_similarity_topk()` 的 events 三处统一使用该判定；相关文案改为支持公开 URL 或年鉴页码凭证。
+- 已合入 `real_labels_1500.json` 对应 2021-06 县月（label=1、risk_score=80、severity=高、event_type=lightning、loss_amount=0、source_kind=yearbook、verified=true 等字段），并新增同字段事件到 `risk_event_labels.json`（总条目 219）。2022 年缺页码事件未处理。
+- 来源事件计数由 127/1373 更新为 128/1372。`backend/test_truthful_outputs.py` 已同步断言；README、`项目全景说明（Codex读）.md`、`工银牧融项目书（用户阅读版）.md`、`frontend/app.js` 已同步本次计数与凭证口径。
+- 使用指定 `_data_collection/.venv` 执行 `pytest backend -q`：28 passed；8083 服务重启后 POST `/api/model/train` 成功，GET `/api/model/label-info` 返回 `real_disaster_label_count=128`、`unknown_month_count=1372`。
+

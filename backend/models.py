@@ -63,6 +63,13 @@ _STORE_DIR = Path(__file__).resolve().parent / "data_store"
 _REGION_LIST_PATH = Path(__file__).resolve().parents[1] / "public_data" / "region_list.csv"
 
 
+def _is_source_event(rl: dict) -> bool:
+    """判断记录是否具备可核验的来源凭证。"""
+    return bool(rl.get("source_url")) or (
+        rl.get("source_kind") == "yearbook" and rl.get("verified") is True
+    )
+
+
 def _load_table(table: str) -> list[dict[str, Any]]:
     path = _STORE_DIR / f"{table}.json"
     if path.exists():
@@ -313,16 +320,35 @@ def _extract_monthly_samples() -> tuple[np.ndarray, np.ndarray, list[dict], dict
     X = np.array(X_rows, dtype=np.float64)
     y = np.array(y_rows, dtype=np.float64)
 
-    # 数据来源统计 —— 自动统计所有来源类型
+    # 数据来源统计：观测真实 / 业务 / 派生 / 样例必须互斥。
+    # 业务来源（如 real_insurance）不能混入环境观测；派生值不能称为实测。
+    all_rows = weather_rows + remote_rows + subject_rows + finance_rows
     ds_counts: dict[str, int] = {}
-    for row in weather_rows + remote_rows + subject_rows + finance_rows:
+    source_category_counts = {"observed": 0, "business": 0, "derived": 0, "sample": 0}
+    observed_sources = {"tpdc", "modis", "mod13q1.061", "cma", "real", "gldas", "era5", "ncep", "geodoi", "openmeteo"}
+    business_sources = {"real_insurance", "asset_register_reference", "bank_business", "insurance_business"}
+    truthy = {"true", "1", "yes", "t"}
+    for row in all_rows:
         src = str(row.get("data_source", "sample")).lower().strip()
         ds_counts[src] = ds_counts.get(src, 0) + 1
-    # 检查 is_sample 标记
-    non_sample_rows = sum(1 for row in weather_rows + remote_rows + subject_rows + finance_rows if str(row.get("is_sample", "true")).lower() not in ("true", "1", "yes", "t"))
-    # 真实数据 = 仅在白名单中的真实观测来源（含其派生）；未知来源（如 real_insurance）不计入
-    real_sources = {"tpdc", "modis", "mod13q1.061", "cma", "real", "gldas", "era5", "ncep", "geodoi", "openmeteo", "openmeteo_derived"}
-    real_rows = sum(v for k, v in ds_counts.items() if k in real_sources)
+        is_sample = str(row.get("is_sample", "")).lower() in truthy or src in {"sample", "simulated"}
+        is_derived = str(row.get("is_derived", "")).lower() in truthy or src.endswith("_derived")
+        if is_sample:
+            source_category_counts["sample"] += 1
+        elif is_derived:
+            source_category_counts["derived"] += 1
+        elif src in business_sources:
+            source_category_counts["business"] += 1
+        elif src in observed_sources:
+            source_category_counts["observed"] += 1
+        else:
+            # 未标注来源的数据不具备真实性证据，按样例/待补来源处理。
+            source_category_counts["sample"] += 1
+
+    observed_rows = source_category_counts["observed"]
+    business_rows = source_category_counts["business"]
+    derived_rows = source_category_counts["derived"]
+    sample_rows = source_category_counts["sample"]
 
     region_ids = sorted(set(m["region_id"] for m in sample_meta))
     months = sorted(set(m["month"] for m in sample_meta))
@@ -336,9 +362,14 @@ def _extract_monthly_samples() -> tuple[np.ndarray, np.ndarray, list[dict], dict
         "regions": region_ids,
         "months": months,
         "data_source_counts": ds_counts,
-        "total_rows": len(weather_rows) + len(remote_rows) + len(subject_rows) + len(finance_rows),
-        "real_rows": real_rows,
-        "sample_rows": ds_counts.get("sample", 0),
+        "source_category_counts": source_category_counts,
+        "total_rows": len(all_rows),
+        # 兼容旧字段：real_rows 现在只代表“环境观测真实”，不含业务或派生。
+        "real_rows": observed_rows,
+        "observed_rows": observed_rows,
+        "business_rows": business_rows,
+        "derived_rows": derived_rows,
+        "sample_rows": sample_rows,
         "simulated_rows": ds_counts.get("simulated", 0),
     }
     return X, y, sample_meta, info
@@ -448,7 +479,7 @@ class RiskModel:
         parts = [f"共 {len(risk_rows)} 条标签：{real_n} 条真实事件标签（来源：应急管理部公报/气候公报/县政府通报）"]
         if sample_n > 0:
             parts.append(f"{sample_n} 条 demo 样例标签")
-        parts.append("真实标签含牲畜死亡/降水极值/低温冻害等事件，附 source_url 可溯源")
+        parts.append("真实标签含牲畜死亡/降水极值/低温冻害等事件，附 source_url 或年鉴页码凭证可溯源")
         return "；".join(parts) + "。"
 
     # ------------------------------------------------------------------
@@ -459,7 +490,7 @@ class RiskModel:
         X, y, meta, info = _extract_monthly_samples()
 
         # ---- 来源支持的事件融合 ----
-        # 只使用带来源 URL 的公开事件；“未检索到报道”不是负标签。
+        # 只使用带 source_url 或年鉴页码凭证的公开事件；“未检索到报道”不是负标签。
         real_labels_path = Path(__file__).parent / "data_store" / "real_labels_1500.json"
         real_label_count = 0
         if real_labels_path.exists():
@@ -469,7 +500,7 @@ class RiskModel:
                 # 构建 (region_id, month) → 来源支持事件映射
                 real_map = {}
                 for rl in real_labels:
-                    if not rl.get('source_url'):
+                    if not _is_source_event(rl):
                         continue
                     key = (rl.get('region_id', ''), rl.get('month', ''))
                     real_map[key] = rl
@@ -509,15 +540,15 @@ class RiskModel:
         if n < 50:
             self._warnings.append(f"样本不足 (当前 {n}，需要 >= 50)。仅使用规则模型，不具备机器学习泛化评估意义。")
             self._warnings.append(f"推荐至少 10 县 × 24 个月 = 240 条样本。当前 {county_count} 县 × {month_count} 月 = {n} 条。")
-        real_ratio = info.get("real_rows", 0) / max(1, info.get("total_rows", 1))
-        if real_ratio < 0.5 and n > 0:
-            self._warnings.append(f"真实数据占比过低 ({real_ratio:.0%})，多数为样例数据，模型泛化能力有限。")
+        observed_ratio = info.get("observed_rows", 0) / max(1, info.get("total_rows", 1))
+        if observed_ratio < 0.5 and n > 0:
+            self._warnings.append(f"环境观测真实数据占比偏低 ({observed_ratio:.0%})，样例/派生数据占比较高，模型泛化能力有限。")
         if county_count < 5:
             self._warnings.append(f"县域数量不足 ({county_count})，建议至少覆盖 10 个高原牧区县。")
 
         if real_label_count > 0:
             self._warnings.append(
-                f"已融合 {real_label_count} 条带来源 URL 的公开灾害事件；其余月份保持未知，不作为真实无灾标签。"
+                f"已融合 {real_label_count} 条附 source_url 或年鉴页码凭证的公开灾害事件；其余月份保持未知，不作为真实无灾标签。"
             )
 
         # ---- 数据级缺口检测 ----
@@ -960,16 +991,26 @@ class RiskModel:
             "county_count": self._info.get("county_count", 0),
             "month_count": self._info.get("month_count", 0),
             "total_rows": self._info.get("total_rows", 0),
-            "real_rows": self._info.get("real_rows", 0),
+            # 四类互斥来源统计；real_rows 保留为观测真实的兼容别名。
+            "real_rows": self._info.get("observed_rows", 0),
+            "observed_rows": self._info.get("observed_rows", 0),
+            "business_rows": self._info.get("business_rows", 0),
+            "derived_rows": self._info.get("derived_rows", 0),
             "sample_rows": self._info.get("sample_rows", 0),
             "simulated_rows": self._info.get("simulated_rows", 0),
-            "real_data_ratio": round(self._info.get("real_rows", 0) / max(1, self._info.get("total_rows", 1)), 2),
+            "source_category_counts": self._info.get("source_category_counts", {}),
+            "observed_data_ratio": round(self._info.get("observed_rows", 0) / max(1, self._info.get("total_rows", 1)), 2),
+            "business_data_ratio": round(self._info.get("business_rows", 0) / max(1, self._info.get("total_rows", 1)), 2),
+            "derived_data_ratio": round(self._info.get("derived_rows", 0) / max(1, self._info.get("total_rows", 1)), 2),
+            "sample_data_ratio": round(self._info.get("sample_rows", 0) / max(1, self._info.get("total_rows", 1)), 2),
+            # 兼容旧字段：仅代表环境观测占比，绝不等同于全体“真实数据”。
+            "real_data_ratio": round(self._info.get("observed_rows", 0) / max(1, self._info.get("total_rows", 1)), 2),
             "non_sample_source_ratio": round(
-                (self._info.get("real_rows", 0) + self._info.get("simulated_rows", 0))
+                (self._info.get("observed_rows", 0) + self._info.get("business_rows", 0) + self._info.get("derived_rows", 0))
                 / max(1, self._info.get("total_rows", 1)),
                 2,
             ),
-            "source_ratio_note": "非样例来源统计包含公开观测、派生、模拟或待核验来源，不等同于真实业务数据占比。",
+            "source_ratio_note": "统计分为环境观测真实、业务、派生、样例四类；业务来源不等同环境观测，派生数据不等同实测。",
             "data_source_counts": self._info.get("data_source_counts", {}),
             "confidence": round(self._confidence, 2),
             "sklearn_available": _HAS_SKLEARN,
@@ -988,7 +1029,7 @@ class RiskModel:
             try:
                 with open(labels_path, "r", encoding="utf-8") as f:
                     rows = json.load(f)
-                real_count = sum(1 for r in rows if r.get("source_url"))
+                real_count = sum(1 for r in rows if _is_source_event(r))
                 unknown_count = max(0, len(rows) - real_count)
             except Exception:
                 pass
@@ -1010,7 +1051,7 @@ class RiskModel:
             ],
             "weak_label_available": True,
             "weak_label_description": (
-                f"基于真实环境异常构建的弱标签，加上{real_count}条带来源 URL 的公开灾害事件: "
+                f"基于真实环境异常构建的弱标签，加上{real_count}条附 source_url 或年鉴页码凭证的公开灾害事件: "
                 "低温异常、降水异常、NDVI同比下降、积雪高值、"
                 f"退化等级、载畜量低值。其余{unknown_count}个月份为未确认状态，不等于真实无灾。"
             ),
@@ -1112,17 +1153,17 @@ def event_similarity_topk(top_k: int = 10, region_id: str | None = None) -> dict
     if n == 0:
         return {"ok": False, "message": "无可用于相似度比较的县月样本"}
 
-    # 只使用带来源 URL 的公开事件；“未检索到报道”不是负标签。
+    # 只使用带 source_url 或年鉴页码凭证的公开事件；“未检索到报道”不是负标签。
     labels_path = Path(__file__).parent / "data_store" / "real_labels_1500.json"
     events: list[dict[str, Any]] = []
     if labels_path.exists():
         try:
             with open(labels_path, "r", encoding="utf-8") as f:
-                events = [rl for rl in json.load(f) if rl.get("source_url")]
+                events = [rl for rl in json.load(f) if _is_source_event(rl)]
         except Exception:
             events = []
     if not events:
-        return {"ok": False, "message": "暂无带来源 URL 的公开事件，无法计算相似度"}
+        return {"ok": False, "message": "暂无带 source_url 或年鉴页码凭证的公开事件，无法计算相似度"}
 
     key_to_idx = {(m["region_id"], m["month"]): i for i, m in enumerate(meta)}
     event_idx: list[tuple[int, dict[str, Any]]] = []
