@@ -445,7 +445,7 @@ def summary() -> dict[str, Any]:
 
 import calendar as _calendar
 from datetime import date as _date, timedelta as _td
-from urllib.request import Request as _Request, urlopen as _urlopen
+from urllib.request import Request as _Request, build_opener as _build_opener, ProxyHandler as _ProxyHandler, urlopen as _urlopen
 from urllib.parse import urlencode as _urlencode
 
 
@@ -521,10 +521,15 @@ def _fetch_daily_weather_forecast(lat: float, lon: float, start_date: str, days:
         })
         req = _Request(
             f"https://api.open-meteo.com/v1/forecast?{params}",
-            headers={"User-Agent": "yak-risk-platform/1.0"},
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
         )
-        with _urlopen(req, timeout=10) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
+        try:
+            opener = _build_opener(_ProxyHandler({}))
+            with opener.open(req, timeout=10) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            with _urlopen(req, timeout=10) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
         daily = payload.get("daily", {})
         dates = daily.get("time", [])
         result = []

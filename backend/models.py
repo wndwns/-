@@ -41,6 +41,13 @@ try:
 except ImportError:
     pass
 
+_HAS_XGB = False
+try:
+    import xgboost as xgb
+    _HAS_XGB = True
+except ImportError:
+    pass
+
 _HAS_SHAP = False
 try:
     import shap
@@ -313,9 +320,9 @@ def _extract_monthly_samples() -> tuple[np.ndarray, np.ndarray, list[dict], dict
         ds_counts[src] = ds_counts.get(src, 0) + 1
     # 检查 is_sample 标记
     non_sample_rows = sum(1 for row in weather_rows + remote_rows + subject_rows + finance_rows if str(row.get("is_sample", "true")).lower() not in ("true", "1", "yes", "t"))
-    # 真实数据 = 明确标记为真实来源的行
-    real_sources = {"tpdc", "modis", "cma", "real", "gldas", "era5", "ncep"}
-    real_rows = sum(v for k, v in ds_counts.items() if k in real_sources or (k not in ("sample", "simulated", "csv") and k != ""))
+    # 真实数据 = 仅在白名单中的真实观测来源（含其派生）；未知来源（如 real_insurance）不计入
+    real_sources = {"tpdc", "modis", "mod13q1.061", "cma", "real", "gldas", "era5", "ncep", "geodoi", "openmeteo", "openmeteo_derived"}
+    real_rows = sum(v for k, v in ds_counts.items() if k in real_sources)
 
     region_ids = sorted(set(m["region_id"] for m in sample_meta))
     months = sorted(set(m["month"] for m in sample_meta))
@@ -350,6 +357,7 @@ class RiskModel:
         self._trained = False
         self._trained_at: str | None = None
         self._model_type = "rule"
+        self._ml_engine = "rule"
         self._clf: Any = None
         self._reg: Any = None
         self._scaler: Any = None
@@ -515,7 +523,7 @@ class RiskModel:
         # ---- 数据级缺口检测 ----
         self._add_data_gap_warnings()
 
-        if n >= 50 and _HAS_SKLEARN:
+        if n >= 50 and (_HAS_SKLEARN or _HAS_XGB):
             try:
                 self._scaler = StandardScaler()
                 X_scaled = self._scaler.fit_transform(X)
@@ -528,30 +536,66 @@ class RiskModel:
                     if m.get('has_source_event_label'):
                         sample_weights[i] = 5.0  # 来源支持事件权重5倍
 
-                self._clf = RandomForestClassifier(
-                    n_estimators=min(100, max(20, n // 3)),
-                    max_depth=6,
-                    random_state=42,
-                    class_weight='balanced'
-                )
-                self._clf.fit(X_scaled, y_cls, sample_weight=sample_weights)
+                if _HAS_XGB:
+                    # XGBoost 默认档（深度6 / lr0.1 / 100棵），树模型无需标准化
+                    self._clf = xgb.XGBClassifier(
+                        n_estimators=100, max_depth=6, learning_rate=0.1,
+                        random_state=42, n_jobs=2, eval_metric="mlogloss",
+                    )
+                    # xgboost 不接受字符串类别，用数值编码（分类器仅用于特征重要性）
+                    y_cls_num = np.array([0 if v < 50 else 1 if v < 70 else 2 for v in y])
+                    self._clf.fit(X, y_cls_num, sample_weight=sample_weights)
+                    self._reg = xgb.XGBRegressor(
+                        n_estimators=100, max_depth=6, learning_rate=0.1,
+                        objective="reg:squarederror", random_state=42, n_jobs=2,
+                    )
+                    self._reg.fit(X, y, sample_weight=sample_weights)
+                    self._ml_engine = "xgboost"
+                else:
+                    self._clf = RandomForestClassifier(
+                        n_estimators=min(100, max(20, n // 3)),
+                        max_depth=6,
+                        random_state=42,
+                        class_weight='balanced'
+                    )
+                    self._clf.fit(X_scaled, y_cls, sample_weight=sample_weights)
 
-                self._reg = Ridge(alpha=1.0)
-                self._reg.fit(X_scaled, y, sample_weight=sample_weights)
+                    self._reg = Ridge(alpha=1.0)
+                    self._reg.fit(X_scaled, y, sample_weight=sample_weights)
+                    self._ml_engine = "rf_ridge"
 
                 self._model_type = "ml_hybrid"
-                if hasattr(self._clf, "feature_importances_"):
+                if self._ml_engine == "xgboost":
+                    gain = self._clf.get_booster().get_score(importance_type="gain")
+                    ml_imp = np.zeros(len(FEATURE_NAMES))
+                    for k, v in gain.items():
+                        try:
+                            ml_imp[int(k[1:])] = v
+                        except Exception:
+                            pass
+                    if ml_imp.sum() > 0:
+                        ml_imp /= ml_imp.sum()
+                else:
                     ml_imp = self._clf.feature_importances_
-                    self._rule_importance = (self._rule_importance + ml_imp) / 2.0
-                    self._rule_importance /= self._rule_importance.sum()
+                self._rule_importance = (self._rule_importance + ml_imp) / 2.0
+                self._rule_importance /= self._rule_importance.sum()
 
                 # 基础评估
                 if n >= 100:
+                    X_split = X if self._ml_engine == "xgboost" else X_scaled
                     X_tr, X_te, y_tr, y_te, sw_tr, sw_te = train_test_split(
-                        X_scaled, y, sample_weights, test_size=0.2, random_state=42
+                        X_split, y, sample_weights, test_size=0.2, random_state=42
                     )
-                    self._reg.fit(X_tr, y_tr, sample_weight=sw_tr)
-                    y_pred = self._reg.predict(X_te)
+                    # 用临时副本评估，不覆盖已用全量数据训练的模型
+                    if self._ml_engine == "xgboost":
+                        reg_eval = xgb.XGBRegressor(
+                            n_estimators=100, max_depth=6, learning_rate=0.1,
+                            objective="reg:squarederror", random_state=42, n_jobs=2,
+                        )
+                    else:
+                        reg_eval = Ridge(alpha=1.0)
+                    reg_eval.fit(X_tr, y_tr, sample_weight=sw_tr)
+                    y_pred = reg_eval.predict(X_te)
                     self._eval_metrics = {
                         "mae": round(float(mean_absolute_error(y_te, y_pred)), 2),
                         "rmse": round(float(np.sqrt(mean_squared_error(y_te, y_pred))), 2),
@@ -561,7 +605,8 @@ class RiskModel:
                     }
                 else:
                     try:
-                        cv_scores = cross_val_score(self._reg, X_scaled, y, cv=min(3, n), scoring="neg_mean_absolute_error")
+                        X_split = X if self._ml_engine == "xgboost" else X_scaled
+                        cv_scores = cross_val_score(self._reg, X_split, y, cv=min(3, n), scoring="neg_mean_absolute_error")
                         self._eval_metrics = {"cv_mae": round(float(-np.mean(cv_scores)), 2), "cv_folds": min(3, n)}
                     except Exception:
                         self._eval_metrics = {}
@@ -703,10 +748,17 @@ class RiskModel:
         shap_values = None
         base_value = float(np.mean(self._y)) if self._y is not None else 50.0
 
-        if _HAS_SHAP and self._model_type == "ml_hybrid" and self._reg is not None:
+        if self._model_type == "ml_hybrid" and self._reg is not None:
             try:
-                # 用TreeExplainer（RF/Ridge兼容）
-                if hasattr(self._reg, 'estimators_'):
+                if self._ml_engine == "xgboost":
+                    # XGB：booster pred_contribs，天然支持 xgboost>=3 且不依赖 shap
+                    contribs = self._reg.get_booster().predict(
+                        xgb.DMatrix(feat.reshape(1, -1)), pred_contribs=True
+                    )
+                    sample_shap = np.asarray(contribs[0, :-1], dtype=np.float64)
+                    base_value = float(contribs[0, -1])
+                elif hasattr(self._reg, 'estimators_'):
+                    # RF：TreeExplainer
                     explainer = shap.TreeExplainer(self._reg)
                     X_scaled = self._scaler.transform(self._X)
                     shap_values = explainer.shap_values(X_scaled)
@@ -720,7 +772,7 @@ class RiskModel:
                     explainer = shap.KernelExplainer(self._reg.predict, background)
                     sample_shap = explainer.shap_values(X_scaled)[0]
                     base_value = float(explainer.expected_value)
-            except Exception as e:
+            except Exception:
                 # SHAP 失败时用规则权重近似
                 sample_shap = (feat - np.mean(self._X, axis=0)) * self._rule_importance
         else:
@@ -767,7 +819,7 @@ class RiskModel:
             "prediction": round(prediction, 2),
             "risk_level": risk_level,
             "model_type": self._model_type,
-            "shap_available": _HAS_SHAP and self._model_type == "ml_hybrid",
+            "shap_available": (_HAS_SHAP or self._ml_engine == "xgboost") and self._model_type == "ml_hybrid",
             "top_drivers": top_drivers,
             "full_explanation": explanations,
             "summary": "".join(summary_parts),
@@ -910,21 +962,44 @@ class RiskModel:
             "total_rows": self._info.get("total_rows", 0),
             "real_rows": self._info.get("real_rows", 0),
             "sample_rows": self._info.get("sample_rows", 0),
+            "simulated_rows": self._info.get("simulated_rows", 0),
             "real_data_ratio": round(self._info.get("real_rows", 0) / max(1, self._info.get("total_rows", 1)), 2),
+            "non_sample_source_ratio": round(
+                (self._info.get("real_rows", 0) + self._info.get("simulated_rows", 0))
+                / max(1, self._info.get("total_rows", 1)),
+                2,
+            ),
+            "source_ratio_note": "非样例来源统计包含公开观测、派生、模拟或待核验来源，不等同于真实业务数据占比。",
             "data_source_counts": self._info.get("data_source_counts", {}),
             "confidence": round(self._confidence, 2),
             "sklearn_available": _HAS_SKLEARN,
+            "xgboost_available": _HAS_XGB,
+            "ml_engine": self._ml_engine,
             "note": note,
             "data_quality_warnings": self._warnings,
         }
 
     def label_info(self) -> dict[str, Any]:
         """返回模型标签来源说明。"""
+        real_count = 0
+        unknown_count = 0
+        labels_path = Path(__file__).parent / "data_store" / "real_labels_1500.json"
+        if labels_path.exists():
+            try:
+                with open(labels_path, "r", encoding="utf-8") as f:
+                    rows = json.load(f)
+                real_count = sum(1 for r in rows if r.get("source_url"))
+                unknown_count = max(0, len(rows) - real_count)
+            except Exception:
+                pass
+        if real_count == 0:
+            real_count = 42
+            unknown_count = 1458
         return {
             "label_type": "weak_label_with_source_events",
             "has_real_disaster_labels": True,
-            "real_disaster_label_count": 42,
-            "unknown_month_count": 1458,
+            "real_disaster_label_count": real_count,
+            "unknown_month_count": unknown_count,
             "has_real_claims_overdue_labels": False,
             "is_rule_risk_score": True,
             "label_features": [
@@ -935,9 +1010,9 @@ class RiskModel:
             ],
             "weak_label_available": True,
             "weak_label_description": (
-                "基于真实环境异常构建的弱标签，加上42条带来源 URL 的公开灾害事件: "
+                f"基于真实环境异常构建的弱标签，加上{real_count}条带来源 URL 的公开灾害事件: "
                 "低温异常、降水异常、NDVI同比下降、积雪高值、"
-                "退化等级、载畜量低值。其余1458个月份为未确认状态，不等于真实无灾。"
+                f"退化等级、载畜量低值。其余{unknown_count}个月份为未确认状态，不等于真实无灾。"
             ),
             "note": (
                 "当前模型是'环境数据 + 规则弱标签 + 少量来源支持事件'的筛查模型，"
@@ -1020,3 +1095,94 @@ def reset_model() -> RiskModel:
     _model = RiskModel()
     _model.train()
     return _model
+
+
+# ---------------------------------------------------------------------------
+# 无监督相似度：来源支持事件相似月份（供人工核查，不产出预测标签）
+# ---------------------------------------------------------------------------
+
+def event_similarity_topk(top_k: int = 10, region_id: str | None = None) -> dict[str, Any]:
+    """找出与来源支持事件月份特征最相似的县月 Top-K，供人工核查候选。
+
+    无监督方法：对 16 维特征做 z-score 标准化后取最小欧氏距离。
+    不做“有灾/无灾”分类，不产出标签，不进入授信金额主链。
+    """
+    X, y, meta, info = _extract_monthly_samples()
+    n = X.shape[0]
+    if n == 0:
+        return {"ok": False, "message": "无可用于相似度比较的县月样本"}
+
+    # 只使用带来源 URL 的公开事件；“未检索到报道”不是负标签。
+    labels_path = Path(__file__).parent / "data_store" / "real_labels_1500.json"
+    events: list[dict[str, Any]] = []
+    if labels_path.exists():
+        try:
+            with open(labels_path, "r", encoding="utf-8") as f:
+                events = [rl for rl in json.load(f) if rl.get("source_url")]
+        except Exception:
+            events = []
+    if not events:
+        return {"ok": False, "message": "暂无带来源 URL 的公开事件，无法计算相似度"}
+
+    key_to_idx = {(m["region_id"], m["month"]): i for i, m in enumerate(meta)}
+    event_idx: list[tuple[int, dict[str, Any]]] = []
+    unmatched: list[dict[str, Any]] = []
+    for e in events:
+        idx = key_to_idx.get((e.get("region_id", ""), e.get("month", "")))
+        if idx is None:
+            unmatched.append({"region_id": e.get("region_id", ""), "month": e.get("month", "")})
+        else:
+            event_idx.append((idx, e))
+    if not event_idx:
+        return {"ok": False, "message": "来源事件均未落在现有县月样本上，无法计算相似度"}
+
+    # z-score 标准化（numpy 实现，不依赖训练状态）
+    mu = X.mean(axis=0)
+    sd = X.std(axis=0)
+    sd[sd == 0] = 1.0
+    Xs = (X - mu) / sd
+
+    event_set = {idx for idx, _ in event_idx}
+    event_vecs = Xs[[idx for idx, _ in event_idx]]
+    sq = ((Xs[:, None, :] - event_vecs[None, :, :]) ** 2).sum(axis=2)
+
+    rows: list[dict[str, Any]] = []
+    for i in range(n):
+        if i in event_set:
+            continue
+        j = int(np.argmin(sq[i]))
+        d = float(np.sqrt(sq[i][j]))
+        _, ev = event_idx[j]
+        rows.append({
+            "region_id": meta[i]["region_id"],
+            "region_name": meta[i]["region_name"],
+            "month": meta[i]["month"],
+            "distance": round(d, 4),
+            "similarity": round(1.0 / (1.0 + d), 4),
+            "risk_score": round(float(y[i]), 2),
+            "nearest_event": {
+                "region_id": ev.get("region_id", ""),
+                "month": ev.get("month", ""),
+                "event_type": ev.get("event_type", ""),
+                "severity": ev.get("severity", ""),
+                "source_url": ev.get("source_url", ""),
+            },
+        })
+
+    if region_id:
+        rows = [r for r in rows if r["region_id"] == region_id]
+    rows.sort(key=lambda r: (r["distance"], r["month"], r["region_id"]))
+    rows = rows[: max(1, min(int(top_k), 200))]
+
+    return {
+        "ok": True,
+        "method": "16维特征 z-score 标准化 + 最小欧氏距离（无监督相似度）",
+        "disclaimer": "相似度只表示特征形态接近，不是灾害预测、不是事件标签；候选月份需人工核验公开资料后再决定是否标注。",
+        "stats": {
+            "n_samples": int(n),
+            "n_events_used": len(event_idx),
+            "n_events_unmatched": len(unmatched),
+            "n_candidates_returned": len(rows),
+        },
+        "candidates": rows,
+    }

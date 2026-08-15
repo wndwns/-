@@ -23,14 +23,18 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request, build_opener, ProxyHandler, urlopen
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+
+# 模型预测结果缓存：预测仅随重训变化，按 trained_at 失效
+_PREDICT_CACHE: dict[str, Any] = {}
 
 # 灾害预测模块（可选，缺失则降级）
 try:
@@ -227,6 +231,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     # ======================================================================
     # 健康检查
@@ -441,12 +446,17 @@ def create_app() -> FastAPI:
             "current": "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code",
             "timezone": "auto",
         })
-        req = Request(f"{endpoint}?{params}", headers={"User-Agent": "yak-risk-platform/1.0"})
+        req = Request(f"{endpoint}?{params}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         try:
-            with urlopen(req, timeout=8) as resp:
+            opener = build_opener(ProxyHandler({}))
+            with opener.open(req, timeout=8) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
         except Exception as exc:
-            return {"ok": False, "configured": True, "provider": "open_meteo", "message": f"Open-Meteo 请求失败: {exc}"}
+            try:
+                with urlopen(req, timeout=8) as resp:
+                    payload = json.loads(resp.read().decode("utf-8"))
+            except Exception as exc2:
+                return {"ok": False, "configured": True, "provider": "open_meteo", "message": f"Open-Meteo 请求失败: {exc2}"}
 
         current = payload.get("current") or {}
         weather_code = current.get("weather_code")
@@ -482,7 +492,7 @@ def create_app() -> FastAPI:
                 "apply_url": "https://lbs.amap.com/api/webservice/guide/api/weatherinfo",
             }
         params = urlencode({"key": key, "city": city, "extensions": extensions, "output": "JSON"})
-        req = Request(f"{endpoint}?{params}", headers={"User-Agent": "yak-risk-platform/1.0"})
+        req = Request(f"{endpoint}?{params}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         try:
             with urlopen(req, timeout=8) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
@@ -829,7 +839,12 @@ def create_app() -> FastAPI:
             from models import get_model
         except ImportError:
             from backend.models import get_model  # type: ignore[no-redef]
-        return get_model().predict()
+        model = get_model()
+        key = model._trained_at or "untrained"
+        if key not in _PREDICT_CACHE:
+            _PREDICT_CACHE.clear()
+            _PREDICT_CACHE[key] = model.predict()
+        return _PREDICT_CACHE[key]
 
     @app.get("/api/model/importance")
     def model_importance() -> list[dict[str, Any]]:
@@ -924,6 +939,21 @@ def create_app() -> FastAPI:
             "历史实验精确率和F1不满足业务决策要求。",
         ]
         return report
+
+    @app.get("/api/model/event-similarity")
+    def model_event_similarity(top_k: int = 10, region_id: str | None = None) -> dict[str, Any]:
+        """无监督相似度：返回与来源支持事件最相似的县月 Top-K，供人工核查候选。
+
+        不产出预测标签，不进入授信金额主链。
+        """
+        try:
+            from models import event_similarity_topk as _event_similarity
+        except ImportError:
+            from backend.models import event_similarity_topk as _event_similarity  # type: ignore[no-redef]
+        try:
+            return _event_similarity(top_k=top_k, region_id=region_id)
+        except Exception as exc:
+            return {"ok": False, "message": f"相似度计算失败: {exc}"}
 
     # ======================================================================
     # 资产登记资料核验 API（百巴村1135条耳标记录）
@@ -1210,6 +1240,8 @@ def create_app() -> FastAPI:
             "real_rows": total_real,
             "simulated_rows": total_simulated,
             "real_data_ratio": round(total_real / max(1, total_rows), 2),
+            "non_sample_source_ratio": round((total_real + total_simulated) / max(1, total_rows), 2),
+            "source_ratio_note": "非样例来源统计包含公开观测、派生、模拟或待核验来源，不等同于真实业务数据占比。",
         }
         return report
 
@@ -1398,7 +1430,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/warning/comprehensive-all")
     def warning_comprehensive_all(year: int = 2025) -> dict[str, Any]:
-        """全部 25 县预警汇总。
+        """全部县域预警汇总。
 
         GET /api/warning/comprehensive-all?year=2025
         """
@@ -1448,7 +1480,7 @@ def create_app() -> FastAPI:
     def warning_ndvi(region_id: str | None = None) -> list[dict[str, Any]]:
         """实时 NDVI 异常监控。
 
-        GET /api/warning/ndvi                    → 全部 25 县
+        GET /api/warning/ndvi                    → 全部县域
         GET /api/warning/ndvi?region_id=naqu-bange  → 单县
         """
         try:

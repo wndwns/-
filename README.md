@@ -10,7 +10,7 @@
 backend/
   server.py              FastAPI 后端服务 + 全量 API
   data.py                数据访问层（JSON Store > MySQL > 内置样例）
-  models.py              模型层（规则 + sklearn 混合预测）
+  models.py              模型层（规则 + XGBoost 混合预测，sklearn 兜底）
   store.py               JSON 文件存储层（backend/data_store/*.json）
   db.py                  MySQL 连接池（可选）
   credit_decision.py     授信与贷后唯一金额纯计算模块
@@ -32,7 +32,7 @@ public_data/
 ## 启动方式
 
 ```powershell
-cd D:\工行杯\yak-risk-platform
+cd C:\Users\WH\Desktop\gonghangbei - 副本
 python -m pip install -r requirements.txt
 python .\backend\server.py
 ```
@@ -40,6 +40,13 @@ python .\backend\server.py
 - 前台主页：http://127.0.0.1:8000（默认进入授信与贷后工作台）
 - 管理端：http://127.0.0.1:8000/admin
 - API 文档：http://127.0.0.1:8000/docs
+
+### 运行与部署边界
+
+- 比赛演示的正式运行方式是本地启动 FastAPI（`python .\backend\server.py`），前端由后端同源提供。
+- `vercel.json` 只把 `frontend/` 作为静态输出目录：Vercel 部署后页面可以打开，但 `/api/*` 后端接口不会随部署生效；公网演示需要另行托管后端并配置 API 地址。
+- 当前没有登录、权限、审计和生产监控，不应直接暴露到生产网络；`.env` 中的 Key 不得提交或公开。
+- 已配置 GitHub Actions 轻量 CI（`.github/workflows/ci.yml`），推送后自动执行编译、回归测试和前端语法检查。
 
 ## 授信与贷后测算接口
 
@@ -54,7 +61,7 @@ POST /api/credit-decision/evaluate            唯一授信测算
 - 输入分组或字段非法返回 422。
 - 案例文件缺失、为空或损坏返回 500（`credit_case_unavailable`），不回退到伪造结果。
 - 测算逻辑集中在 `backend/credit_decision.py`，金额以元计算、仅最后向下取整到 1 万元；
-  保险、RF/Ridge、四维综合分与旧风险乘数不进入金额主链。
+  保险、XGB 预测分、四维综合分与旧风险乘数不进入金额主链。
 - 案例数据为比赛样例（`backend/data_store/credit_cases.json`），不是真实工行客户资料。
 
 ## 外部天气与地图 API
@@ -111,7 +118,7 @@ data.py 数据层
 ### 架构
 
 - 模型代码：`backend/models.py`
-- 策略：样本 < 20 条 → 规则加权模型；样本 ≥ 20 条 → sklearn RandomForest + Ridge 混合
+- 策略：样本 < 50 条 → 仅规则加权模型；样本 ≥ 50 条且 xgboost 可用 → XGBoost 分类+回归（默认档 depth6/lr0.1/100 棵）；无 xgboost 时回退 RandomForest 分类 + Ridge 回归
 - 特征：16 维（气象 7 + 遥感 6 + 经营 2 + 金融 1）
 - 集成方式：模型预测通过 `/api/model/predict` 输出，同时注入 `/api/risk-assessment` 和 `/api/platform`
 
@@ -135,10 +142,9 @@ data.py 数据层
 
 ### 训练数据规模说明
 
-- 当前真实数据：CMFD 气象 300 行 + MODIS NDVI 300 行 = 600 行真实数据
-- 25 县 × 25 月 = 300+ 训练样本，模型类型 `ml_hybrid`
-- 样本数 >= 300，置信度较高
-- 模型明确标注数据来源 (`data_source_counts`)：tpdc=300, modis=300, sample=8
+- 县月样本 3562 条，覆盖 26 县、137 个月（气象 3120 行、遥感 2392 行）
+- 来源支持事件 127 条（带公开 URL），其余 1373 个月份为“未确认”，不能当作无事件
+- 模型类型 `ml_hybrid`（引擎 xgboost，RF+Ridge 兜底）；评估指标（MAE/RMSE/R² 等）是“对规则弱标签的拟合度”，不代表真实灾害、损失或逾期预测能力
 
 ## 遥感数据接入
 
@@ -146,10 +152,10 @@ data.py 数据层
 
 | 数据表 | 数据来源 | 行数 | is_sample | 状态 |
 |--------|----------|------|-----------|------|
-| weather_data | CMFD 2.0 (TPDC) | 300 | false | 真实气象（待扩展多年）|
-| remote_sensing_data | MODIS NDVI + Snow | 300 | false | NDVI+积雪（待扩展多年）|
-| business_subjects | 脱敏模拟 | 4 | true | sample |
-| finance_credit | 脱敏模拟 | 4 | true | sample |
+| weather_data | TPDC CMFD V0200 | 3120 | false | 26 县公开气象（2015-01 至 2024-12）|
+| remote_sensing_data | MODIS 及派生 | 2392 | false | NDVI/雪盖/退化/载畜（载畜量为派生值）|
+| business_subjects | 脱敏模拟 | 76 | true | sample（75 样例 + 1 历史资产登记映射）|
+| finance_credit | 脱敏模拟 | 76 | true | sample（75 样例 + 1 历史资产登记映射）|
 
 ### 当前数据缺口
 
@@ -292,16 +298,15 @@ DOI: 10.3974/geodb.2024.07.07.V1
 
 ### 风险事件标签表
 
-已设计 `risk_event_labels` 表结构（字段: region_id, event_month, event_type, severity, loss_amount, claim_amount, overdue_flag, is_real_label），但当前为空。不伪造标签。
+`risk_event_labels` 现有 218 条（193 条带来源 URL 的公开事件材料 + 25 条样例）；模型训练读取 `real_labels_1500.json`，其中只有 127 条带来源 URL 的事件作为来源支持样本，其余 1373 个月份为未确认状态。`is_real_label=true` 不等于真实业务标签；不伪造标签。
 
 ## 模型标签说明
 
 当前模型是**"真实环境数据 + 规则风险标签"的弱监督评分模型**：
 - `GET /api/model/label-info` 返回标签类型说明
 - `GET /api/model/macro-background` 返回宏观背景数据状态
-- `label_type=rule_label`, 无真实灾害/理赔/逾期标签
-- 标签来源: 规则风险分（气象+遥感+经营+金融加权），不是真实灾害/损失/逾期标签
-- `label_type=rule_label`
+- `label_type=rule_label`，无真实灾害/理赔/逾期标签
+- 标签来源：规则风险分（气象+遥感+经营+金融加权），不是真实灾害/损失/逾期标签
 - `GET /api/model/label-info` 返回标签详细说明
 - 不应宣称已经完成真实灾害预测或贷款逾期预测
 
@@ -340,7 +345,7 @@ python public_data/scripts/build_public_samples.py
 - **样例数据**：基于公开数据源字段体系构造的合理模拟值，供演示和开发
 - **真实数据**：需注册对应数据源、下载后通过管理端导入或替换 `backend/data_store/*.json`
 - 系统中所有样例数据均标记 `data_source: "sample"` 或 `"csv"`
-- 风险评估中的模型置信度会随数据量增加而提升
+- 模型评估指标是对规则弱标签的拟合度，会随数据量变化，不代表真实预测能力
 
 ## 四类 CSV 导入
 
@@ -371,6 +376,7 @@ POST /api/model/train          重新训练
 POST /api/model/predict        预测所有区域
 GET  /api/model/importance     特征重要性
 GET  /api/model/forecast       趋势预测
+GET  /api/model/event-similarity  来源事件相似月份 Top-K（人工核查候选，非预测标签）
 
 # 公开数据
 GET  /api/public-data/sources  数据源清单
@@ -389,7 +395,7 @@ POST /api/import/csv           导入 CSV
 | 推荐 | 25 | 36 | 900 | 较稳定 ML 训练和评估 |
 | 更强 | 40+ | 36-60 | 1440+ | 稳定 ML，可靠评估 |
 
-当前系统内置 25 个高原牧区示范县（`public_data/region_list.csv`）。
+当前系统内置 26 个高原牧区示范县（`public_data/region_list.csv`）；模型启停阈值为 50 个样本，表中“推荐数据规模”仅为规划参考。
 
 ## 真实数据接入流程 (TPDC)
 
@@ -417,13 +423,13 @@ POST /api/import/csv           导入 CSV
 - **simulated** — 脱敏模拟数据，基于真实参数生成但不涉及真实隐私（金融和保险明细）
 - **real / tpdc / modis / cma** — 从公开数据源导入的真实数据
 
-当前不能声称已经接入实时生产数据。金融和保险明细没有公开真实数据，比赛版只能使用脱敏模拟数据。
+当前不能声称已经接入实时生产数据。金融和保险明细没有公开真实数据，比赛版只能使用脱敏模拟数据。`real_insurance`、`asset_register_reference` 等标记是待核验登记参考，不等于真实业务数据，也不得作为无标签风险检测目标。
 
 ## 当前状态
 
-- 比赛演示版，内置 25 个高原牧区示范县 + 3 县样例数据
+- 比赛演示版，内置 26 个高原牧区示范县
 - JSON 文件存储模式可用，无需 MySQL
 - CSV 导入闭环已打通
-- 模型层：region_id+month 训练样本，规则 + sklearn 混合
-- 真实气象 API / 遥感 API 尚未接入
+- 模型层：region_id+month 训练样本，规则 + XGBoost 混合（sklearn 兜底）
+- 气象/遥感公开数据已接入（TPDC、Open-Meteo、MODIS 及派生数据）；高德/Open-Meteo 实时外部 API 为可选集成
 - 前端使用 Vue 3 CDN + ECharts，无需构建工具

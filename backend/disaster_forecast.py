@@ -34,8 +34,8 @@ REGION_CSV = ROOT / "public_data" / "region_list.csv"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
-UA = "yak-risk-platform/1.0"
-TIMEOUT = 30
+UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+TIMEOUT = 10
 
 
 # ========== 26县映射 ==========
@@ -107,8 +107,14 @@ def geocode_query(query: str) -> dict | None:
 # ========== Open-Meteo 数据获取 ==========
 def _fetch(url: str) -> dict:
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        return json.loads(r.read())
+    try:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(req, timeout=TIMEOUT) as r:
+            return json.loads(r.read())
+    except (urllib.error.URLError, OSError):
+        # 默认直连；直连失败时回退系统代理重试一次
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+            return json.loads(r.read())
 
 
 def fetch_forecast(lat: float, lon: float, days: int = 16) -> dict:
@@ -547,7 +553,11 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
     try:
         forecast_data = fetch_forecast(lat, lon, days=16)
     except Exception as e:
-        return {"ok": False, "message": f"Open-Meteo 预报获取失败: {e}"}
+        # 实时预报不可用时降级为历史同期数据，避免整页不可用
+        forecast_data = {}
+        forecast_note = f"Open-Meteo 实时预报暂不可用（{e}），已回退为历史同期数据"
+    else:
+        forecast_note = ""
 
     try:
         historical = fetch_historical_5y(lat, lon, now, target_end)
@@ -574,6 +584,8 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
     top_disaster = max(disaster_avgs, key=disaster_avgs.get)
 
     recommendations = generate_recommendations(composite, top_disaster, disaster_avgs[top_disaster], region_name)
+    if forecast_note:
+        recommendations.insert(0, f"⚠ {forecast_note}")
 
     # 4. 构造置信度说明
     confidence_segments = [
@@ -613,6 +625,6 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
                      "blizzard": "暴雪", "ecological": "生态"}[top_disaster],
         },
         "recommendations": recommendations,
-        "data_source": "Open-Meteo (ERA5 + 16天预报)",
+        "data_source": "Open-Meteo (ERA5 + 16天预报)" if not forecast_note else "历史同期数据（Open-Meteo 实时预报暂不可用）",
         "generated_at": now.isoformat() + "+08:00",
     }

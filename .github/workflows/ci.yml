@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Compile backend
+        run: python -m compileall backend
+      - name: Truthfulness regression
+        run: python backend/test_truthful_outputs.py
+      - name: Credit decision regression
+        run: python backend/test_credit_decision.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Frontend syntax check
+        run: node --check frontend/app.js

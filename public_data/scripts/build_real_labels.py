@@ -20,7 +20,7 @@ OUTPUT_FILE = BACKEND_DIR / "data_store" / "real_labels_1500.json"
 # 25个区域（不含林芝，因为林芝缺时序数据）
 REGIONS_25 = [
     "naqu-bange", "naqu-seni", "naqu-nierong", "naqu-anduo", "naqu-shenzha",
-    "changdu-karu", "changdu-luolong", "changdu-leiwuqi", "changdu-jiangda",
+    "changdu-karuo", "changdu-luolong", "changdu-leiwuqi", "changdu-jiangda",
     "rikaze-xietongmen", "rikaze-jiangzi", "rikaze-kangma", "rikaze-zhongba",
     "shannan-cuona", "ali-gaize",
     "yushu-chengduo", "yushu-zaduo",

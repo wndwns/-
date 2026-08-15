@@ -281,7 +281,7 @@ NEW_LABELS_BATCH4 = [
     },
     # 16. 2025年Q1昌都卡若区牦牛死亡
     {
-        "region_id": "changdu-karu",
+        "region_id": "changdu-karuo",
         "event_month": "2025-03",
         "event_type": "disease",
         "severity": "中",

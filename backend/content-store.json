@@ -1,38 +1,5 @@
 {
-  "slides": [
-    {
-      "kicker": "ICBC 绿色金融",
-      "title": "牧融绿链",
-      "desc": "面向高原牧区，把气象遥感、经营台账、授信还款、产业链资金和保险协同转化为工行客户经理可执行的风险评估结论。",
-      "theme": "green",
-      "image": "/media/slides/20260528200748-c1d577bbef-banner.jpg",
-      "original_image": "/media/slides/20260528200748-c1d577bbef-original.jpg"
-    },
-    {
-      "kicker": "工行授信准入",
-      "title": "工行绿色信贷风险评估",
-      "desc": "以县域风险、工行授信主体、还款逾期和保险覆盖为对象池，形成准入、复核、贷后核查建议。",
-      "theme": "green",
-      "image": "/media/slides/20260528200748-5792484051-banner.jpg",
-      "original_image": "/media/slides/20260528200748-5792484051-original.jpg"
-    },
-    {
-      "kicker": "工行贷后管理",
-      "title": "产业链资金闭环监测",
-      "desc": "围绕工行放款、饲草采购、物流配送、牧场入库、产品回款和贷后核销形成闭环。",
-      "theme": "green",
-      "image": "/media/slides/20260528200749-baf44c3409-banner.jpg",
-      "original_image": "/media/slides/20260528200749-baf44c3409-original.jpg"
-    },
-    {
-      "kicker": "银保协同",
-      "title": "绿色信贷风险缓释",
-      "desc": "用雪灾、草场退化、NDVI、承保和理赔记录识别风险缓释能力，沉淀绿色绩效和边疆民生价值。",
-      "theme": "green",
-      "image": "/media/slides/20260528200749-6e56ed6d8f-banner.jpg",
-      "original_image": "/media/slides/20260528200749-6e56ed6d8f-original.jpg"
-    }
-  ],
+  "slides": [],
   "platform": {
     "brand": {
       "name": "牧融绿链",
@@ -3091,6 +3058,12 @@
     },
     "amap_map": {
       "source_type": "api",
+      "api_endpoint": "",
+      "api_key": "",
+      "extra_config": {}
+    },
+    "open_meteo": {
+      "source_type": "sample",
       "api_endpoint": "",
       "api_key": "",
       "extra_config": {}

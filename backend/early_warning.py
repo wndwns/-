@@ -785,7 +785,7 @@ def compute_spi(region_id: str, target_month: str, scale: int = 3) -> dict[str, 
     monthly_precip = defaultdict(float)
     for rec in records:
         ym = rec["date"][:7]
-        monthly_precip[ym] += rec.get("precip_mm", 0)
+        monthly_precip[ym] += rec.get("precip_mm") or 0
 
     # 计算 N 个月滑动累计降水
     y, m = int(target_month[:4]), int(target_month[5:7])
@@ -872,7 +872,7 @@ def snow_disaster_risk(region_id: str, days_ahead: int = 16) -> dict[str, Any]:
           雪深 ≥ 10cm 持续 ≥ 5天 → 中度雪灾
           雪深 ≥ 15cm 持续 ≥ 7天 → 重度雪灾
     """
-    from urllib.request import Request, urlopen
+    from urllib.request import Request, build_opener, ProxyHandler, urlopen
     from urllib.parse import urlencode as _urlencode
 
     # 获取坐标
@@ -906,10 +906,15 @@ def snow_disaster_risk(region_id: str, days_ahead: int = 16) -> dict[str, Any]:
         })
         req = Request(
             f"https://api.open-meteo.com/v1/forecast?{params}",
-            headers={"User-Agent": "yak-risk-platform/1.0"},
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
         )
-        with urlopen(req, timeout=10) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
+        try:
+            opener = build_opener(ProxyHandler({}))
+            with opener.open(req, timeout=10) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            with urlopen(req, timeout=10) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
 
         daily = payload.get("daily", {})
         dates = daily.get("time", [])

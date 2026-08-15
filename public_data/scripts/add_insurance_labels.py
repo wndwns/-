@@ -48,7 +48,7 @@ NEW_LABELS = [
         "imported_at": datetime.now().isoformat()
     },
     {
-        "region_id": "changdu-karu",
+        "region_id": "changdu-karuo",
         "event_month": "2025-03",
         "event_type": "disease",
         "severity": "中",
