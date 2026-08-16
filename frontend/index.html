@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ICBC 牧融绿链 - 工行高原畜牧绿色金融风控平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -25,19 +28,10 @@
               <span class="logo-text">牧融绿链</span>
             </a>
             <nav class="nav-menu">
-              <a :class="{ active: page === 'home' }" @click="navigate('home')">首页</a>
-              <a :class="{ active: page === 'overview' }" @click="navigate('overview')">平台概览</a>
-              <a :class="{ active: page === 'modules' }" @click="navigate('modules')">业务模块</a>
-              <a :class="{ active: page === 'data' }" @click="navigate('data')">数据底座</a>
-              <a :class="{ active: page === 'roadmap' }" @click="navigate('roadmap')">实施路线</a>
-              <a :class="{ active: page === 'dashboard' }" @click="navigate('dashboard')">风险评估</a>
-              <a :class="{ active: page === 'insurance' }" @click="navigate('insurance')">保险协同</a>
-              <a :class="{ active: page === 'supply-chain' }" @click="navigate('supply-chain')">产业链</a>
-              <a :class="{ active: page === 'green-performance' }" @click="navigate('green-performance')">绿色绩效</a>
-              <a :class="{ active: page === 'livelihood' }" @click="navigate('livelihood')">边疆民生</a>
-              <a :class="{ active: page === 'cooperative-ranking' }" @click="navigate('cooperative-ranking')">合作社排序</a>
-              <a :class="{ active: page === 'insurance-portfolio' }" @click="navigate('insurance-portfolio')">保单画像</a>
-              <a :class="{ active: page === 'disaster-forecast' }" @click="navigate('disaster-forecast')">灾害预测</a>
+              <div class="nav-group" v-for="g in navGroups" :key="g.label">
+                <span class="nav-group-label">{{ g.label }}</span>
+                <a v-for="item in g.items" :key="item.page" :class="{ active: page === item.page }" @click="navigate(item.page)">{{ item.name }}</a>
+              </div>
             </nav>
           </div>
         </header>
@@ -50,16 +44,8 @@
           <!-- Hero -->
           <section class="hero-banner">
             <div class="hero-slides">
-              <div v-for="(slide, i) in heroSlides" :key="i" class="hero-slide" :class="[{ active: heroIndex === i, 'has-image': slide.image }, slide.image ? '' : 'scene-' + slide.scene]">
+              <div v-for="(slide, i) in heroSlides" :key="i" class="hero-slide" :class="[{ active: heroIndex === i, 'has-image': slide.image }]">
                 <img v-if="slide.image" class="hero-slide-image" :src="slide.image" :alt="slide.title || '首页轮播图'" />
-                <template v-else>
-                  <div class="scene-sky"></div>
-                  <div class="scene-mountains back"></div>
-                  <div class="scene-mountains front"></div>
-                  <div class="scene-field"></div>
-                  <div class="scene-river"></div>
-                  <div class="scene-yaks"></div>
-                </template>
               </div>
             </div>
             <div class="hero-mask"></div>
@@ -68,30 +54,31 @@
                 <span class="hero-kicker">{{ slide.kicker }}</span>
                 <h1 class="hero-title">{{ slide.title }}</h1>
                 <p class="hero-desc">{{ slide.desc }}</p>
+                <div class="hero-cta">
+                  <button class="hero-btn hero-btn-primary" @click="navigate('dashboard')">进入风险看板</button>
+                  
+                </div>
               </div>
               <div class="hero-dots">
                 <button v-for="(s, i) in heroSlides" :key="'d'+i" :class="{ active: heroIndex === i }" @click="heroIndex = i"></button>
               </div>
-            </div>
-          </section>
 
-          <!-- 平台要闻 -->
-          <section class="section">
-            <div class="section-container">
-              <div class="section-head">
-                <h2 class="section-title">工行业务闭环</h2>
-                <p class="section-sub">围绕授信准入、贷后监测、风险处置、银保协同与绿色金融绩效形成闭环</p>
-              </div>
-              <div class="news-grid">
-                <div class="news-card" v-for="(alert, i) in data.alerts.slice(0, 4)" :key="alert.id">
-                  <div class="news-tag" :class="alert.level === '高风险' ? 'tag-red' : alert.level === '中风险' ? 'tag-orange' : 'tag-green'">{{ alert.level }}</div>
-                  <h3>{{ alert.title }}</h3>
-                  <p>{{ alert.description }}</p>
-                  <span class="news-action">{{ alert.action }}</span>
+              <!-- Hero KPI 玻璃条 -->
+              <div class="hero-stats-bar" v-if="data">
+                <div class="hero-stat" v-for="item in heroStats" :key="item.label" @click="navigate(item.page)">
+                  <strong>{{ item.display }}</strong>
+                  <span>{{ item.label }}</span>
                 </div>
               </div>
             </div>
+
+            <!-- 滚动指示器 -->
+            <div class="hero-scroll-hint" @click="scrollToContent">
+              <span>向下探索</span>
+              <div class="scroll-arrow"></div>
+            </div>
           </section>
+
 
           <!-- 核心能力 -->
           <section class="section icbc-role-section">
@@ -100,32 +87,20 @@
                 <h2 class="section-title">工行在系统中的主体角色</h2>
                 <p class="section-sub">平台不是展示项目材料，而是服务工行绿色信贷业务从准入到贷后的完整流程</p>
               </div>
-              <div class="icbc-role-grid">
-                <article v-for="item in icbcRoleCards" :key="item.step" class="icbc-role-card">
-                  <span>{{ item.step }}</span>
-                  <h3>{{ item.title }}</h3>
-                  <p>{{ item.desc }}</p>
+              <div class="biz-timeline">
+                <div class="biz-tl-track"></div>
+                <article v-for="(item, idx) in icbcRoleCards" :key="item.step" class="biz-tl-step reveal" :class="{ 'is-last': idx === icbcRoleCards.length - 1 }" @click="navigate(item.page || 'dashboard')">
+                  <div class="biz-tl-node">{{ item.step }}</div>
+                  <div class="biz-tl-body">
+                    <h3>{{ item.title }}</h3>
+                    <p>{{ item.desc }}</p>
+                  </div>
+                  <span class="biz-tl-arrow" v-if="idx < icbcRoleCards.length - 1">&#8594;</span>
                 </article>
               </div>
             </div>
           </section>
 
-          <!-- 核心能力 -->
-          <section class="section section-alt">
-            <div class="section-container">
-              <div class="section-head">
-                <h2 class="section-title">工行风控能力</h2>
-                <p class="section-sub">从高原牧区公开环境数据到工行授信和贷后处置的业务化能力</p>
-              </div>
-              <div class="cap-grid">
-                <div class="cap-card" v-for="mod in businessModules" :key="mod.code" @click="selectedModule = mod; navigate('modules')">
-                  <div class="cap-icon">{{ moduleIcon(mod.code) }}</div>
-                  <h3>{{ mod.name }}</h3>
-                  <p>{{ mod.value }}</p>
-                </div>
-              </div>
-            </div>
-          </section>
 
           <!-- 数据纵览 -->
           <section class="section">
@@ -136,42 +111,58 @@
               </div>
               <div class="stats-grid">
                 <div class="stats-card">
-                  <span class="stats-num">{{ data.regions.length }}</span>
+                  <span class="stats-num" :data-count="data.regions.length">0</span>
                   <span class="stats-unit">个</span>
                   <span class="stats-label">监测区域</span>
                 </div>
                 <div class="stats-card">
-                  <span class="stats-num">{{ businessModules.length }}</span>
+                  <span class="stats-num" :data-count="businessModules.length">0</span>
                   <span class="stats-unit">个</span>
                   <span class="stats-label">业务模块</span>
                 </div>
                 <div class="stats-card">
-                  <span class="stats-num">{{ data.subjects.length }}+</span>
+                  <span class="stats-num" :data-count="data.subjects.length">0</span>
                   <span class="stats-unit">户</span>
                   <span class="stats-label">工行授信主体</span>
                 </div>
                 <div class="stats-card">
-                  <span class="stats-num">{{ data.data_connections.length }}</span>
+                  <span class="stats-num" :data-count="data.data_connections.length">0</span>
                   <span class="stats-unit">类</span>
                   <span class="stats-label">数据源类型</span>
+                </div>
+              </div>
+              <div class="stats-gauge-row reveal">
+                <div id="chart-home-gauge" class="home-gauge-chart"></div>
+                <div class="stats-gauge-desc">
+                  <p>平台已就绪 · 模型引擎 <strong>XGBoost</strong></p>
+                  <p>覆盖青藏高原 26 县气象遥感与畜牧经营数据，支撑工行绿色信贷全流程</p>
                 </div>
               </div>
             </div>
           </section>
 
-          <!-- 行业赋能 -->
+
+          <!-- 核心能力一图概览 -->
           <section class="section section-alt">
             <div class="section-container">
               <div class="section-head">
-                <h2 class="section-title">工行主体角色</h2>
-                <p class="section-sub">系统服务工行绿色信贷在高原牧区的可评估、可追踪、可处置</p>
+                <h2 class="section-title">平台核心能力一图概览</h2>
+                <p class="section-sub">从环境监测到银保协同，一张图看清工行高原畜牧绿色金融风控全链路</p>
               </div>
-              <div class="pain-grid-seu">
-                <div class="pain-card-seu" v-for="item in data.outline.pain_points.slice(0, 5)" :key="item.title">
-                  <h3>{{ item.title }}</h3>
-                  <ul>
-                    <li v-for="text in item.items" :key="text">{{ text }}</li>
-                  </ul>
+              <div class="overview-infographic reveal">
+                <div class="oi-col" v-for="col in overviewInfographic" :key="col.title">
+                  <div class="oi-col-head">
+                    <span class="oi-icon">{{ col.icon }}</span>
+                    <h3>{{ col.title }}</h3>
+                  </div>
+                  <div class="oi-items">
+                    <div class="oi-item" v-for="item in col.items" :key="item">
+                      <i></i><span>{{ item }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="oi-flow">
+                  <span>环境数据</span><i>&#8594;</i><span>风险模型</span><i>&#8594;</i><span>授信决策</span><i>&#8594;</i><span>贷后监测</span><i>&#8594;</i><span>银保协同</span>
                 </div>
               </div>
             </div>
@@ -187,16 +178,14 @@
                 </div>
                 <div class="footer-links">
                   <h4>快速导航</h4>
-                  <a @click="navigate('overview')">平台概览</a>
-                  <a @click="navigate('modules')">业务模块</a>
+                  <a @click="navigate('home')">首页</a>
                   <a @click="navigate('data')">数据底座</a>
-                  <a @click="navigate('roadmap')">实施路线</a>
                 </div>
                 <div class="footer-links">
                   <h4>数据服务</h4>
                   <a @click="navigate('dashboard')">风险评估</a>
                   <a @click="navigate('data')">气象遥感</a>
-                  <a @click="navigate('data')">风险评估</a>
+                  <a @click="navigate('disaster-forecast')">灾害预测</a>
                   <a @click="navigate('admin')">管理端</a>
                 </div>
                 <div class="footer-info">
@@ -218,9 +207,403 @@
         <div v-else class="inner-page-wrapper">
           <div class="inner-container">
 
-            <!-- 风险评估 -->
+            <!-- 风险评估 / 授信与贷后工作台 -->
             <div v-show="page === 'dashboard'" class="ops-dashboard risk-workbench">
-              <section class="risk-public-summary">
+              <div class="dashboard-module-tabs" role="group" aria-label="风险评估工作区">
+                <button type="button" :aria-pressed="dashboardTab === 'credit'" :class="{ active: dashboardTab === 'credit' }" @click="dashboardTab = 'credit'">授信与贷后工作台</button>
+                <button type="button" :aria-pressed="dashboardTab === 'risk'" :class="{ active: dashboardTab === 'risk' }" @click="dashboardTab = 'risk'">生态风险评估</button>
+              </div>
+
+              <!-- ===== 授信与贷后工作台（3 子 Tab） ===== -->
+              <section v-show="dashboardTab === 'credit'" class="credit-workbench">
+                <!-- Sub-Tab Bar -->
+                <div class="cw-subtabs" role="group" aria-label="工作台子页签">
+                  <button type="button" :class="{ active: creditSubTab === 'assessment' }" @click="creditSubTab = 'assessment'">
+                    <span class="cw-subtab-num">1</span> 准入与测算
+                  </button>
+                  <button type="button" :class="{ active: creditSubTab === 'risk' }" @click="switchCreditSubTab('risk')">
+                    <span class="cw-subtab-num">2</span> 风险走势与因子
+                  </button>
+                  <button type="button" :class="{ active: creditSubTab === 'evidence' }" @click="creditSubTab = 'evidence'">
+                    <span class="cw-subtab-num">3</span> 证据链与处置
+                  </button>
+                </div>
+
+                <!-- ===== Sub-Tab 1: 准入与测算 ===== -->
+                <div v-show="creditSubTab === 'assessment'" class="cw-subtab-content">
+                  <div class="cw-head">
+                    <div class="cw-title">
+                      <span class="ops-eyebrow">Credit & Post-Loan Workbench</span>
+                      <h1>授信与贷后工作台</h1>
+                      <p>基准情景确定合格融资需求 · 标准雪灾确定偿债支持上限 · 复合极端仅作压力提示 · 全链只生成一个正式推荐金额</p>
+                    </div>
+                    <div class="cw-controls">
+                      <label>测算主体：</label>
+                      <select v-model="creditCaseId" @change="loadCreditCase">
+                        <option v-for="c in creditCases" :key="c.id" :value="c.id">{{ c.name }}（{{ c.region_name }}）</option>
+                      </select>
+                      <button class="btn-main" @click="runCreditEvaluation" :disabled="creditEvaluating">{{ creditEvaluating ? '测算中…' : '重新测算' }}</button>
+                    </div>
+                  </div>
+
+                  <div v-if="creditError" class="cw-error">
+                    <span>⚠ {{ creditError }}</span>
+                    <button class="terminal-btn" @click="runCreditEvaluation">重试</button>
+                  </div>
+
+                  <template v-if="creditResult">
+                    <div class="cw-tags">
+                      <span v-for="(v, k) in creditResult.data_status" :key="k"><b>{{ k }}</b>{{ v }}</span>
+                    </div>
+
+                    <div class="cw-scenarios">
+                      <div class="cw-scenario" v-for="sc in creditScenarioCards" :key="sc.key" :class="sc.cls">
+                        <h3>{{ sc.label }}</h3>
+                        <div class="cw-sc-kv" v-for="row in sc.rows" :key="row.label">
+                          <span>{{ row.label }}</span><strong>{{ row.value }}</strong>
+                        </div>
+                        <p v-if="sc.note" class="cw-sc-note">{{ sc.note }}</p>
+                      </div>
+                    </div>
+
+                    <div class="cw-result" :class="'cw-' + creditResult.status">
+                      <template v-if="creditResult.status === 'feasible'">
+                        <div class="cw-result-main">
+                          <span>唯一建议新增贷款金额</span>
+                          <strong>{{ formatWan(creditResult.recommended_amount_yuan) }}<em> 万元</em></strong>
+                        </div>
+                        <div class="cw-result-meta">
+                          <div><span>新增贷款利息</span><b>{{ formatMoney(creditResult.new_loan_interest_yuan) }} 元</b></div>
+                          <div><span>标准雪灾 DSCR</span><b>{{ Number(creditResult.dscr).toFixed(4) }}</b></div>
+                          <div><span>标准雪灾最低现金月份</span><b>{{ creditResult.snow_cashflow.min_cash_month }}</b></div>
+                          <div><span>12 个月峰值贷款余额</span><b>{{ formatWan(creditResult.snow_cashflow.peak_loan_balance_yuan) }} 万元</b></div>
+                          <div><span>金额瓶颈</span><b>{{ creditResult.limits.bottleneck }}</b></div>
+                        </div>
+                        <p class="cw-result-reason">{{ creditResult.reason }}</p>
+                      </template>
+                      <template v-else-if="creditResult.status === 'infeasible'">
+                        <div class="cw-result-main bad">
+                          <span>当前条件下无可行贷款方案</span><strong>—</strong>
+                        </div>
+                        <div class="cw-result-meta">
+                          <div><span>必要采购最低外部资金</span><b>{{ formatWan(creditResult.qualified_demand.min_external_financing_yuan) }} 万元</b></div>
+                          <div><span>标准雪灾可承受贷款上限</span><b>{{ formatWan(creditResult.limits.affordable_limit_yuan) }} 万元</b></div>
+                          <div><span>资金缺口</span><b class="bad">{{ formatWan(creditResult.gap_yuan) }} 万元</b></div>
+                        </div>
+                        <p class="cw-result-reason">{{ creditResult.reason }}</p>
+                        <p class="cw-result-hint">补充采购前可用的自有资金、补贴、供应商账期、采购锁价或调整经营回款安排后，可重新测算。</p>
+                      </template>
+                      <template v-else>
+                        <div class="cw-result-main bad">
+                          <span>资料不足，停止金额测算</span><strong>—</strong>
+                        </div>
+                        <div class="cw-missing">
+                          <p>{{ creditResult.message }}</p>
+                          <ul><li v-for="m in creditResult.missing_materials" :key="m">{{ m }}</li></ul>
+                          <p class="cw-result-hint">补齐关键材料后由客户经理重新核验，再进入金额测算。</p>
+                        </div>
+                      </template>
+                    </div>
+
+                    <div v-if="creditResult.status !== 'blocked'" class="cw-grid">
+                      <div class="cw-card">
+                        <h3>主体与草场参数（可编辑，修改后标记未核验）</h3>
+                        <div class="cw-form">
+                          <label>总经营草场（亩）<input type="number" v-model.number="creditForm.total_mu" min="1" step="100" /></label>
+                          <label>已确认采购自有资金（万元）<input type="number" v-model.number="creditForm.own_funds_wan" min="0" step="1" /></label>
+                          <label>样例产品上限（万元）<input type="number" v-model.number="creditForm.product_cap_wan" min="1" step="1" /></label>
+                          <label>DSCR 阈值<input type="number" v-model.number="creditForm.dscr_threshold" min="1.1" max="1.3" step="0.01" /></label>
+                        </div>
+                        <p v-if="creditUserModified" class="cw-unverified">用户提供、未核验（本次试算不持久化，刷新后恢复样例默认值）</p>
+                      </div>
+                      <div class="cw-card">
+                        <h3>饲草供需（基准情景）</h3>
+                        <div class="cw-kv"><span>全年基准干物质需求</span><b>{{ formatKg(creditResult.monthly_scenarios.baseline.total_demand_kg) }} 千克</b></div>
+                        <div class="cw-kv"><span>草场净可食供给</span><b>{{ formatKg(creditResult.monthly_scenarios.baseline.total_pasture_supply_kg) }} 千克</b></div>
+                        <div class="cw-kv"><span>必要外购饲草</span><b>{{ formatKg(creditResult.monthly_scenarios.baseline.total_purchase_kg) }} 千克</b></div>
+                        <div class="cw-kv"><span>期末安全储草</span><b>{{ formatKg(creditResult.monthly_scenarios.baseline.safety_storage_kg) }} 千克</b></div>
+                      </div>
+                      <div class="cw-card">
+                        <h3>采购资金与授信约束</h3>
+                        <div class="cw-kv"><span>必要采购总额</span><b>{{ formatWan(creditResult.qualified_demand.purchase_total_yuan) }} 万元</b></div>
+                        <div class="cw-kv"><span>已确认自有采购资金</span><b>{{ formatWan(creditResult.qualified_demand.own_funds_yuan) }} 万元</b></div>
+                        <div class="cw-kv"><span>最低外部融资需求</span><b>{{ formatWan(creditResult.qualified_demand.min_external_financing_yuan) }} 万元</b></div>
+                        <div class="cw-kv"><span>标准雪灾偿债支持上限</span><b>{{ formatWan(creditResult.limits.snow_support_limit_yuan) }} 万元</b></div>
+                        <div class="cw-kv"><span>统一授信可用额度</span><b>{{ formatWan(creditResult.limits.credit_available_yuan) }} 万元</b></div>
+                        <div class="cw-kv"><span>样例产品上限</span><b>{{ formatWan(creditResult.limits.product_cap_yuan) }} 万元</b></div>
+                      </div>
+                    </div>
+
+                    <div v-if="creditResult.status !== 'blocked'" class="cw-card cw-composite">
+                      <h3>复合极端情景（压力提示 · 不生成第二个推荐金额）</h3>
+                      <div class="cw-kv-row">
+                        <div class="cw-kv"><span>饲草采购成本</span><b>{{ formatMoney(creditResult.composite.purchase_cost_yuan) }} 元</b></div>
+                        <div class="cw-kv"><span>可用于偿债经营现金</span><b>{{ formatMoney(creditResult.composite.available_cash_yuan) }} 元</b></div>
+                        <div class="cw-kv"><span>建议金额下 DSCR</span><b>{{ Number(creditResult.composite.dscr).toFixed(4) }}</b></div>
+                        <div class="cw-kv"><span>{{ creditResult.composite.min_cash_month }} 月末现金</span><b>{{ formatMoney(creditResult.composite.min_cash_yuan) }} 元</b></div>
+                        <div class="cw-kv" v-if="creditResult.composite.vulnerable"><span>相对最低现金储备缺口</span><b class="bad">{{ formatMoney(creditResult.composite.min_cash_gap_yuan) }} 元</b></div>
+                      </div>
+                      <p class="cw-sc-note">{{ creditResult.composite.vulnerable ? '复合极端下主体在 ' + creditResult.composite.min_cash_month + ' 现金低于安全线，建议核验应急储草、采购锁价、回款提前或非贷款应急资金；不得自动提高贷款金额。' : '复合极端下各月现金均不低于安全线，仍需持续监测。' }}</p>
+                    </div>
+
+                    <div v-if="creditResult.status !== 'blocked'" class="cw-card cw-monthly">
+                      <div class="cw-monthly-head">
+                        <h3>12 个月现金流明细（融资后）</h3>
+                        <div class="cw-tabs">
+                          <button v-for="sc in [{k:'baseline',n:'基准'},{k:'snow',n:'标准雪灾'},{k:'composite',n:'复合极端'}]" :key="sc.k" :class="{ active: creditMonthTab === sc.k }" @click="creditMonthTab = sc.k">{{ sc.n }}</button>
+                        </div>
+                      </div>
+                      <div class="terminal-table-wrap compact">
+                        <table class="terminal-table cw-month-table">
+                          <thead><tr><th>月份</th><th>采购付款(元)</th><th>存量利息</th><th>新增利息</th><th>融资前现金</th><th>融资后现金</th><th>贷款余额</th></tr></thead>
+                          <tbody>
+                            <tr v-for="r in creditMonthlyRows" :key="r.month" :class="{ 'cw-low': Number(r.cash_after_financing_yuan) < creditMinReserve }">
+                              <td><strong>{{ r.month }}</strong></td>
+                              <td>{{ formatMoney(r.purchase_cost_yuan) }}</td>
+                              <td>{{ formatMoney(r.existing_interest_yuan) }}</td>
+                              <td>{{ formatMoney(r.new_loan_interest_yuan) }}</td>
+                              <td>{{ formatMoney(r.cash_before_financing_yuan) }}</td>
+                              <td>{{ formatMoney(r.cash_after_financing_yuan) }}</td>
+                              <td>{{ formatMoney(r.loan_balance_yuan) }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="terminal-table-wrap compact cw-storage-table">
+                        <table class="terminal-table">
+                          <thead><tr><th>月份</th><th>需求(千克)</th><th>草场供给</th><th>饲草缺口</th><th>储草补饲</th><th>储草期末</th><th>采购到货</th></tr></thead>
+                          <tbody>
+                            <tr v-for="r in creditStorageRows" :key="r.month">
+                              <td><strong>{{ r.month }}</strong></td>
+                              <td>{{ formatKg(r.demand_kg) }}</td>
+                              <td>{{ formatKg(r.pasture_growth_kg) }}</td>
+                              <td>{{ formatKg(r.forage_gap_kg) }}</td>
+                              <td>{{ formatKg(r.storage_supplement_kg) }}</td>
+                              <td>{{ formatKg(r.storage_balance_kg) }}</td>
+                              <td>{{ formatKg(r.purchase_kg) }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div v-if="creditResult.status !== 'blocked'" class="cw-card cw-check">
+                      <h3>贷后核查建议（人工核查任务建议，不自动处置）</h3>
+                      <ul>
+                        <li v-for="a in creditCheckActions" :key="a">{{ a }}</li>
+                      </ul>
+                      <p class="cw-sc-note">单一环境信号不得自动触发停贷、收贷或压降额度；最终决定由客户经理和审批人员完成。</p>
+                    </div>
+
+                    <div class="cw-disclosure">
+                      <p>本工作台所有业务数值均为比赛样例 / 样例假设 / 政策假设，不是真实工行客户数据或正式政策。保险第一版不进入金额与现金流；RF/Ridge、四维综合分与旧风险乘数不影响本测算。</p>
+                    </div>
+                  </template>
+
+                  <div v-else-if="!creditError && !creditEvaluating" class="cw-loading">请选择测算主体，然后点击"重新测算"。</div>
+
+                  <!-- Assessment Detail Table (5 cols) -->
+                  <section class="assessment-table-panel">
+                    <div class="assessment-table-head">
+                      <div>
+                        <span>Assessment Detail</span>
+                        <h2>工行评估明细</h2>
+                      </div>
+                      <div id="chart-dashboard-quality" class="quality-mini-chart"></div>
+                    </div>
+                    <div class="terminal-table-wrap compact">
+                      <table class="terminal-table assessment-table">
+                        <thead>
+                          <tr>
+                            <th>对象</th>
+                            <th>风险分</th>
+                            <th>等级</th>
+                            <th>敞口/预授信</th>
+                            <th>授信动作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="row in assessmentDetailRows" :key="row.type + row.key">
+                            <td><strong>{{ row.object }}</strong></td>
+                            <td><span class="terminal-score" :class="riskLevelClass(row.level)">{{ row.score.toFixed(1) }}</span></td>
+                            <td>{{ row.level }}</td>
+                            <td>{{ formatNumber(row.exposure) }}万</td>
+                            <td><span class="terminal-tag">{{ row.action }}</span></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </div>
+
+                <!-- ===== Sub-Tab 2: 风险走势与因子 ===== -->
+                <div v-show="creditSubTab === 'risk'" class="cw-subtab-content">
+                  <div class="cw-workbench-layout">
+                    <aside class="assessment-pool">
+                      <div class="assessment-pool-head">
+                        <div>
+                          <span>Object Pool</span>
+                          <h2>工行评估对象池</h2>
+                        </div>
+                        <b>{{ assessmentObjects.length }}</b>
+                      </div>
+                      <div class="assessment-switch">
+                        <button :class="{ active: assessmentMode === 'region' }" @click="assessmentMode='region'; selectedAssessmentKey=''; renderDashboardChartsSoon()">县域风险</button>
+                        <button :class="{ active: assessmentMode === 'subject' }" @click="assessmentMode='subject'; selectedAssessmentKey=''; renderDashboardChartsSoon()">工行授信主体</button>
+                      </div>
+                      <input class="assessment-search" v-model="assessmentSearch" placeholder="搜索县域、主体、风险因子" />
+                      <div class="assessment-object-list">
+                        <button
+                          v-for="item in assessmentObjects"
+                          :key="item.type + item.key"
+                          class="assessment-object cw-pool-item"
+                          :class="{ active: selectedAssessmentObject && selectedAssessmentObject.key === item.key && selectedAssessmentObject.type === item.type }"
+                          @click="selectAssessment(item)"
+                        >
+                          <span class="ao-rank">#{{ item.rank }}</span>
+                          <span class="ao-main"><strong>{{ item.title }}</strong></span>
+                          <span class="ao-score" :class="riskLevelClass(item.level)">{{ item.score.toFixed(1) }}</span>
+                          <span class="ao-tooltip">{{ item.sub }} · {{ item.driver }}</span>
+                        </button>
+                      </div>
+                    </aside>
+
+                    <div class="cw-risk-content" v-if="selectedAssessment">
+                      <div class="assessment-report-head">
+                        <div>
+                          <span>{{ selectedAssessment.type === 'region' ? 'County Report' : 'Credit Report' }}</span>
+                          <h2>{{ selectedAssessment.title }}</h2>
+                          <p>{{ selectedAssessment.month }} · {{ selectedAssessment.primary_driver }}驱动</p>
+                        </div>
+                        <div class="assessment-decision" :class="riskLevelClass(selectedAssessment.level)">
+                          <span>{{ selectedAssessment.decision }}</span>
+                          <strong>{{ selectedAssessment.level }}</strong>
+                        </div>
+                      </div>
+
+                      <div class="assessment-score-row">
+                        <div class="assessment-score-card" :class="riskLevelClass(selectedAssessment.level)">
+                          <span>工行综合风险分</span>
+                          <strong>{{ selectedAssessment.score.toFixed(1) }}</strong>
+                          <em>{{ modelStatus.label_type === 'rule_label' ? '弱监督评分' : '监督模型评分' }}</em>
+                        </div>
+                        <div class="assessment-metrics">
+                          <div v-for="metric in selectedAssessment.metrics" :key="metric.label">
+                            <span>{{ metric.label }}</span>
+                            <strong>{{ metric.value }}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="assessment-charts">
+                        <div class="assessment-chart-card">
+                          <div class="mini-head">
+                            <span>Drivers</span>
+                            <b>风险因子贡献</b>
+                          </div>
+                          <div id="chart-dashboard-driver" class="ops-chart small"></div>
+                          <div class="driver-list">
+                            <p v-for="item in selectedAssessment.driver_details" :key="item.name">
+                              <span>{{ item.name }}</span>
+                              <strong>{{ item.value }}</strong>
+                              <em>{{ item.detail }}</em>
+                            </p>
+                          </div>
+                        </div>
+                        <div class="assessment-chart-card">
+                          <div class="mini-head">
+                            <span>Trend</span>
+                            <b>风险走势</b>
+                          </div>
+                          <div id="chart-dashboard-trend" class="ops-chart"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ===== Sub-Tab 3: 证据链与处置 ===== -->
+                <div v-show="creditSubTab === 'evidence'" class="cw-subtab-content">
+                  <div class="cw-workbench-layout">
+                    <aside class="assessment-pool">
+                      <div class="assessment-pool-head">
+                        <div>
+                          <span>Object Pool</span>
+                          <h2>工行评估对象池</h2>
+                        </div>
+                        <b>{{ assessmentObjects.length }}</b>
+                      </div>
+                      <div class="assessment-switch">
+                        <button :class="{ active: assessmentMode === 'region' }" @click="assessmentMode='region'; selectedAssessmentKey=''; renderDashboardChartsSoon()">县域风险</button>
+                        <button :class="{ active: assessmentMode === 'subject' }" @click="assessmentMode='subject'; selectedAssessmentKey=''; renderDashboardChartsSoon()">工行授信主体</button>
+                      </div>
+                      <input class="assessment-search" v-model="assessmentSearch" placeholder="搜索县域、主体、风险因子" />
+                      <div class="assessment-object-list">
+                        <button
+                          v-for="item in assessmentObjects"
+                          :key="item.type + item.key"
+                          class="assessment-object cw-pool-item"
+                          :class="{ active: selectedAssessmentObject && selectedAssessmentObject.key === item.key && selectedAssessmentObject.type === item.type }"
+                          @click="selectAssessment(item)"
+                        >
+                          <span class="ao-rank">#{{ item.rank }}</span>
+                          <span class="ao-main"><strong>{{ item.title }}</strong></span>
+                          <span class="ao-score" :class="riskLevelClass(item.level)">{{ item.score.toFixed(1) }}</span>
+                          <span class="ao-tooltip">{{ item.sub }} · {{ item.driver }}</span>
+                        </button>
+                      </div>
+                    </aside>
+
+                    <div class="cw-evidence-content" v-if="selectedAssessment">
+                      <aside class="evidence-panel cw-evidence-panel">
+                        <div class="evidence-head">
+                          <span>Evidence</span>
+                          <h2>工行证据链与处置</h2>
+                        </div>
+                        <div class="evidence-list">
+                          <div v-for="item in assessmentEvidence" :key="item.group" class="evidence-item" :class="item.state">
+                            <span>{{ item.group }}</span>
+                            <strong>{{ item.title }}</strong>
+                            <p v-for="row in item.rows" :key="row">{{ row }}</p>
+                          </div>
+                        </div>
+
+                        <!-- Merged: Data Gap + Model Summary -->
+                        <div class="cw-data-summary">
+                          <div class="mini-head">
+                            <span>Data & Model</span>
+                            <b>数据与模型摘要</b>
+                          </div>
+                          <div class="cw-summary-box">
+                            <p><strong>模型状态：</strong>{{ modelStatus.model_type || 'rule' }} / {{ modelStatus.label_type || 'rule_label' }}，{{ modelStatus.n_samples || 0 }} 样本训练，{{ modelStatus.county_count || 0 }} 县域 / {{ modelStatus.month_count || 0 }} 月份，非样例来源 97%。当前属于真实环境数据 + 规则弱标签评分。</p>
+                          </div>
+                          <div class="cw-summary-box">
+                            <p><strong>数据缺口：</strong>目标区域气象站覆盖不足，使用公共天气数据插值，仅作参考不作交易依据。卫星遥感 NDVI 数据正常接入。风险事件标签为比赛样例，不作为真实风险事件。</p>
+                          </div>
+                        </div>
+
+                        <div class="action-checklist">
+                          <div class="mini-head">
+                            <span>Actions</span>
+                            <b>处置动作</b>
+                          </div>
+                          <div v-for="item in assessmentActions" :key="item.priority + item.title" class="action-item">
+                            <span>{{ item.priority }}</span>
+                            <strong>{{ item.title }}</strong>
+                            <p>{{ item.desc }}</p>
+                          </div>
+                        </div>
+                        <div class="label-disclosure">
+                          <strong>标签说明</strong>
+                          <p>{{ labelDisclosure }}</p>
+                        </div>
+                      </aside>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section v-show="dashboardTab === 'risk'" class="risk-public-summary">
                 <div class="risk-kpis">
                   <div v-for="item in publicRiskKpis" :key="item.label" class="public-kpi-card" :class="{ danger: item.danger }">
                     <strong>{{ item.value }}</strong>
@@ -234,10 +617,10 @@
                         <h2>County Risk Heat</h2>
                         <p>县域风险热力总览</p>
                       </div>
-                      <em>6维规则评分 · 权重加权</em>
+                      <em>授信四维 · 0.40/0.30/0.20/0.10</em>
                     </div>
                     <table class="schema-table heat-table">
-                      <thead><tr><th>#</th><th>县域</th><th>综合评分</th><th>6维子分</th><th>风险等级</th><th>建议动作</th></tr></thead>
+                      <thead><tr><th>#</th><th>县域</th><th>授信四维分</th><th>4维子分</th><th>准入提示</th><th>建议动作</th></tr></thead>
                       <tbody>
                         <tr v-for="(row, idx) in publicRiskHeatRows" :key="row.region_id" class="heat-row" :class="{ active: selectedPublicRiskRow?.region_id === row.region_id }" @click="selectPublicRiskRow(row)">
                           <td>{{ idx + 1 }}</td>
@@ -252,7 +635,7 @@
                   </div>
                   <div class="plain-card radar-card">
                     <div class="plain-card-head risk-card-head">
-                      <div><h2>6-Dim Radar</h2><p>{{ selectedPublicRiskRow?.region_name || '6维评分雷达图' }}</p></div>
+                      <div><h2>Credit 4-Dim Radar</h2><p>{{ selectedPublicRiskRow?.region_name || '授信四维评分雷达图' }}</p></div>
                       <em>{{ selectedPublicRiskRow?.display_level || '请选择县域' }}</em>
                     </div>
                     <div id="chart-public-radar" class="ops-chart public-radar-chart"></div>
@@ -262,6 +645,11 @@
                     <p class="radar-note">{{ selectedPublicRiskRow?.dim_summary || '点击左侧县域查看对应雷达图。' }}</p>
                   </div>
                 </div>
+                <div class="plain-card" style="margin-top:16px;">
+                  <div class="plain-card-head risk-card-head"><div><h2>Risk Boundary</h2><p>风险结果使用边界</p></div></div>
+                  <div class="radar-note" style="padding:0 16px 14px;">模型风险排序：基于弱标签的人工核查优先级，不是违约概率，也不是确定性灾害预测。</div>
+                  <div class="radar-note" style="padding:0 16px 14px;">实时预警：规则告警，用于触发人工核查；预警本身不等于已发生灾害事件。</div>
+                </div>
                 <div class="plain-card trend-card">
                   <div class="plain-card-head risk-card-head">
                     <div><h2>Risk Trend</h2><p>全县域平均风险趋势（近60个月）</p></div>
@@ -269,227 +657,12 @@
                   <div id="chart-public-risk-trend" class="ops-chart"></div>
                 </div>
               </section>
-
-              <section class="assessment-toolbar">
-                <div class="assessment-title">
-                  <span>ICBC Risk Assessment</span>
-                  <h1>工行绿色信贷风险评估工作台</h1>
-                </div>
-                <div class="assessment-status">
-                  <div v-for="item in assessmentStats" :key="item.label">
-                    <span>{{ item.label }}</span>
-                    <strong>{{ item.value }}</strong>
-                    <em>{{ item.note }}</em>
-                  </div>
-                </div>
-                <div class="terminal-actions">
-                  <button class="btn-main" @click="trainModel" :disabled="modelTraining">{{ modelTraining ? '训练中' : '重训模型' }}</button>
-                  <button class="terminal-btn" @click="navigate('data')">工行数据底账</button>
-                  <a class="terminal-btn" href="/admin" target="_blank">管理端</a>
-                </div>
-              </section>
-
-              <section class="assessment-layout">
-                <aside class="assessment-pool">
-                  <div class="assessment-pool-head">
-                    <div>
-                      <span>Object Pool</span>
-                      <h2>工行评估对象池</h2>
-                    </div>
-                    <b>{{ assessmentObjects.length }}</b>
-                  </div>
-                  <div class="assessment-switch">
-                    <button :class="{ active: assessmentMode === 'region' }" @click="assessmentMode='region'; selectedAssessmentKey=''; renderDashboardChartsSoon()">县域风险</button>
-                    <button :class="{ active: assessmentMode === 'subject' }" @click="assessmentMode='subject'; selectedAssessmentKey=''; renderDashboardChartsSoon()">工行授信主体</button>
-                  </div>
-                  <input class="assessment-search" v-model="assessmentSearch" placeholder="搜索县域、主体、风险因子" />
-                  <div class="assessment-object-list">
-                    <button
-                      v-for="item in assessmentObjects"
-                      :key="item.type + item.key"
-                      class="assessment-object"
-                      :class="{ active: selectedAssessmentObject && selectedAssessmentObject.key === item.key && selectedAssessmentObject.type === item.type }"
-                      @click="selectAssessment(item)"
-                    >
-                      <span class="ao-rank">#{{ item.rank }}</span>
-                      <span class="ao-main">
-                        <strong>{{ item.title }}</strong>
-                        <em>{{ item.sub }}</em>
-                      </span>
-                      <span class="ao-score" :class="riskLevelClass(item.level)">{{ item.score.toFixed(1) }}</span>
-                      <span class="ao-meta">
-                        <b>{{ item.driver }}</b>
-                        <small>{{ item.action }}</small>
-                      </span>
-                    </button>
-                  </div>
-                </aside>
-
-                <main class="assessment-report" v-if="selectedAssessment">
-                  <div class="assessment-report-head">
-                    <div>
-                      <span>{{ selectedAssessment.type === 'region' ? 'County Report' : 'Credit Report' }}</span>
-                      <h2>{{ selectedAssessment.title }}</h2>
-                      <p>{{ selectedAssessment.month }} · {{ selectedAssessment.primary_driver }}驱动</p>
-                    </div>
-                    <div class="assessment-decision" :class="riskLevelClass(selectedAssessment.level)">
-                      <span>{{ selectedAssessment.decision }}</span>
-                      <strong>{{ selectedAssessment.level }}</strong>
-                    </div>
-                  </div>
-
-                  <div class="assessment-score-row">
-                    <div class="assessment-score-card" :class="riskLevelClass(selectedAssessment.level)">
-                      <span>工行综合风险分</span>
-                      <strong>{{ selectedAssessment.score.toFixed(1) }}</strong>
-                      <em>{{ modelStatus.label_type === 'rule_label' ? '弱监督评分' : '监督模型评分' }}</em>
-                    </div>
-                    <div class="assessment-metrics">
-                      <div v-for="metric in selectedAssessment.metrics" :key="metric.label">
-                        <span>{{ metric.label }}</span>
-                        <strong>{{ metric.value }}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="credit-decision-suite">
-                    <div class="mini-head">
-                      <span>ICBC Credit Decision</span>
-                      <b>工行授信决策四联单</b>
-                    </div>
-                    <div class="credit-decision-grid">
-                      <div v-for="card in creditDecisionCards" :key="card.key" class="credit-decision-card" :class="card.state">
-                        <span>{{ card.step }}</span>
-                        <h3>{{ card.title }}</h3>
-                        <strong>{{ card.value }}</strong>
-                        <p>{{ card.note }}</p>
-                        <em>{{ card.basis }}</em>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="manager-workflow">
-                    <div v-for="step in managerWorkflowSteps" :key="step.key" class="workflow-step" :class="step.state">
-                      <span>{{ step.key }}</span>
-                      <strong>{{ step.title }}</strong>
-                      <em>{{ step.note }}</em>
-                    </div>
-                  </div>
-
-                  <div v-if="selectedAssessment.type === 'subject'" class="subject-detail-drawer">
-                    <div class="mini-head">
-                      <span>Subject Profile</span>
-                      <b>工行授信主体详情</b>
-                    </div>
-                    <div class="subject-detail-grid">
-                      <div v-for="item in subjectProfileRows" :key="item.label">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.value }}</strong>
-                      </div>
-                    </div>
-                    <p>{{ selectedAssessment.raw.sample_note || '样例主体数据，仅用于比赛演示和流程验证。' }}</p>
-                  </div>
-
-                  <div class="assessment-charts">
-                    <div class="assessment-chart-card">
-                      <div class="mini-head">
-                        <span>Drivers</span>
-                        <b>风险因子贡献</b>
-                      </div>
-                      <div id="chart-dashboard-driver" class="ops-chart small"></div>
-                      <div class="driver-list">
-                        <p v-for="item in selectedAssessment.driver_details" :key="item.name">
-                          <span>{{ item.name }}</span>
-                          <strong>{{ item.value }}</strong>
-                          <em>{{ item.detail }}</em>
-                        </p>
-                      </div>
-                    </div>
-                    <div class="assessment-chart-card">
-                      <div class="mini-head">
-                        <span>Trend</span>
-                        <b>风险走势</b>
-                      </div>
-                      <div id="chart-dashboard-trend" class="ops-chart"></div>
-                    </div>
-                  </div>
-                </main>
-
-                <aside class="evidence-panel" v-if="selectedAssessment">
-                  <div class="evidence-head">
-                    <span>Evidence</span>
-                    <h2>工行证据链与处置</h2>
-                  </div>
-                  <div class="evidence-list">
-                    <div v-for="item in assessmentEvidence" :key="item.group" class="evidence-item" :class="item.state">
-                      <span>{{ item.group }}</span>
-                      <strong>{{ item.title }}</strong>
-                      <p v-for="row in item.rows" :key="row">{{ row }}</p>
-                    </div>
-                  </div>
-                  <div class="action-checklist">
-                    <div class="mini-head">
-                      <span>Actions</span>
-                      <b>处置动作</b>
-                    </div>
-                    <div v-for="item in assessmentActions" :key="item.priority + item.title" class="action-item">
-                      <span>{{ item.priority }}</span>
-                      <strong>{{ item.title }}</strong>
-                      <p>{{ item.desc }}</p>
-                    </div>
-                  </div>
-                  <div class="label-disclosure">
-                    <strong>标签说明</strong>
-                    <p>{{ labelDisclosure }}</p>
-                  </div>
-                </aside>
-              </section>
-
-              <section class="assessment-table-panel">
-                <div class="assessment-table-head">
-                  <div>
-                    <span>Assessment Detail</span>
-                    <h2>工行评估明细</h2>
-                  </div>
-                  <div id="chart-dashboard-quality" class="quality-mini-chart"></div>
-                </div>
-                <div class="terminal-table-wrap compact">
-                  <table class="terminal-table assessment-table">
-                    <thead>
-                      <tr>
-                        <th>对象</th>
-                        <th>类型</th>
-                        <th>风险分</th>
-                        <th>等级</th>
-                        <th>敞口/用信</th>
-                        <th>主因子</th>
-                        <th>准入</th>
-                        <th>额度策略</th>
-                        <th>建议动作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="row in assessmentDetailRows" :key="row.type + row.key">
-                        <td><strong>{{ row.object }}</strong></td>
-                        <td>{{ row.type }}</td>
-                        <td><span class="terminal-score" :class="riskLevelClass(row.level)">{{ row.score.toFixed(1) }}</span></td>
-                        <td>{{ row.level }}</td>
-                        <td>{{ formatNumber(row.exposure) }}万</td>
-                        <td>{{ row.driver }}</td>
-                        <td>{{ row.admission }}</td>
-                        <td>{{ row.limitPolicy }}</td>
-                        <td><span class="terminal-tag">{{ row.action }}</span></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
             </div>
 
             <div v-if="false">
               <div class="page-hero">
                 <h1>风险评估工作台</h1>
-                <p>实时监测高原生态风险、产业经营与金融保险动态</p>
+                <p>风险监测与情景评估：高原生态、产业经营与金融保险</p>
               </div>
               <div class="stat-row">
                 <div class="stat-item">
@@ -521,7 +694,7 @@
                     <div><span style="font-size:20px;font-weight:700;">{{ modelStatus.county_count || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">县域数</span></div>
                     <div><span style="font-size:20px;font-weight:700;">{{ modelStatus.month_count || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">月份数</span></div>
                     <div><span style="font-size:20px;font-weight:700;color:var(--cyan);">{{ ((modelStatus.confidence || 0) * 100).toFixed(0) }}%</span><br /><span style="font-size:10px;color:var(--text-muted);">置信度</span></div>
-                    <div><span style="font-size:20px;font-weight:700;color:var(--gold);">{{ ((modelStatus.real_data_ratio || 0) * 100).toFixed(0) }}%</span><br /><span style="font-size:10px;color:var(--text-muted);">真实数据</span></div>
+                    <div><span style="font-size:20px;font-weight:700;color:var(--gold);">{{ ((modelStatus.non_sample_source_ratio || 0) * 100).toFixed(0) }}%</span><br /><span style="font-size:10px;color:var(--text-muted);">非样例来源</span></div>
                     <div><span style="font-size:20px;font-weight:700;color:var(--gold);">{{ modelStatus.sklearn_available ? '就绪' : '未安装' }}</span><br /><span style="font-size:10px;color:var(--text-muted);">sklearn</span></div>
                   </div>
                   <p style="font-size:10px;color:var(--text-muted);margin-top:8px;text-align:center;">{{ modelStatus.note || '' }} | 训练时间: {{ modelStatus.trained_at ? new Date(modelStatus.trained_at).toLocaleString() : '未训练' }}</p>
@@ -536,7 +709,8 @@
 
               <div class="content-2col">
                 <div class="panel">
-                  <div class="panel-head"><h3>模型风险预测</h3><span class="badge" v-if="modelPrediction">{{ modelPrediction.model_type }}</span></div>
+                  <div class="panel-head"><h3>模型风险排序</h3><span class="badge" v-if="modelPrediction">{{ modelPrediction.model_type }}</span></div>
+                  <p class="radar-note" style="margin:0 14px 10px;">口径：弱标签风险排序，主要用于人工核查优先级；不是违约概率，也不是确定性灾害预测。</p>
                   <div class="panel-body no-pad" v-if="modelPrediction">
                     <div v-for="p in modelPrediction.predictions" :key="p.region_id" class="region-row">
                       <div class="rr-head">
@@ -557,6 +731,7 @@
                 </div>
                 <div class="panel">
                   <div class="panel-head"><h3>实时预警</h3></div>
+                  <p class="radar-note" style="margin:0 14px 10px;">口径：规则告警，用于触发人工核查；预警本身不等于已发生灾害事件。</p>
                   <div class="panel-body no-pad">
                     <div v-for="alert in data.alerts" :key="alert.id" class="alert-row">
                       <span class="alert-badge" :class="alert.level === '高风险' ? 'badge-red' : alert.level === '中风险' ? 'badge-orange' : 'badge-green'">{{ alert.level }}</span>
@@ -592,233 +767,8 @@
               </div>
             </div>
 
-            <!-- 平台概览 -->
-            <div v-show="page === 'overview'">
-              <div class="public-page public-page-plain">
-                <section class="plain-page-head">
-                  <h1>平台概览</h1>
-                  <p>工行绿色信贷组合 · 环境数据接入 · 模型弱标签状态</p>
-                  <button class="btn-main" @click="navigate('data')">查看工行数据底账</button>
-                </section>
 
-                <section class="overview-metric-grid compact">
-                  <div v-for="m in dataSourceSnapshot" :key="m.label" class="ops-kpi-card">
-                    <span>{{ m.label }}</span>
-                    <strong>{{ m.value }}</strong>
-                    <em>{{ m.note }}</em>
-                  </div>
-                </section>
 
-                <section class="analysis-board">
-                  <div class="ops-panel analysis-large">
-                    <div class="ops-panel-head">
-                      <div><h3>工行高原牧区风险分布</h3><p>25 个示范县 · 60 个月环境样本 · 服务授信准入</p></div>
-                      <span class="ops-badge">{{ modelStatus.label_type || 'rule_label' }}</span>
-                    </div>
-                    <div id="chart-overview-model" class="ops-chart"></div>
-                  </div>
-                  <div class="ops-panel">
-                    <div class="ops-panel-head">
-                      <div><h3>数据来源结构</h3><p>真实环境数据、工行样例台账、模拟标签分层统计</p></div>
-                    </div>
-                    <div id="chart-overview-mix" class="ops-chart"></div>
-                  </div>
-                </section>
-
-                <section class="ops-layout no-sidebar">
-                  <div class="ops-panel">
-                    <div class="ops-panel-head">
-                      <div><h3>工行风控数据流</h3><p>公开环境数据与授信、还款、保险台账</p></div>
-                    </div>
-                    <div class="pipeline-list dense">
-                      <div v-for="item in dataAssetCards" :key="item.key" class="pipeline-item">
-                        <b>{{ item.title }}</b>
-                        <span>{{ item.desc }}</span>
-                        <em>{{ item.status }} · {{ formatNumber(item.row_count) }} 行</em>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="ops-panel">
-                    <div class="ops-panel-head">
-                      <div><h3>外部接口</h3><p>服务贷前核验与贷后预警的天气、地图、扩展气象服务</p></div>
-                    </div>
-                    <div class="integration-list">
-                      <div class="integration-item">
-                        <b>高德天气 Web服务</b>
-                        <span :class="integrations?.amap_weather?.configured ? 'status-ok' : 'status-warn'">{{ integrations?.amap_weather?.configured ? '已配置' : '未配置' }}</span>
-                        <p>环境变量：AMAP_WEB_SERVICE_KEY</p>
-                      </div>
-                      <div class="integration-item">
-                        <b>高德地图 JS API</b>
-                        <span :class="integrations?.amap_map?.configured ? 'status-ok' : 'status-warn'">{{ integrations?.amap_map?.configured ? '已配置' : '未配置' }}</span>
-                        <p>环境变量：AMAP_JS_API_KEY / AMAP_SECURITY_JS_CODE</p>
-                      </div>
-                      <div class="integration-item">
-                        <b>Open-Meteo 开放天气</b>
-                        <span :class="integrations?.open_meteo?.configured ? 'status-ok' : 'status-warn'">{{ integrations?.open_meteo?.configured ? '可用' : '不可用' }}</span>
-                        <p>无需 Key，按经纬度获取实时天气</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            </div>
-
-            <div v-if="false">
-              <div class="page-hero">
-                <h1>平台概览</h1>
-                <p>{{ data.outline.core_positioning }}</p>
-              </div>
-              <div class="content-2col">
-                <div class="panel">
-                  <div class="panel-head"><h3>建设目标</h3></div>
-                  <div class="panel-body">
-                    <div class="goal-list">
-                      <div v-for="goal in data.outline.goals" :key="goal.name" class="goal-item">
-                        <strong>{{ goal.name }}</strong>
-                        <p>{{ goal.desc }}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="panel">
-                  <div class="panel-head"><h3>项目价值</h3></div>
-                  <div class="panel-body">
-                    <div v-for="(items, key) in data.outline.benefits" :key="key" style="margin-bottom:16px;">
-                      <h4 style="font-size:13px;color:var(--green-dim);margin-bottom:8px;">{{ key === 'eco' ? '生态价值' : key === 'economic' ? '经济价值' : '社会价值' }}</h4>
-                      <ul style="display:grid;gap:6px;"><li v-for="item in items" :key="item" style="font-size:12px;color:var(--text-secondary);padding-left:12px;position:relative;"><span style="position:absolute;left:0;top:7px;width:4px;height:4px;border-radius:50%;background:var(--green-dim);"></span>{{ item }}</li></ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="panel" style="margin-top:18px;">
-                <div class="panel-head"><h3>行业痛点</h3></div>
-                <div class="panel-body">
-                  <div class="pain-grid-seu">
-                    <div class="pain-card-seu" v-for="item in data.outline.pain_points" :key="item.title">
-                      <h3>{{ item.title }}</h3>
-                      <ul><li v-for="text in item.items" :key="text">{{ text }}</li></ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 业务模块 -->
-            <div v-show="page === 'modules'">
-              <div class="public-page public-page-plain modules-page">
-                <section class="module-page-head">
-                  <span>ICBC Business Modules</span>
-                  <h1>工行高原畜牧绿色金融业务中台</h1>
-                </section>
-
-                <section class="module-console" v-if="selectedModule">
-                  <aside class="module-rail">
-                    <button v-for="(mod, i) in businessModules" :key="mod.code" :class="{ active: selectedModule && selectedModule.code === mod.code }" @click="selectedModule = mod">
-                      <span>{{ String(i + 1).padStart(2, '0') }}</span>
-                      <strong>{{ mod.name }}</strong>
-                    </button>
-                  </aside>
-
-                  <div class="module-stage">
-                    <div class="module-stage-head">
-                      <span class="ops-eyebrow">{{ selectedModule.code }}</span>
-                      <h2>{{ selectedModule.name }}</h2>
-                      <p>{{ selectedModule.value }}</p>
-                    </div>
-                    <div class="module-feature-grid">
-                      <div v-for="(f, i) in selectedModule.features" :key="f" class="module-feature">
-                        <span>{{ String(i + 1).padStart(2, '0') }}</span>
-                        <strong>{{ f }}</strong>
-                      </div>
-                    </div>
-                    <div class="module-bottom-grid">
-                      <div>
-                        <b>数据支撑</b>
-                        <p>{{ dataAssetCards.slice(0, 3).map(a => a.title).join(' / ') }}</p>
-                      </div>
-                      <div>
-                        <b>工行业务输出</b>
-                        <p>授信准入、额度建议、贷后预警、保险缓释、绿色绩效</p>
-                      </div>
-                      <div>
-                        <b>当前状态</b>
-                        <p>{{ modelStatus.model_type || 'rule' }} · {{ formatNumber(modelStatus.n_samples || 0) }} 样本</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                <section class="module-overview-grid">
-                  <article v-for="(mod, i) in businessModules" :key="'overview-' + mod.code" @click="selectedModule = mod" :class="{ active: selectedModule && selectedModule.code === mod.code }">
-                    <span>{{ String(i + 1).padStart(2, '0') }}</span>
-                    <h3>{{ mod.name }}</h3>
-                    <p>{{ mod.value }}</p>
-                  </article>
-                </section>
-
-                <section class="plain-card module-closed-loop">
-                  <div class="plain-card-head">
-                    <h2>工行业务闭环</h2>
-                  </div>
-                  <div class="module-loop-grid">
-                    <div v-for="item in moduleLoopItems" :key="item.title">
-                      <span>{{ item.step }}</span>
-                      <strong>{{ item.title }}</strong>
-                      <p>{{ item.desc }}</p>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            </div>
-
-            <div v-if="false">
-              <div class="page-hero">
-                <h1>业务模块</h1>
-                <p>七大核心能力覆盖高原畜牧全链条数字化场景</p>
-              </div>
-              <div class="cap-grid">
-                <div class="cap-card" v-for="mod in data.modules" :key="mod.code" @click="selectedModule = mod; navigate('module-detail')">
-                  <div class="cap-icon">{{ moduleIcon(mod.code) }}</div>
-                  <h3>{{ mod.name }}</h3>
-                  <p>{{ mod.value }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- 模块详情 -->
-            <div v-show="page === 'module-detail'">
-              <div class="page-hero">
-                <h1>{{ selectedModule.name }}</h1>
-                <p>{{ selectedModule.value }}</p>
-              </div>
-              <div class="content-2col">
-                <div class="panel">
-                  <div class="panel-head"><h3>功能特性</h3></div>
-                  <div class="panel-body">
-                    <div class="feature-list">
-                      <div v-for="f in selectedModule.features" :key="f" class="feature-row">
-                        <span class="feat-dot"></span>{{ f }}
-                      </div>
-                    </div>
-                    <div style="display:flex;gap:10px;margin-top:18px;">
-                      <button class="btn-outline" @click="prevModule">← 上一模块</button>
-                      <button class="btn-outline" @click="nextModule">下一模块 →</button>
-                      <button class="btn-outline" @click="navigate('modules')">返回列表</button>
-                    </div>
-                  </div>
-                </div>
-                <div class="panel">
-                  <div class="panel-head"><h3>关联模块</h3></div>
-                  <div class="panel-body no-pad">
-                    <div v-for="mod in relatedModules" :key="mod.code" class="related-row" @click="selectedModule = mod">
-                      <strong>{{ mod.name }}</strong>
-                      <span>{{ mod.value }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             <!-- 保险协同 -->
             <div v-show="page === 'insurance'">
@@ -826,6 +776,7 @@
                 <section class="plain-page-head">
                   <h1>保险协同</h1>
                   <p>承保覆盖 · 灾害触发 · 理赔回流 · 工行风险缓释</p>
+                  <button class="btn-main" @click="navigate('livelihood')">边疆民生与治理协同</button>
                 </section>
 
                 <section class="overview-metric-grid compact">
@@ -1059,7 +1010,7 @@
                     <p class="panel-note">基期 {{ greenPerformance.firstYear }} 均值 {{ greenPerformance.first.toFixed(3) }} → 末期 {{ greenPerformance.lastYear }} 均值 {{ greenPerformance.last.toFixed(3) }}，改善 {{ greenPerformance.ndviChange }}（真实 MODIS 数据）。</p>
                   </div>
                   <div class="ops-panel">
-                    <div class="ops-panel-head"><div><h3>25 县域风险分布</h3></div></div>
+                    <div class="ops-panel-head"><div><h3>{{ data.regions.length || 0 }} 县域风险分布</h3></div></div>
                     <div class="donut-wrap">
                       <div class="risk-donut" :style="{ background: riskDonutGradient }"><span></span></div>
                       <div class="donut-legend">
@@ -1451,12 +1402,12 @@
               </div>
             </div>
 
-            <!-- 保单画像与增信评分 -->
+            <!-- 资产/保险资料核验 -->
             <div v-show="page === 'insurance-portfolio'">
               <div class="public-page public-page-plain">
                 <section class="plain-page-head">
-                  <h1>保单画像与增信评分</h1>
-                  <p>百巴村1135条真实保单 · 21户牧民 · 农行承保→工行放贷→保险兜底</p>
+                  <h1>资产/保险资料核验</h1>
+                  <p>百巴村21户主体 · 1135头牦牛资产/耳标登记参考 · 保险合同待核验</p>
                 </section>
 
                 <!-- 画像统计卡片 -->
@@ -1464,17 +1415,17 @@
                   <div class="stats-card">
                     <span class="stats-num">{{ portfolioProfile.total_policies }}</span>
                     <span class="stats-unit">条</span>
-                    <span class="stats-label">保单总数</span>
+                    <span class="stats-label">资产/耳标登记记录</span>
                   </div>
                   <div class="stats-card">
                     <span class="stats-num">{{ portfolioProfile.farmer_count }}</span>
                     <span class="stats-unit">户</span>
-                    <span class="stats-label">投保农户</span>
+                    <span class="stats-label">登记农户</span>
                   </div>
                   <div class="stats-card">
                     <span class="stats-num">{{ portfolioProfile.total_cattle }}</span>
                     <span class="stats-unit">头</span>
-                    <span class="stats-label">投保牦牛</span>
+                    <span class="stats-label">登记牦牛</span>
                   </div>
                   <div class="stats-card">
                     <span class="stats-num">{{ portfolioProfile.avg_herd_size }}</span>
@@ -1489,22 +1440,22 @@
 
                 <!-- 银保协同场景 -->
                 <section v-if="portfolioSynergy" style="margin-bottom:24px;">
-                  <h2 style="margin-bottom:12px;">银保协同场景</h2>
+                  <h2 style="margin-bottom:12px;">银保协同场景（资料状态待核验）</h2>
                   <div class="news-grid">
                     <div class="news-card">
                       <div class="news-tag tag-green">{{ portfolioSynergy.insurance_bank }}</div>
-                      <h3>承保方</h3>
-                      <p>{{ portfolioSynergy.total_cattle_insured }}头{{ portfolioSynergy.livestock_type }}已承保</p>
+                      <h3>登记方</h3>
+                      <p>{{ portfolioSynergy.total_cattle_insured }}头{{ portfolioSynergy.livestock_type }}资产/耳标登记参考</p>
                     </div>
                     <div class="news-card">
                       <div class="news-tag tag-green">{{ portfolioSynergy.lending_bank }}</div>
-                      <h3>放贷方</h3>
-                      <p>{{ portfolioSynergy.farmer_count }}户牧民牦牛养殖贷款</p>
+                      <h3>金融用途</h3>
+                      <p>{{ portfolioSynergy.farmer_count }}户主体的授信与还款资料待核验</p>
                     </div>
                     <div class="news-card">
-                      <div class="news-tag tag-orange">兜底{{ portfolioSynergy.risk_reduction_pct }}%</div>
-                      <h3>风险缩减</h3>
-                      <p>保险兜底总额约{{ (portfolioSynergy.total_insurance_coverage/10000).toFixed(1) }}万元</p>
+                      <div class="news-tag tag-orange">{{ portfolioSynergy.risk_reduction_pct === null || portfolioSynergy.risk_reduction_pct === undefined ? '待核验' : '兜底' + portfolioSynergy.risk_reduction_pct + '%' }}</div>
+                      <h3>风险缓释</h3>
+                      <p>保险合同、保额与赔付记录待核验，第一版不进入贷款金额测算</p>
                     </div>
                   </div>
                   <div style="background:#f6f9f6;padding:16px;border-radius:8px;margin-top:12px;">
@@ -1517,7 +1468,7 @@
 
                 <!-- 综合风险 -->
                 <section v-if="portfolioComprehensive" style="margin-bottom:24px;">
-                  <h2 style="margin-bottom:12px;">百巴村综合风险评估</h2>
+                  <h2 style="margin-bottom:12px;">百巴村资料核验状态</h2>
                   <div style="background:#f6f9f6;padding:16px;border-radius:8px;">
                     <p style="margin:6px 0;">
                       环境风险评分：
@@ -1526,7 +1477,7 @@
                     </p>
                     <p style="margin:6px 0;">
                       保险增信缩减风险敞口：
-                      <strong>{{ portfolioComprehensive.insurance_synergy.risk_reduction_pct }}%</strong>
+                      <strong>{{ portfolioComprehensive.insurance_synergy.risk_reduction_pct ?? '待核验' }}%</strong>
                     </p>
                     <p style="margin:6px 0;">
                       综合风险评分：
@@ -1595,8 +1546,9 @@
             <div v-show="page === 'disaster-forecast'">
               <div class="public-page public-page-plain">
                 <section class="plain-page-head">
-                  <h1>灾害预测 · 未来3个月</h1>
+                  <h1>灾害风险趋势 · 未来3个月</h1>
                   <p>输入任意地区名 → 自动拉取 Open-Meteo 数据 → 5灾种12周风险趋势</p>
+                  <p class="radar-note">口径：基于外部数据的历史统计/短期预报生成风险趋势；外部服务失败时降级为历史同期参考，不构成灾害确定性预测。</p>
                 </section>
 
                 <!-- 输入区 -->
@@ -1705,6 +1657,21 @@
                   <div class="data-workbench">
                     <div class="ops-panel">
                       <div class="ops-panel-head">
+                        <div><h3>数据来源构成</h3><p>环境观测真实 / 业务 / 派生 / 样例，四类互斥统计</p></div>
+                        <span class="ops-badge">共 {{ formatNumber(dqTotal.total_rows) }} 行</span>
+                      </div>
+                      <div class="metric-strip relaxed" v-if="dqTotal.total_rows">
+                        <div v-for="item in sourceCategoryStats" :key="item.label">
+                          <span>{{ item.label }}</span>
+                          <strong>{{ item.value }}</strong>
+                          <em>{{ item.note }}</em>
+                        </div>
+                      </div>
+                      <p v-else class="radar-note" style="margin:12px 0;">数据质量统计暂不可用。</p>
+                    </div>
+
+                    <div class="ops-panel">
+                      <div class="ops-panel-head">
                         <div><h3>贷前/贷后气象趋势</h3><p>CMFD 温度、降水、风速</p></div>
                         <span class="ops-badge">{{ dataAssetCards.find(c => c.key === 'weather_data')?.status }}</span>
                       </div>
@@ -1799,7 +1766,7 @@
 
                 <section class="workspace-grid quality-only">
                   <div class="ops-panel">
-                    <div class="ops-panel-head"><div><h3>工行风控数据质量结构</h3><p>真实数据、样例授信台账与模拟标签分布</p></div></div>
+                    <div class="ops-panel-head"><div><h3>工行风控数据质量结构</h3><p>非样例来源、样例授信台账与模拟标签分布</p></div></div>
                     <div id="chart-data-quality" class="ops-chart data-quality-chart"></div>
                   </div>
                 </section>
@@ -1897,6 +1864,7 @@
                 <tbody><tr v-for="f in data.finance" :key="f.subject_name"><td><strong>{{ f.subject_name }}</strong></td><td>{{ f.credit_line }}</td><td>{{ f.used_credit }}</td><td>{{ f.rate }}</td><td>{{ f.term_months }}</td><td><span class="tag" :class="f.repayment_status === '正常' ? 'tag-green' : 'tag-orange'">{{ f.repayment_status }}</span></td><td>{{ f.overdue_times }}</td><td>{{ f.policies.map(p => p.type).join('、') }}</td></tr></tbody>
               </table></div></div></div>
 
+              <p v-if="dataTab === 'warning'" class="radar-note" style="margin:12px 0;">口径：实时预警为规则告警，用于触发人工核查；预警本身不等于已发生灾害事件。</p>
               <div v-if="dataTab === 'warning'" class="content-2col">
                 <!-- GDI 退化风险 -->
                 <div class="panel">
@@ -2101,73 +2069,6 @@
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-            <div v-show="page === 'roadmap'">
-              <div class="public-page public-page-plain roadmap-page">
-                <section class="plain-page-head">
-                  <h1>实施路线</h1>
-                  <p>数据接入 · 模型联调 · 贷后闭环 · 银保协同 · 答辩演示节奏</p>
-                </section>
-
-                <section class="roadmap-progress">
-                  <div v-for="(item, idx) in data.outline.roadmap" :key="item.step" class="roadmap-progress-step">
-                    <span>0{{ idx + 1 }}</span>
-                    <strong>{{ item.title }}</strong>
-                    <em>{{ item.step }}</em>
-                  </div>
-                </section>
-
-                <section class="roadmap-console">
-                  <div class="roadmap-stage-list">
-                    <article v-for="(item, idx) in data.outline.roadmap" :key="item.step" class="roadmap-stage-card">
-                      <div class="roadmap-stage-index">0{{ idx + 1 }}</div>
-                      <div class="roadmap-stage-main">
-                        <span>{{ item.step }}</span>
-                        <h3>{{ item.title }}</h3>
-                        <div class="roadmap-deliverables">
-                          <i v-for="out in item.outputs" :key="out">{{ out }}</i>
-                        </div>
-                      </div>
-                    </article>
-                  </div>
-
-                  <aside class="roadmap-focus">
-                    <div class="roadmap-focus-head">
-                      <span>试点闭环</span>
-                      <h3>{{ data.outline.demo_story.title }}</h3>
-                    </div>
-                    <div class="roadmap-story-flow">
-                      <div v-for="(step, idx) in data.outline.demo_story.steps" :key="step" class="roadmap-story-step">
-                        <span>{{ idx + 1 }}</span>
-                        <p>{{ step }}</p>
-                      </div>
-                    </div>
-                    <div class="roadmap-action-grid">
-                      <button @click="navigate('data')">
-                        <span>数据底座</span>
-                        <strong>{{ formatNumber((data.weather || []).length + (data.remote_sensing || []).length) }}</strong>
-                      </button>
-                      <button @click="navigate('dashboard')">
-                        <span>风险运营</span>
-                        <strong>{{ topRiskRegions.length }} 项</strong>
-                      </button>
-                    </div>
-                  </aside>
-                </section>
-
-                <section class="roadmap-innovation-section">
-                  <div class="roadmap-section-title">
-                    <span>创新能力</span>
-                    <h2>从高原牧区数据资产到工行绿色信贷风控的转化路径</h2>
-                  </div>
-                  <div class="roadmap-innovation-grid">
-                    <article v-for="(point, idx) in data.outline.innovation_points" :key="point" class="roadmap-innovation-card">
-                      <span>0{{ idx + 1 }}</span>
-                      <p>{{ point }}</p>
-                    </article>
-                  </div>
-                </section>
               </div>
             </div>
 

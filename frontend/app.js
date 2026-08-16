@@ -4,13 +4,9 @@
  * Vue 3 SPA + ECharts
  *
  * 页面:
- *   home          - 首页（全屏 Hero + 要闻 + 能力 + 数据纵览 + 赋能 + 页脚）
+ *   home          - 首页（全屏 Hero + 角色时间线 + 数据底账 + 核心能力一图概览 + 页脚）
  *   dashboard     - 风险评估
- *   overview      - 平台概览
- *   modules       - 业务模块列表
- *   module-detail - 模块详情
  *   data          - 数据底座
- *   roadmap       - 实施路线
  *   insurance     - 保险协同
  *   supply-chain  - 产业链资金闭环
  *   green-performance - 绿色绩效
@@ -136,6 +132,20 @@ const api = {
   async portfolioDueDiligence() {
     const res = await fetch("/api/insurance-portfolio/due-diligence", { cache: "no-store" });
     return res.json();
+  },
+  // 授信与贷后工作台
+  async creditCases() {
+    const res = await fetch("/api/credit-cases", { cache: "no-store" });
+    return res.json();
+  },
+  async creditEvaluate(caseId, inputs = {}, signal) {
+    const res = await fetch("/api/credit-decision/evaluate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ case_id: caseId, inputs }),
+      signal,
+    });
+    return res;
   },
 };
 
@@ -367,7 +377,7 @@ function renderPublicRadar(row) {
       splitArea: { areaStyle: { color: ["#fbfdfb", "#ffffff"] } },
     },
     series: [{
-      name: "6维风险子分",
+      name: "授信四维评分",
       type: "radar",
       data: [{
         value: dims.map((item) => item.value),
@@ -404,9 +414,10 @@ function renderOverviewMix(rows) {
       itemStyle: { borderColor: "#fff", borderWidth: 3 },
       label: { color: "#26332b", formatter: "{b}\n{d}%" },
       data: [
-        { name: "真实数据", value: rows?.real_rows || 0 },
+        { name: "环境观测真实", value: rows?.observed_rows || 0 },
+        { name: "业务数据", value: rows?.business_rows || 0 },
+        { name: "派生数据", value: rows?.derived_rows || 0 },
         { name: "样例数据", value: rows?.sample_rows || 0 },
-        { name: "模拟数据", value: rows?.simulated_rows || 0 },
       ],
     }],
   });
@@ -559,10 +570,39 @@ createApp({
     return {
       loading: true,
       data: null,
-      page: "home",
+      page: "dashboard",
+      dashboardTab: "credit",
+      creditSubTab: "assessment",
       selectedModule: null,
       dataTab: "weather",
       scrolled: false,
+      // 导航分组（14 个逻辑页面全部保留）
+      navGroups: [
+        {
+          label: "核心业务",
+          items: [
+            { page: "dashboard", name: "授信与贷后工作台" },
+            { page: "supply-chain", name: "产业链" },
+            { page: "insurance", name: "保险协同" },
+            { page: "green-performance", name: "绿色绩效" },
+            { page: "cooperative-ranking", name: "合作社排序" },
+          ],
+        },
+        {
+          label: "数据与证据",
+          items: [
+            { page: "data", name: "数据底座" },
+            { page: "disaster-forecast", name: "灾害预测" },
+          ],
+        },
+        {
+          label: "平台",
+          items: [
+            { page: "home", name: "首页" },
+            { page: "insurance-portfolio", name: "资产/保险资料核验" },
+          ],
+        },
+      ],
 
       // Hero
       heroSlides: buildHeroSlides(),
@@ -638,6 +678,20 @@ createApp({
       explainData: null,
       explainLoading: false,
       explainSelectedRegion: "",
+      // 授信与贷后工作台
+      creditCases: [],
+      creditCaseId: "",
+      creditEvaluating: false,
+      creditResult: null,
+      creditError: "",
+      creditMonthTab: "snow",
+      creditUserModified: false,
+      creditForm: {
+        total_mu: 42000,
+        own_funds_wan: 35,
+        product_cap_wan: 120,
+        dscr_threshold: 1.2,
+      },
     };
   },
 
@@ -645,22 +699,94 @@ createApp({
     pageTitle() {
       const m = {
         home: "首页",
-        dashboard: "风险评估",
-        overview: "平台概览",
-        modules: "业务模块",
-        "module-detail": "模块详情",
+        dashboard: "授信与贷后工作台",
         data: "数据底座",
-        roadmap: "实施路线",
         insurance: "保险协同",
         "supply-chain": "产业链",
         "green-performance": "绿色绩效",
         livelihood: "边疆民生",
+        "cooperative-ranking": "合作社排序",
+        "insurance-portfolio": "资产/保险资料核验",
+        "disaster-forecast": "灾害预测",
       };
       return m[this.page] || "牧融绿链";
     },
     activeAlertCount() {
       if (!this.data) return 0;
       return this.data.alerts.filter((a) => a.level === "高风险" || a.level === "中风险").length;
+    },
+    // ---- 授信与贷后工作台 ----
+    creditScenarioCards() {
+      if (!this.creditResult || this.creditResult.status === "blocked" || !this.creditResult.qualified_demand) return [];
+      const r = this.creditResult;
+      return [
+        {
+          key: "baseline",
+          cls: "cw-baseline",
+          label: "基准情景 · 合格融资需求",
+          rows: [
+            { label: "必要采购总额", value: this.formatWan(r.qualified_demand.purchase_total_yuan) + " 万元" },
+            { label: "已确认自有资金", value: this.formatWan(r.qualified_demand.own_funds_yuan) + " 万元" },
+            { label: "合格融资需求", value: this.formatWan(r.qualified_demand.qualified_demand_yuan) + " 万元" },
+            { label: "必要外购饲草", value: this.formatKg(r.monthly_scenarios.baseline.total_purchase_kg) + " 千克" },
+          ],
+          note: "基准情景回答“合理经营需要多少资金”。",
+        },
+        {
+          key: "snow",
+          cls: "cw-snow",
+          label: "标准雪灾 · 偿债支持上限",
+          rows: [
+            { label: "可用于偿债经营现金", value: this.formatMoney(r.limits.snow_available_cash_yuan) + " 元" },
+            { label: "偿债支持上限", value: this.formatWan(r.limits.snow_support_limit_yuan) + " 万元" },
+            { label: "最低外部融资需求", value: this.formatWan(r.qualified_demand.min_external_financing_yuan) + " 万元" },
+            { label: "可行性", value: r.status === "feasible" ? "可行" : r.status === "infeasible" ? "暂不可行" : "—" },
+          ],
+          note: "标准雪灾回答“在可解释压力下最多能承受多少新增债务”。",
+        },
+        {
+          key: "composite",
+          cls: "cw-comp",
+          label: "复合极端 · 脆弱性提示",
+          rows: [
+            { label: "采购成本", value: this.formatMoney(r.composite.purchase_cost_yuan) + " 元" },
+            { label: "建议金额下 DSCR", value: Number(r.composite.dscr).toFixed(4) },
+            { label: r.composite.min_cash_month + " 月末现金", value: this.formatMoney(r.composite.min_cash_yuan) + " 元" },
+            { label: "现金缺口", value: this.formatMoney(r.composite.min_cash_gap_yuan) + " 元" },
+          ],
+          note: "复合极端只揭示脆弱性和核查建议，不生成第二个推荐金额。",
+        },
+      ];
+    },
+    creditMonthlyRows() {
+      if (!this.creditResult || this.creditResult.status === "blocked") return [];
+      return this.creditResult.monthly_cashflow[this.creditMonthTab] || [];
+    },
+    creditStorageRows() {
+      if (!this.creditResult || this.creditResult.status === "blocked") return [];
+      const plan = this.creditResult.monthly_scenarios[this.creditMonthTab];
+      return plan && plan.rows ? plan.rows : [];
+    },
+    creditMinReserve() {
+      if (this.creditResult && this.creditResult.snow_cashflow && this.creditResult.snow_cashflow.minimum_cash_reserve_yuan) {
+        return Number(this.creditResult.snow_cashflow.minimum_cash_reserve_yuan);
+      }
+      return 150000;
+    },
+    creditCheckActions() {
+      if (!this.creditResult || this.creditResult.status === "blocked") return [];
+      const r = this.creditResult;
+      const actions = [];
+      if (r.status === "infeasible") {
+        actions.push("核验采购前可用的自有资金、补贴、供应商账期或采购锁价，确认后可重新测算");
+      }
+      actions.push(`在 ${r.snow_cashflow.min_cash_month} 重点核验现金与回款，标准雪灾最低现金 ${this.formatMoney(r.snow_cashflow.min_cash_yuan)} 元`);
+      if (r.composite && r.composite.vulnerable) {
+        actions.push(`复合极端 ${r.composite.min_cash_month} 现金缺口约 ${this.formatMoney(r.composite.min_cash_gap_yuan)} 元，核验应急储草、采购锁价、回款提前或非贷款应急资金`);
+      }
+      actions.push("核验草场与储草月度守恒记录，确认不存在重复计量");
+      actions.push("核验资金用途与回款来源，由客户经理决定后续核查动作");
+      return actions;
     },
     highRiskCount() {
       if (!this.data) return 0;
@@ -834,8 +960,8 @@ createApp({
       if ((this.modelStatus.real_data_ratio || 0) < 0.9) {
         tasks.push({
           level: "warn",
-          title: "补齐真实数据占比",
-          desc: `当前真实数据占比 ${this.percent(this.modelStatus.real_data_ratio || 0)}，优先替换样例经营与金融数据。`,
+          title: "补齐真实业务数据",
+          desc: `当前非样例来源统计为 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}；公开观测、派生数据和待核验来源不等同于真实业务数据。`,
           action: "数据底座",
           page: "data",
         });
@@ -880,18 +1006,34 @@ createApp({
     },
     icbcRoleCards() {
       return [
-        { step: "01", title: "授信准入", desc: "客户经理选择县域或主体，查看风险筛查结果、来源证据和待核验字段。" },
-        { step: "02", title: "资金用途核验", desc: "贷款资金绑定饲草采购、活体交易和物流回款，减少资金空转。" },
-        { step: "03", title: "贷后预警", desc: "NDVI、积雪、回款、逾期和保险资料异常进入客户经理人工核查队列。" },
-        { step: "04", title: "银保协同", desc: "承保、出险、查勘、理赔结果回流贷后策略，形成风险缓释闭环。" },
+        { step: "01", title: "授信准入", desc: "客户经理选择县域或主体，查看风险筛查结果、来源证据和待核验字段。", page: "dashboard" },
+        { step: "02", title: "资金用途核验", desc: "贷款资金绑定饲草采购、活体交易和物流回款，减少资金空转。", page: "supply-chain" },
+        { step: "03", title: "贷后预警", desc: "NDVI、积雪、回款、逾期和保险资料异常进入客户经理人工核查队列。", page: "dashboard" },
+        { step: "04", title: "银保协同", desc: "承保、出险、查勘、理赔结果回流贷后策略，形成风险缓释闭环。", page: "insurance" },
+      ];
+    },
+    heroStats() {
+      if (!this.data) return [];
+      return [
+        { label: "监测区域", display: String(this.data.regions.length), page: "data" },
+        { label: "授信主体", display: this.data.subjects.length + "+", page: "dashboard" },
+        { label: "数据源", display: String(this.data.data_connections.length), page: "data" },
+      ];
+    },
+    overviewInfographic() {
+      return [
+        { icon: "EO", title: "环境监测", items: ["县域气象月度数据", "草地植被与退化监测", "积雪深度与载畜量", "灾害风险趋势与规则预警"] },
+        { icon: "ML", title: "智能风控", items: ["弱标签风险排序", "授信四维评分", "风险因子可解释", "人工核验优先级"] },
+        { icon: "GF", title: "授信决策", items: ["融资需求智能测算", "雪灾偿债压力测试", "极端天气压力测试", "推荐授信金额"] },
+        { icon: "IN", title: "银保协同", items: ["保单画像与核验", "理赔证据回流", "风险缓释闭环", "普惠牧区服务"] },
       ];
     },
     systemHealthItems() {
       return [
         {
-          label: "数据闭环",
-          value: this.percent(this.modelStatus.real_data_ratio || 0),
-          state: (this.modelStatus.real_data_ratio || 0) >= 0.9 ? "ok" : "warn",
+          label: "环境观测",
+          value: this.percent(this.modelStatus.observed_data_ratio || 0),
+          state: (this.modelStatus.observed_data_ratio || 0) >= 0.9 ? "ok" : "warn",
         },
         {
           label: "模型状态",
@@ -1090,7 +1232,7 @@ createApp({
             `训练样本 ${this.formatNumber(this.modelStatus.n_samples || 0)}`,
             `县域 ${this.modelStatus.county_count || 0} 个`,
             `月份 ${this.modelStatus.month_count || 0} 个`,
-            `真实数据 ${this.percent(this.modelStatus.real_data_ratio || 0)}`,
+            `非样例来源 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}`,
           ],
           state: this.modelStatus.model_type === "ml_hybrid" ? "ok" : "warn",
         });
@@ -1222,25 +1364,24 @@ createApp({
         const driverVal = (key) => Number(drivers.find((item) => item.key === key)?.value || 0);
         const regionSubjects = this.creditSubjectRows.filter((item) => item.region_id === row.region_id);
         const avgSubjectScore = regionSubjects.length ? avg(regionSubjects.map((item) => Number(item.score) || 0)) : 75;
-        const avgCoverage = regionSubjects.length
-          ? avg(regionSubjects.map((item) => Number(String(item.insurance || "0").replace("%", "")) || 0))
-          : 70;
-        const overdue = regionSubjects.reduce((sum, item) => sum + (Number(item.overdue) || 0), 0);
         const usage = regionSubjects.length ? avg(regionSubjects.map((item) => Number(item.usage) || 0)) : 0.6;
+        // 授信四维口径：0.40×工商 + 0.30×生态 + 0.20×气象 + 0.10×经营。
+        // 工商维度目前是待替换的高仿真数据，其他维度来自当前接入数据或规则映射。
         const dimScores = [
-          { name: "信用", value: Math.round(Math.min(100, Math.max(0, 100 - avgSubjectScore + overdue * 12 + usage * 20))) },
-          { name: "经营", value: Math.round(Math.min(100, Math.max(0, 100 - avgSubjectScore + usage * 18))) },
-          { name: "生态", value: Math.round(Math.min(100, driverVal("remote") * 3.8 + 30)) },
-          { name: "气象", value: Math.round(Math.min(100, driverVal("weather") * 4.2 + 28)) },
-          { name: "金融", value: Math.round(Math.min(100, driverVal("finance") * 3.4 + overdue * 10 + usage * 18)) },
-          { name: "保险", value: Math.round(Math.min(100, Math.max(0, 95 - avgCoverage + overdue * 8))) },
+          { name: "工商", value: Math.round(Math.min(100, Math.max(0, avgSubjectScore - usage * 18))) },
+          { name: "生态", value: Math.round(Math.min(100, Math.max(0, 100 - (driverVal("remote") * 3.8 + 30)))) },
+          { name: "气象", value: Math.round(Math.min(100, Math.max(0, 100 - (driverVal("weather") * 4.2 + 28)))) },
+          { name: "经营", value: Math.round(Math.min(100, Math.max(0, avgSubjectScore - usage * 12))) },
         ];
+        const byName = Object.fromEntries(dimScores.map((item) => [item.name, item.value]));
+        const fourDimScore = byName["工商"] * 0.40 + byName["生态"] * 0.30 + byName["气象"] * 0.20 + byName["经营"] * 0.10;
         return {
           ...row,
-          display_score: normalized.toFixed(1),
-          display_level: normalized >= 70 ? "高风险" : normalized >= 55 ? "中风险" : "低风险",
+          model_risk_score: normalized.toFixed(1),
+          display_score: fourDimScore.toFixed(1),
+          display_level: fourDimScore >= 70 ? "较优" : fourDimScore >= 55 ? "需复核" : "关注",
           dim_scores: dimScores,
-          dim_summary: `信用/经营基于主体评分和用信率，生态/气象来自模型因子，金融/保险来自授信、逾期和覆盖率。`,
+          dim_summary: `授信四维评分 = 0.40×工商 + 0.30×生态 + 0.20×气象 + 0.10×经营；工商为高仿真待替换数据，不等同模型风险排序。`,
         };
       });
     },
@@ -1290,12 +1431,12 @@ createApp({
         warnings: byKey[key]?.warnings || [],
       });
       return [
-        card("weather_data", "CMFD 气象数据", "2020-2024，25 县 × 60 个月，温度/降水/风速。", "真实接入"),
+        card("weather_data", "CMFD 气象数据", "当前数据覆盖 26 个县域和 137 个月样本，包含温度/降水/风速。", "公开观测"),
         card("remote_sensing_data", "MODIS/TPDC 遥感数据", "NDVI、积雪、草地退化与临时载畜量字段。", "部分真实"),
         card("forage_supply_demand", "Geodoi 饲草供需", "2000-2020 全国/区域年度宏观饲草供需。", "真实宏观"),
         card("business_subjects", "经营主体台账", "合作社、家庭牧场、供应商经营信息。", "样例待替换"),
         card("finance_credit", "工行授信与保险台账", "授信、用信、还款、逾期、保单信息。", "样例待替换"),
-        card("risk_event_labels", "来源事件样本", "带来源 URL 的公开灾害事件；其余月份保持未确认。", "42 条来源事件"),
+        card("risk_event_labels", "来源事件样本", "附公开 URL 或年鉴页码凭证的灾害事件；其余月份保持未确认。", "128 条来源事件"),
         card("insurance_claims", "银保理赔查勘", "出险、查勘、理赔金额和贷后回流动作。", "脱敏样例"),
         card("supply_chain_orders", "产业链订单台账", "饲草采购、活体交易、物流验收和关联授信。", "脱敏样例"),
         card("supply_chain_payments", "工行资金流向", "定向支付、收款方、到账状态和用途核验。", "脱敏样例"),
@@ -1308,7 +1449,7 @@ createApp({
         { label: "TPDC CMFD 气象", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "weather_data")?.row_count || 0), note: "县域月度温度/降水/风速" },
         { label: "MODIS/TPDC 遥感", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "remote_sensing_data")?.row_count || 0), note: "NDVI、积雪、退化、载畜量字段" },
         { label: "Geodoi 宏观饲草", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "forage_supply_demand")?.row_count || 0), note: "年度区域参考，不参与训练" },
-        { label: "来源事件", value: 42, note: "公开灾害事件；不等于完整灾害或贷损标签" },
+        { label: "来源事件", value: 128, note: "128 条来源支持事件；其余月份未确认，不等于无灾" },
       ];
     },
     moduleLoopItems() {
@@ -1351,10 +1492,24 @@ createApp({
     overviewMetrics() {
       const total = this.dataQuality?.total || {};
       return [
-        { label: "真实数据行", value: this.formatNumber(total.real_rows || 0), note: "气象、遥感、宏观饲草供需" },
-        { label: "样例数据行", value: this.formatNumber(total.sample_rows || 0), note: "经营主体、工行授信和保险台账仍需替换" },
-        { label: "模型样本", value: this.formatNumber(this.modelStatus.n_samples || 0), note: `${this.modelStatus.county_count || 0} 县 / ${this.modelStatus.month_count || 0} 月` },
-        { label: "来源事件", value: 42, note: "其余月份为未确认状态，不等于无灾" },
+        { label: "环境观测真实", value: this.formatNumber(total.observed_rows || 0), note: "公开气象/遥感观测，不含业务或派生数据" },
+        { label: "业务数据", value: this.formatNumber(total.business_rows || 0), note: "业务来源需按证据边界单独核验" },
+        { label: "派生数据", value: this.formatNumber(total.derived_rows || 0), note: "由原始数据计算，不等同实测" },
+        { label: "样例数据", value: this.formatNumber(total.sample_rows || 0), note: "经营主体、工行授信和保险台账仍需替换" },
+      ];
+    },
+    dqTotal() {
+      return this.dataQuality?.total || {};
+    },
+    sourceCategoryStats() {
+      const t = this.dataQuality?.total || {};
+      const total = t.total_rows || 0;
+      const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
+      return [
+        { label: "环境观测真实", value: `${this.formatNumber(t.observed_rows || 0)} · ${pct(t.observed_rows)}%`, note: "公开气象/遥感观测" },
+        { label: "业务数据", value: `${this.formatNumber(t.business_rows || 0)} · ${pct(t.business_rows)}%`, note: "业务来源需按证据边界核验" },
+        { label: "派生数据", value: `${this.formatNumber(t.derived_rows || 0)} · ${pct(t.derived_rows)}%`, note: "由原始数据计算，不等同实测" },
+        { label: "样例数据", value: `${this.formatNumber(t.sample_rows || 0)} · ${pct(t.sample_rows)}%`, note: "经营/授信/保险台账待替换" },
       ];
     },
     insuranceRows() {
@@ -1614,7 +1769,7 @@ createApp({
             `训练样本 ${this.formatNumber(this.modelStatus.n_samples || 0)}`,
             `县域 ${this.modelStatus.county_count || 0} 个`,
             `月份 ${this.modelStatus.month_count || 0} 个`,
-            `真实数据 ${this.percent(this.modelStatus.real_data_ratio || 0)}`,
+            `非样例来源 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}`,
           ],
           state: "warn",
         },
@@ -1847,12 +2002,16 @@ createApp({
       this.page = page;
       window.location.hash = page;
       window.scrollTo({ top: 0, behavior: "smooth" });
-      if (page === "home") this.startHero(); else this.stopHero();
+      if (page === "home") {
+        this.startHero();
+        this.$nextTick(() => { this.renderHomeGauge(); this.animateCounters(); this.setupScrollReveal(); });
+      } else {
+        this.stopHero();
+      }
       this.$nextTick(() => {
         if (page === "dashboard") {
           this.loadModelData();
         }
-        if (page === "overview") this.renderOverviewChartsSoon();
         if (page === "data") { this.renderDataChartsSoon(); this.loadWarningData(); }
         if (page === "green-performance") this.renderOverviewChartsSoon();
         if (page === "data" && this.dataTab === "risk") renderRiskChart(this.data?.risk_assessment);
@@ -2131,6 +2290,66 @@ createApp({
       if (this.heroTimer) { clearInterval(this.heroTimer); this.heroTimer = null; }
     },
 
+    scrollToContent() {
+      const el = document.querySelector(".home-page .section");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    },
+
+    renderHomeGauge() {
+      const chart = makeChart("chart-home-gauge");
+      if (!chart) return;
+      const rc = this.data?.regions?.length || 0;
+      const sc = this.data?.subjects?.length || 0;
+      const dc = this.data?.data_connections?.length || 0;
+      const score = Math.min(100, Math.round(rc * 2.5 + sc * 0.4 + dc * 3));
+      chart.setOption({
+        series: [{
+          type: "gauge",
+          startAngle: 200,
+          endAngle: -20,
+          min: 0, max: 100,
+          radius: "88%",
+          center: ["50%", "55%"],
+          progress: { show: true, width: 14, roundCap: true, itemStyle: { color: "#007aff" } },
+          axisLine: { lineStyle: { width: 14, color: [[0.6, "#e5e5ea"], [1, "#007aff"]] } },
+          pointer: { length: "55%", width: 5, itemStyle: { color: "#1d1d1f" } },
+          anchor: { show: true, size: 12, itemStyle: { color: "#1d1d1f" } },
+          axisTick: { show: false },
+          splitLine: { length: 10, lineStyle: { color: "#d1d1d6" } },
+          axisLabel: { distance: 18, fontSize: 10, color: "#8e8e93" },
+          detail: { valueAnimation: true, formatter: "{value}", fontSize: 32, fontWeight: 700, color: "#1d1d1f", offsetCenter: [0, "65%"] },
+          title: { show: true, offsetCenter: [0, "88%"], fontSize: 12, color: "#8e8e93" },
+          data: [{ value: score, name: "平台就绪度" }],
+        }],
+      });
+    },
+
+    animateCounters() {
+      const els = document.querySelectorAll(".home-page .stats-num[data-count]");
+      els.forEach(el => {
+        const target = parseInt(el.getAttribute("data-count"), 10);
+        if (isNaN(target) || target === 0) { el.textContent = target; return; }
+        let current = 0;
+        const step = Math.max(1, Math.ceil(target / 35));
+        const timer = setInterval(() => {
+          current += step;
+          if (current >= target) { current = target; clearInterval(timer); }
+          el.textContent = current;
+        }, 25);
+      });
+    },
+
+    setupScrollReveal() {
+      const els = document.querySelectorAll(".home-page .reveal:not(.revealed)");
+      if (!els.length) return;
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) { e.target.classList.add("revealed"); obs.unobserve(e.target); }
+        });
+      }, { threshold: 0.1 });
+      els.forEach(el => obs.observe(el));
+    },
+
     moduleIcon(code) {
       const icons = { "eco-monitor":"EO", "grass-balance":"GB", "supply-chain":"SC", "green-finance":"GF", "insurance":"IN", "green-perf":"GP", "livelihood":"ML" };
       return icons[code] || "⊟";
@@ -2249,6 +2468,86 @@ createApp({
     formatNumber(val) {
       const n = Number(val) || 0;
       return n.toLocaleString("zh-CN");
+    },
+    formatWan(yuan) {
+      const n = Number(yuan) || 0;
+      return (n / 10000).toLocaleString("zh-CN", { maximumFractionDigits: 2 });
+    },
+    formatMoney(yuan) {
+      const n = Number(yuan) || 0;
+      return Math.round(n).toLocaleString("zh-CN");
+    },
+    formatKg(kg) {
+      const n = Number(kg) || 0;
+      return Math.round(n).toLocaleString("zh-CN");
+    },
+    // ---- 授信与贷后工作台 ----
+    async loadCreditCases() {
+      try {
+        const d = await api.creditCases();
+        this.creditCases = Array.isArray(d.cases) ? d.cases : [];
+        if (this.creditCases.length && !this.creditCaseId) {
+          // 默认进入主案例（班戈县绿色牧业合作社），优先选非阻断案例
+          const main = this.creditCases.find((c) => !c.blocked) || this.creditCases[0];
+          this.creditCaseId = main.id;
+          await this.loadCreditCase();
+        }
+      } catch (e) {
+        this.creditError = "案例列表加载失败：" + (e && e.message ? e.message : e);
+      }
+    },
+    loadCreditCase() {
+      this._skipCreditFormWatch = true;
+      this.creditResult = null;
+      this.creditError = "";
+      this.creditUserModified = false;
+      this.creditForm = { total_mu: 42000, own_funds_wan: 35, product_cap_wan: 120, dscr_threshold: 1.2 };
+      this.$nextTick(() => { this._skipCreditFormWatch = false; });
+    },
+    buildCreditInputs() {
+      if (!this.creditUserModified) return {};
+      const total = Number(this.creditForm.total_mu) || 0;
+      const inputs = {};
+      inputs.pasture = { total_mu: total };
+      inputs.operating = { own_purchase_funds_yuan: (Number(this.creditForm.own_funds_wan) || 0) * 10000 };
+      inputs.credit = {
+        product_cap_yuan: (Number(this.creditForm.product_cap_wan) || 0) * 10000,
+        dscr_threshold: Number(this.creditForm.dscr_threshold) || 1.2,
+      };
+      return inputs;
+    },
+    async runCreditEvaluation() {
+      if (this.creditEvaluating) return; // 同一时间只允许一个测算请求
+      this.creditEvaluating = true;
+      this.creditError = "";
+      this.creditResult = null;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000); // 10 秒超时
+      try {
+        const inputs = this.buildCreditInputs();
+        const res = await api.creditEvaluate(this.creditCaseId, inputs || {}, controller.signal);
+        if (!res.ok) {
+          let msg = `请求失败（${res.status}）`;
+          try {
+            const body = await res.json();
+            const detail = body && body.detail;
+            if (typeof detail === "string") msg = detail;
+            else if (detail && detail.message) msg = detail.message;
+          } catch (_) { /* 忽略响应体解析失败 */ }
+          if (res.status === 422) msg = "输入校验失败：" + msg;
+          if (res.status === 500) msg = "案例数据不可用（credit_case_unavailable）";
+          this.creditError = msg;
+          return;
+        }
+        this.creditResult = await res.json();
+      } catch (e) {
+        this.creditError = e && e.name === "AbortError"
+          ? "测算请求超时（10 秒），请重试"
+          : "网络错误：" + (e && e.message ? e.message : e);
+      } finally {
+        clearTimeout(timer);
+        this.creditEvaluating = false;
+      }
     },
     percent(val) {
       return `${Math.round((Number(val) || 0) * 100)}%`;
@@ -2523,7 +2822,7 @@ createApp({
       if (window.__amapLoadingPromise) return window.__amapLoadingPromise;
       window.__amapLoadingPromise = new Promise((resolve, reject) => {
         const script = document.createElement("script");
-        script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(this.mapConfig.key)}&plugin=AMap.Scale,AMap.ToolBar,AMap.ControlBar`;
+        script.src = `https://webapi.amap.com/maps?v=1.4.15&key=${encodeURIComponent(this.mapConfig.key)}&plugin=AMap.Scale,AMap.ToolBar,AMap.ControlBar`;
         script.async = true;
         script.onload = () => resolve();
         script.onerror = () => reject(new Error("AMap JS API script load failed"));
@@ -2727,12 +3026,23 @@ createApp({
       try { this.liveWeather = await api.openMeteoNow(31.36, 90.01); } catch (_) {}
     },
 
+    switchCreditSubTab(tab) {
+      this.creditSubTab = tab;
+      if (tab === 'risk') {
+        this.$nextTick(() => { this.renderDashboardChartsSoon(); });
+      }
+    },
+
     async init() {
       const hash = window.location.hash.replace("#", "");
-      const valid = ["home","dashboard","overview","modules","data","roadmap","insurance","supply-chain","green-performance","livelihood","cooperative-ranking","insurance-portfolio","disaster-forecast"];
+      const valid = ["home","dashboard","data","insurance","supply-chain","green-performance","livelihood","cooperative-ranking","insurance-portfolio","disaster-forecast"];
       if (hash && valid.includes(hash)) this.page = hash;
 
-      this.data = await api.platform();
+      try {
+        this.data = await api.platform();
+      } catch (_) {
+        this.data = { slides: [], modules: [], closed_loop: {}, regions: [], stats: {}, highlights: [] };
+      }
       if (Array.isArray(this.data.slides) && this.data.slides.length) {
         this.heroSlides = this.data.slides.map((slide, idx) => ({
           scene: slide.scene || ["snow", "grassland", "river", "sunset"][idx % 4],
@@ -2745,16 +3055,19 @@ createApp({
       }
       if (!this.selectedModule) this.selectedModule = this.businessModules[0] || this.data.modules[0];
       this.closedLoop = this.data?.closed_loop || {};
-      await this.loadModelData();
+      this.loadModelData(); // 不阻塞首帧：首页先渲染，模型数据后台就绪
+      this.loadCreditCases(); // 授信与贷后工作台默认加载主案例并自动测算
 
       this.loading = false;
-      if (this.page === "home") this.startHero();
+      if (this.page === "home") {
+        this.startHero();
+        this.$nextTick(() => { this.renderHomeGauge(); this.animateCounters(); this.setupScrollReveal(); });
+      }
 
       await this.$nextTick();
       if (this.page === "dashboard") {
         this.renderDashboardChartsSoon();
       }
-      if (this.page === "overview") this.renderOverviewChartsSoon();
       if (this.page === "data") { this.renderDataChartsSoon(); this.loadWarningData(); }
       if (this.page === "data" && this.dataTab === "risk") renderRiskChart(this.data?.risk_assessment);
 
@@ -2774,11 +3087,18 @@ createApp({
       if (p === "dashboard") {
         this.$nextTick(() => {
           this.loadModelData();
+          if (!this.creditCases.length) this.loadCreditCases();
         });
       }
-      if (p === "overview") this.$nextTick(() => this.renderOverviewChartsSoon());
       if (p === "data") this.$nextTick(() => this.renderDataChartsSoon());
       if (p === "data" && this.dataTab === "risk") this.$nextTick(() => renderRiskChart(this.data?.risk_assessment));
+    },
+    creditForm: {
+      deep: true,
+      handler() {
+        if (this._skipCreditFormWatch) return;
+        this.creditUserModified = true;
+      },
     },
     dataTab(t) {
       if (t === "risk") this.$nextTick(() => renderRiskChart(this.data?.risk_assessment));

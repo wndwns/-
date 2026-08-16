@@ -416,14 +416,14 @@ def _score_weather(coop: dict[str, Any]) -> tuple[float, dict[str, float]]:
 def _score_ops(coop: dict[str, Any]) -> tuple[float, dict[str, float]]:
     """经营维度评分 (0-100)。"""
     # 存栏规模 (牦牛+藏羊折算)
-    livestock = coop["ops_cattle_count"] * 1.0 + coop["ops_sheep_count"] * 0.3
+    livestock = (coop.get("ops_cattle_count") or 0) * 1.0 + (coop.get("ops_sheep_count") or 0) * 0.3
     livestock_score = _norm(livestock, 50, 3000)
 
     # 草场面积
-    grass_score = _norm(coop["ops_grassland_mu"], 2000, 120000)
+    grass_score = _norm(coop.get("ops_grassland_mu") or 0, 2000, 120000)
 
     # 历史信用
-    overdue = coop["ops_overdue_times"]
+    overdue = coop.get("ops_overdue_times") or 0
     credit_score = 100.0 if overdue == 0 else (70.0 if overdue == 1 else (40.0 if overdue == 2 else 10.0))
 
     detail = {
@@ -456,6 +456,13 @@ def rank_cooperatives(region_id: str, top_n: int = 50) -> list[dict[str, Any]]:
 
     # 生成合作社数据
     coops = _generate_cooperatives_for_county(region)
+    # 生成数据中个别数字字段可能为 None，统一归零避免评分崩溃
+    for c in coops:
+        for f in ("ops_cattle_count", "ops_sheep_count", "ops_grassland_mu", "ops_overdue_times",
+                  "biz_registered_capital_wan", "biz_social_security_count", "biz_penalty_count",
+                  "biz_years_established", "biz_tax_compliant"):
+            if c.get(f) is None:
+                c[f] = 0
 
     # 获取该县遥感数据
     remote = next((r for r in _remote_data if r.get("region_id") == region_id), None)

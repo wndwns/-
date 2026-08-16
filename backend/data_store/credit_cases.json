@@ -1,0 +1,145 @@
+{
+  "_note": "授信测算案例数据（比赛样例）。所有业务数值均为 sample / sample_assumption，不是真实工行客户数据或正式政策。",
+  "cases": {
+    "bankgong-green-coop": {
+      "id": "bankgong-green-coop",
+      "name": "班戈县绿色牧业合作社",
+      "region_id": "naqu-bange",
+      "region_name": "那曲市班戈县",
+      "case_type": "main",
+      "data_status": {
+        "主体身份": "sample",
+        "草场与牲畜": "sample_assumption",
+        "月度经营现金": "sample_assumption",
+        "存量债务本息": "sample_assumption",
+        "采购计划": "sample_assumption",
+        "利率与产品上限": "policy_assumption"
+      },
+      "pasture": {
+        "total_mu": 42000,
+        "summer_mu": 24000,
+        "winter_mu": 14000,
+        "non_use_mu": 4000,
+        "summer_net_dm_kg_per_mu": 56,
+        "winter_net_dm_kg_per_mu": 29,
+        "initial_storage_kg": 234520,
+        "safety_storage_kg": 104720,
+        "monthly_growth_reference_total_mu": 42000,
+        "monthly_growth_kg": [
+          10000, 10000, 20000, 60000, 150000, 260000,
+          350000, 350000, 250000, 180000, 80000, 30000
+        ]
+      },
+      "livestock": {
+        "yak_head": 980,
+        "sheep_head": 2600,
+        "yak_dm_kg_per_day": 4.0,
+        "sheep_dm_kg_per_day": 1.0,
+        "monthly_demand_kg": [
+          202120, 182560, 202120, 195600, 202120, 195600,
+          202120, 202120, 195600, 202120, 195600, 202120
+        ]
+      },
+      "operating": {
+        "initial_cash_yuan": 500000,
+        "minimum_cash_reserve_yuan": 150000,
+        "own_purchase_funds_yuan": 350000,
+        "confirmed_subsidy_yuan": 0,
+        "monthly_net_cash_yuan": [
+          200000, 350000, 200000, 200000, 300000, 350000,
+          400000, 450000, 550000, 650000, 550000, 665345.50
+        ]
+      },
+      "procurement": {
+        "base_price_yuan_per_kg": 2.50,
+        "base_arrival_kg": {
+          "2027-01": 300000,
+          "2027-02": 200000
+        }
+      },
+      "debt": {
+        "existing_loan_yuan": 1660000,
+        "annual_rate": 0.042,
+        "repayment_status": "正常",
+        "repay_plan": {
+          "2027-10": 0.5,
+          "2027-12": 0.5
+        }
+      },
+      "credit": {
+        "unified_total_yuan": 2710000,
+        "used_yuan": 1660000,
+        "product_cap_yuan": 1200000,
+        "collateral_support_yuan": "N/A",
+        "dscr_threshold": 1.20
+      },
+      "product": {
+        "name": "12 个月饲草采购流动资金贷款比赛样例",
+        "financing_method": "信用",
+        "term_months": 12,
+        "note": "样例产品条款，非工行真实产品政策"
+      },
+      "annual_rate": 0.042,
+      "draw_plan": {
+        "2027-01": 0.6,
+        "2027-02": 0.4
+      },
+      "repay_plan": {
+        "2027-10": 0.4,
+        "2027-12": 0.6
+      },
+      "scenarios": {
+        "baseline": {
+          "label": "基准情景",
+          "pressure_months": [],
+          "demand_factor": 1.00,
+          "reachability": 1.00,
+          "price_factor": 1.00
+        },
+        "snow": {
+          "label": "标准雪灾情景",
+          "pressure_months": [1, 2],
+          "demand_factor": 1.10,
+          "reachability": 0.70,
+          "price_factor": 1.15
+        },
+        "composite": {
+          "label": "复合极端情景",
+          "pressure_months": [1, 2, 12],
+          "demand_factor": 1.20,
+          "reachability": 0.50,
+          "price_factor": 1.30
+        }
+      },
+      "limits": {
+        "no_live_stock_collateral": true,
+        "no_insurance_in_cashflow": true,
+        "no_legacy_model_in_amount": true
+      }
+    },
+    "baiba-village": {
+      "id": "baiba-village",
+      "name": "百巴村（林芝市巴宜区）",
+      "region_id": "linzhi-bayi",
+      "region_name": "林芝市巴宜区百巴镇百巴村",
+      "case_type": "blocked",
+      "blocked": true,
+      "blocked_reason": "关键金融与经营资料不足",
+      "blocked_message": "当前仅有 21 户主体与 1135 头牦牛的资产/耳标登记参考，缺少有效保险合同、授信记录、还款记录、连续经营现金流和采购预算，当前不进入贷款金额测算。",
+      "missing_materials": [
+        "有效保险合同及责任范围",
+        "授信与还款记录",
+        "连续 12 个月经营回款与成本",
+        "必要饲草采购预算与付款计划",
+        "统一授信与已用额度确认"
+      ],
+      "data_status": {
+        "资产登记": "asset_register_reference",
+        "保险合同": "missing",
+        "授信记录": "missing",
+        "经营现金流": "missing",
+        "采购预算": "missing"
+      }
+    }
+  }
+}

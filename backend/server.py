@@ -14,6 +14,7 @@ API 文档: http://127.0.0.1:8000/docs
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 import uuid
@@ -22,14 +23,24 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request, build_opener, ProxyHandler, urlopen
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+
+# 模型预测结果缓存：预测仅随重训变化，按 trained_at 失效
+_PREDICT_CACHE: dict[str, Any] = {}
+
+# content-store 只存配置，不存数据快照：这些键一律不进 platform 持久化
+_PLATFORM_DATA_KEYS = {
+    "weather", "remote_sensing", "subjects", "finance", "closed_loop", "alerts",
+    "risk_assessment", "regions", "model_status", "model_confidence",
+}
 
 # 灾害预测模块（可选，缺失则降级）
 try:
@@ -102,6 +113,12 @@ class DataSourceConfigPayload(BaseModel):
     api_endpoint: str = ""
     api_key: str = ""
     extra_config: dict[str, Any] = Field(default_factory=dict)
+
+
+class CreditDecisionEvaluateRequest(BaseModel):
+    """授信测算请求：选择案例 + 本次试算输入（不持久化）。"""
+    case_id: str
+    inputs: dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +237,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     # ======================================================================
     # 健康检查
@@ -434,12 +452,17 @@ def create_app() -> FastAPI:
             "current": "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code",
             "timezone": "auto",
         })
-        req = Request(f"{endpoint}?{params}", headers={"User-Agent": "yak-risk-platform/1.0"})
+        req = Request(f"{endpoint}?{params}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         try:
-            with urlopen(req, timeout=8) as resp:
+            opener = build_opener(ProxyHandler({}))
+            with opener.open(req, timeout=8) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
         except Exception as exc:
-            return {"ok": False, "configured": True, "provider": "open_meteo", "message": f"Open-Meteo 请求失败: {exc}"}
+            try:
+                with urlopen(req, timeout=8) as resp:
+                    payload = json.loads(resp.read().decode("utf-8"))
+            except Exception as exc2:
+                return {"ok": False, "configured": True, "provider": "open_meteo", "message": f"Open-Meteo 请求失败: {exc2}"}
 
         current = payload.get("current") or {}
         weather_code = current.get("weather_code")
@@ -475,7 +498,7 @@ def create_app() -> FastAPI:
                 "apply_url": "https://lbs.amap.com/api/webservice/guide/api/weatherinfo",
             }
         params = urlencode({"key": key, "city": city, "extensions": extensions, "output": "JSON"})
-        req = Request(f"{endpoint}?{params}", headers={"User-Agent": "yak-risk-platform/1.0"})
+        req = Request(f"{endpoint}?{params}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         try:
             with urlopen(req, timeout=8) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
@@ -710,9 +733,12 @@ def create_app() -> FastAPI:
     @app.post("/api/admin/platform")
     def save_platform(payload: PlatformPayload) -> dict[str, Any]:
         store = load_content_store()
-        store["platform"] = payload.platform
+        platform = dict(payload.platform or {})
+        for key in _PLATFORM_DATA_KEYS:
+            platform.pop(key, None)  # 数据快照一律不写配置库，防止旧样例污染 platform
+        store["platform"] = platform
         save_content_store(store)
-        return {"ok": True, "platform": payload.platform}
+        return {"ok": True, "platform": platform}
 
     # ======================================================================
     # 公开数据集合 API
@@ -822,7 +848,12 @@ def create_app() -> FastAPI:
             from models import get_model
         except ImportError:
             from backend.models import get_model  # type: ignore[no-redef]
-        return get_model().predict()
+        model = get_model()
+        key = model._trained_at or "untrained"
+        if key not in _PREDICT_CACHE:
+            _PREDICT_CACHE.clear()
+            _PREDICT_CACHE[key] = model.predict()
+        return _PREDICT_CACHE[key]
 
     @app.get("/api/model/importance")
     def model_importance() -> list[dict[str, Any]]:
@@ -917,6 +948,21 @@ def create_app() -> FastAPI:
             "历史实验精确率和F1不满足业务决策要求。",
         ]
         return report
+
+    @app.get("/api/model/event-similarity")
+    def model_event_similarity(top_k: int = 10, region_id: str | None = None) -> dict[str, Any]:
+        """无监督相似度：返回与来源支持事件最相似的县月 Top-K，供人工核查候选。
+
+        不产出预测标签，不进入授信金额主链。
+        """
+        try:
+            from models import event_similarity_topk as _event_similarity
+        except ImportError:
+            from backend.models import event_similarity_topk as _event_similarity  # type: ignore[no-redef]
+        try:
+            return _event_similarity(top_k=top_k, region_id=region_id)
+        except Exception as exc:
+            return {"ok": False, "message": f"相似度计算失败: {exc}"}
 
     # ======================================================================
     # 资产登记资料核验 API（百巴村1135条耳标记录）
@@ -1100,6 +1146,10 @@ def create_app() -> FastAPI:
         total_sample = 0
         total_real = 0
         total_simulated = 0
+        total_categories = {"observed": 0, "business": 0, "derived": 0, "sample": 0}
+        observed_sources = {"tpdc", "modis", "mod13q1.061", "cma", "real", "gldas", "era5", "ncep", "geodoi", "openmeteo"}
+        business_sources = {"real_insurance", "asset_register_reference", "bank_business", "insurance_business"}
+        truthy = {"true", "1", "yes", "t"}
 
         for table_name, table_def in TABLES.items():
             rows = read_table(table_name)
@@ -1107,6 +1157,19 @@ def create_app() -> FastAPI:
             sample_count = sum(1 for r in rows if str(r.get("data_source", "")).lower() == "sample")
             simulated_count = sum(1 for r in rows if str(r.get("data_source", "")).lower() == "simulated")
             real_count = n - sample_count - simulated_count
+            category_counts = {"observed": 0, "business": 0, "derived": 0, "sample": 0}
+            for r in rows:
+                src = str(r.get("data_source", "sample")).lower().strip()
+                if str(r.get("is_sample", "")).lower() in truthy or src in {"sample", "simulated"}:
+                    category_counts["sample"] += 1
+                elif str(r.get("is_derived", "")).lower() in truthy or src.endswith("_derived"):
+                    category_counts["derived"] += 1
+                elif src in business_sources:
+                    category_counts["business"] += 1
+                elif src in observed_sources:
+                    category_counts["observed"] += 1
+                else:
+                    category_counts["sample"] += 1
             if table_name in {
                 "insurance_claims", "supply_chain_orders", "supply_chain_payments",
                 "post_loan_workflow", "green_performance_metrics",
@@ -1183,8 +1246,12 @@ def create_app() -> FastAPI:
                 "label": table_def.get("label", table_name),
                 "row_count": n,
                 "sample_rows": sample_count,
-                "real_rows": real_count,
+                "real_rows": category_counts["observed"],
+                "observed_rows": category_counts["observed"],
+                "business_rows": category_counts["business"],
+                "derived_rows": category_counts["derived"],
                 "simulated_rows": simulated_count,
+                "source_category_counts": category_counts,
                 "date_range": [dates[0], dates[-1]] if dates else [],
                 "region_count": len(regions),
                 "month_count": len(months),
@@ -1196,13 +1263,21 @@ def create_app() -> FastAPI:
             total_sample += sample_count
             total_real += real_count
             total_simulated += simulated_count
+            for key in total_categories:
+                total_categories[key] += category_counts[key]
 
         report["total"] = {
             "total_rows": total_rows,
-            "sample_rows": total_sample,
-            "real_rows": total_real,
+            "sample_rows": total_categories["sample"],
+            "real_rows": total_categories["observed"],
+            "observed_rows": total_categories["observed"],
+            "business_rows": total_categories["business"],
+            "derived_rows": total_categories["derived"],
             "simulated_rows": total_simulated,
-            "real_data_ratio": round(total_real / max(1, total_rows), 2),
+            "source_category_counts": total_categories,
+            "real_data_ratio": round(total_categories["observed"] / max(1, total_rows), 2),
+            "non_sample_source_ratio": round((total_categories["observed"] + total_categories["business"] + total_categories["derived"]) / max(1, total_rows), 2),
+            "source_ratio_note": "统计分为环境观测真实、业务、派生、样例四类；业务来源不等同环境观测，派生数据不等同实测。",
         }
         return report
 
@@ -1391,7 +1466,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/warning/comprehensive-all")
     def warning_comprehensive_all(year: int = 2025) -> dict[str, Any]:
-        """全部 25 县预警汇总。
+        """全部县域预警汇总。
 
         GET /api/warning/comprehensive-all?year=2025
         """
@@ -1441,7 +1516,7 @@ def create_app() -> FastAPI:
     def warning_ndvi(region_id: str | None = None) -> list[dict[str, Any]]:
         """实时 NDVI 异常监控。
 
-        GET /api/warning/ndvi                    → 全部 25 县
+        GET /api/warning/ndvi                    → 全部县域
         GET /api/warning/ndvi?region_id=naqu-bange  → 单县
         """
         try:
@@ -1563,6 +1638,119 @@ def create_app() -> FastAPI:
             return {"ok": True, "regions": regions, "count": len(regions)}
         except Exception as exc:
             return {"ok": False, "message": str(exc), "regions": []}
+
+    # ======================================================================
+    # 授信与贷后工作台 - 唯一授信测算
+    # ======================================================================
+
+    _CREDIT_INPUT_RULES = {
+        "pasture": {"total_mu": (1, None)},
+        "operating": {"own_purchase_funds_yuan": (0, None)},
+        "credit": {
+            "product_cap_yuan": (1, None),
+            "dscr_threshold": (1.10, 1.30),
+        },
+    }
+
+    def _validate_credit_inputs(raw: dict[str, Any]) -> dict[str, Any]:
+        """校验前端允许覆盖的字段、单位和范围。"""
+        if not isinstance(raw, dict):
+            raise HTTPException(status_code=422, detail="inputs 必须是对象")
+        validated: dict[str, Any] = {}
+        for section, fields in raw.items():
+            allowed = _CREDIT_INPUT_RULES.get(section)
+            if allowed is None:
+                raise HTTPException(status_code=422, detail=f"未知输入分组: {section}")
+            if not isinstance(fields, dict):
+                raise HTTPException(status_code=422, detail=f"输入分组 {section} 必须是对象")
+            validated[section] = {}
+            for key, value in fields.items():
+                limits = allowed.get(key)
+                if limits is None:
+                    raise HTTPException(status_code=422, detail=f"未知输入字段: {section}.{key}")
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                    raise HTTPException(status_code=422, detail=f"{section}.{key} 必须是有限数值")
+                lower, upper = limits
+                if value < lower or (upper is not None and value > upper):
+                    raise HTTPException(status_code=422, detail=f"{section}.{key} 超出允许范围")
+                validated[section][key] = value
+        return validated
+
+    def _jsonable(obj: Any) -> Any:
+        """递归把 Decimal 转为 float，便于 JSON 响应。"""
+        from decimal import Decimal as _Decimal
+        if isinstance(obj, _Decimal):
+            return float(obj)
+        if isinstance(obj, dict):
+            return {k: _jsonable(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_jsonable(v) for v in obj]
+        if isinstance(obj, tuple):
+            return [_jsonable(v) for v in obj]
+        return obj
+
+    @app.post("/api/credit-decision/evaluate")
+    def credit_decision_evaluate(payload: CreditDecisionEvaluateRequest) -> dict[str, Any]:
+        """授信与贷后工作台唯一测算接口。
+
+        - feasible / infeasible / blocked 均返回 HTTP 200（业务状态在 body.status）。
+        - 输入分组或字段非法返回 422。
+        - 案例文件缺失、为空或损坏返回 500（credit_case_unavailable）。
+        """
+        try:
+            from credit_decision import evaluate_credit_case as _evaluate_credit
+        except ImportError:
+            from backend.credit_decision import evaluate_credit_case as _evaluate_credit  # type: ignore[no-redef]
+        try:
+            from store import read_credit_cases, CreditCaseUnavailableError
+        except ImportError:
+            from backend.store import read_credit_cases, CreditCaseUnavailableError  # type: ignore[no-redef]
+
+        try:
+            store_data = read_credit_cases()
+        except CreditCaseUnavailableError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "credit_case_unavailable", "message": str(exc)},
+            )
+
+        case = (store_data.get("cases") or {}).get(payload.case_id)
+        if not case:
+            raise HTTPException(status_code=422, detail=f"未知案例 case_id: {payload.case_id}")
+
+        validated = _validate_credit_inputs(payload.inputs)
+        result = _evaluate_credit(case, validated)
+        return _jsonable(result)
+
+    @app.get("/api/credit-cases")
+    def list_credit_cases() -> dict[str, Any]:
+        """返回授信测算案例列表（仅元数据，不含业务明细）。"""
+        try:
+            from store import read_credit_cases, CreditCaseUnavailableError
+        except ImportError:
+            from backend.store import read_credit_cases, CreditCaseUnavailableError  # type: ignore[no-redef]
+
+        try:
+            store_data = read_credit_cases()
+        except CreditCaseUnavailableError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "credit_case_unavailable", "message": str(exc)},
+            )
+
+        cases = []
+        for item in (store_data.get("cases") or {}).values():
+            if not isinstance(item, dict):
+                continue
+            cases.append({
+                "id": item.get("id", ""),
+                "name": item.get("name", ""),
+                "region_name": item.get("region_name", ""),
+                "case_type": item.get("case_type", ""),
+                "blocked": bool(item.get("blocked")),
+            })
+        cases.sort(key=lambda c: c["id"])
+        return {"cases": cases, "count": len(cases)}
 
     # ======================================================================
     # 404 兜底

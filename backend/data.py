@@ -554,7 +554,38 @@ def get_risk_assessment() -> list[dict[str, Any]]:
 # 全量平台数据
 # ============================================================================
 
+_PLATFORM_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def _platform_cache_key() -> str:
+    """缓存键：data_store mtime + 模型训练时间 + 数据规模签名。
+    规模签名防止进程在 store 回退样例时缓存了缩水数据、之后又因键不变被永久复用。"""
+    base = Path(__file__).resolve().parent / "data_store"
+    mtimes = [0.0]
+    if base.exists():
+        mtimes = [p.stat().st_mtime for p in base.glob("*.json")]
+    trained = ""
+    try:
+        from .models import get_model
+        trained = get_model()._trained_at or ""
+    except Exception:
+        try:
+            from models import get_model
+            trained = get_model()._trained_at or ""
+        except Exception:
+            pass
+    try:
+        scale = f"{len(_store_read('weather_data'))}/{len(_store_read('remote_sensing_data'))}/{len(_store_read('business_subjects'))}/{_store_available}"
+    except Exception:
+        scale = f"err/{_store_available}"
+    return f"{max(mtimes):.3f}|{trained}|{scale}"
+
+
 def build_platform_data() -> dict[str, Any]:
+    key = _platform_cache_key()
+    if key in _PLATFORM_CACHE:
+        return _PLATFORM_CACHE[key]
+
     outline = get_outline()
 
     # 尝试加载模型预测结果
@@ -582,7 +613,7 @@ def build_platform_data() -> dict[str, Any]:
                     r["model_drivers"] = mp.get("drivers", {})
                     break
 
-    return {
+    result = {
         "brand": {
             "name": "牧融绿链",
             "title": "工行高原畜牧绿色金融风险评估、产业链闭环与贷后管理平台",
@@ -607,6 +638,8 @@ def build_platform_data() -> dict[str, Any]:
         "model_status": model_pred.get("model_type", "rule") if model_pred else "rule",
         "model_confidence": model_pred.get("confidence", 0) if model_pred else 0,
     }
+    _PLATFORM_CACHE[key] = result
+    return result
 
 
 # 兼容旧代码

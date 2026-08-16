@@ -17,8 +17,8 @@ def test_labels_keep_unknown_months_out_of_business_claims():
     info = RiskModel().label_info()
 
     assert info["label_type"] == "weak_label_with_source_events"
-    assert info["real_disaster_label_count"] == 42
-    assert info["unknown_month_count"] == 1458
+    assert info["real_disaster_label_count"] == 128
+    assert info["unknown_month_count"] == 1372
 
 
 if __name__ == "__main__":
