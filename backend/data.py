@@ -558,7 +558,8 @@ _PLATFORM_CACHE: dict[str, dict[str, Any]] = {}
 
 
 def _platform_cache_key() -> str:
-    """缓存键：data_store 文件最新修改时间 + 模型训练时间，任一变化即重建。"""
+    """缓存键：data_store mtime + 模型训练时间 + 数据规模签名。
+    规模签名防止进程在 store 回退样例时缓存了缩水数据、之后又因键不变被永久复用。"""
     base = Path(__file__).resolve().parent / "data_store"
     mtimes = [0.0]
     if base.exists():
@@ -573,7 +574,11 @@ def _platform_cache_key() -> str:
             trained = get_model()._trained_at or ""
         except Exception:
             pass
-    return f"{max(mtimes):.3f}|{trained}"
+    try:
+        scale = f"{len(_store_read('weather_data'))}/{len(_store_read('remote_sensing_data'))}/{len(_store_read('business_subjects'))}/{_store_available}"
+    except Exception:
+        scale = f"err/{_store_available}"
+    return f"{max(mtimes):.3f}|{trained}|{scale}"
 
 
 def build_platform_data() -> dict[str, Any]:

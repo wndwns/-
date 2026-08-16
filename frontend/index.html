@@ -1657,6 +1657,21 @@
                   <div class="data-workbench">
                     <div class="ops-panel">
                       <div class="ops-panel-head">
+                        <div><h3>数据来源构成</h3><p>环境观测真实 / 业务 / 派生 / 样例，四类互斥统计</p></div>
+                        <span class="ops-badge">共 {{ formatNumber(dqTotal.total_rows) }} 行</span>
+                      </div>
+                      <div class="metric-strip relaxed" v-if="dqTotal.total_rows">
+                        <div v-for="item in sourceCategoryStats" :key="item.label">
+                          <span>{{ item.label }}</span>
+                          <strong>{{ item.value }}</strong>
+                          <em>{{ item.note }}</em>
+                        </div>
+                      </div>
+                      <p v-else class="radar-note" style="margin:12px 0;">数据质量统计暂不可用。</p>
+                    </div>
+
+                    <div class="ops-panel">
+                      <div class="ops-panel-head">
                         <div><h3>贷前/贷后气象趋势</h3><p>CMFD 温度、降水、风速</p></div>
                         <span class="ops-badge">{{ dataAssetCards.find(c => c.key === 'weather_data')?.status }}</span>
                       </div>

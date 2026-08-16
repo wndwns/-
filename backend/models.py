@@ -670,8 +670,12 @@ class RiskModel:
             y_true = float(self._y[i])
 
             if self._model_type == "ml_hybrid" and self._reg is not None and self._scaler is not None:
-                X_scaled = self._scaler.transform(feat.reshape(1, -1))
-                y_pred = float(self._reg.predict(X_scaled)[0])
+                # XGB 用原始特征（树训练/预测须同一变换域）；RF/Ridge 才走标准化
+                if self._ml_engine == "xgboost":
+                    y_pred = float(self._reg.predict(feat.reshape(1, -1))[0])
+                else:
+                    X_scaled = self._scaler.transform(feat.reshape(1, -1))
+                    y_pred = float(self._reg.predict(X_scaled)[0])
                 y_pred = max(0, min(100, y_pred))
             else:
                 y_pred = y_true
@@ -769,8 +773,11 @@ class RiskModel:
 
         # 计算预测值
         if self._model_type == "ml_hybrid" and self._reg is not None and self._scaler is not None:
-            X_scaled = self._scaler.transform(feat.reshape(1, -1))
-            prediction = float(self._reg.predict(X_scaled)[0])
+            if self._ml_engine == "xgboost":
+                prediction = float(self._reg.predict(feat.reshape(1, -1))[0])
+            else:
+                X_scaled = self._scaler.transform(feat.reshape(1, -1))
+                prediction = float(self._reg.predict(X_scaled)[0])
             prediction = max(0, min(100, prediction))
         else:
             prediction = float(self._y[idx])
@@ -924,7 +931,11 @@ class RiskModel:
         for i, meta in enumerate(self._sample_meta):
             if meta["region_id"] == region_id:
                 if self._model_type == "ml_hybrid" and self._reg is not None and self._scaler is not None:
-                    current_pred = float(self._reg.predict(self._scaler.transform(self._X[i].reshape(1, -1)))[0])
+                    feat_i = self._X[i].reshape(1, -1)
+                    if self._ml_engine == "xgboost":
+                        current_pred = float(self._reg.predict(feat_i)[0])
+                    else:
+                        current_pred = float(self._reg.predict(self._scaler.transform(feat_i))[0])
                 else:
                     current_pred = float(self._y[i])
                 current_pred = max(0, min(100, current_pred))

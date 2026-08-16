@@ -36,6 +36,12 @@ from pydantic import BaseModel, Field
 # 模型预测结果缓存：预测仅随重训变化，按 trained_at 失效
 _PREDICT_CACHE: dict[str, Any] = {}
 
+# content-store 只存配置，不存数据快照：这些键一律不进 platform 持久化
+_PLATFORM_DATA_KEYS = {
+    "weather", "remote_sensing", "subjects", "finance", "closed_loop", "alerts",
+    "risk_assessment", "regions", "model_status", "model_confidence",
+}
+
 # 灾害预测模块（可选，缺失则降级）
 try:
     from disaster_forecast import forecast_disaster as _forecast_disaster, load_region_mapping as _load_disaster_regions
@@ -727,9 +733,12 @@ def create_app() -> FastAPI:
     @app.post("/api/admin/platform")
     def save_platform(payload: PlatformPayload) -> dict[str, Any]:
         store = load_content_store()
-        store["platform"] = payload.platform
+        platform = dict(payload.platform or {})
+        for key in _PLATFORM_DATA_KEYS:
+            platform.pop(key, None)  # 数据快照一律不写配置库，防止旧样例污染 platform
+        store["platform"] = platform
         save_content_store(store)
-        return {"ok": True, "platform": payload.platform}
+        return {"ok": True, "platform": platform}
 
     # ======================================================================
     # 公开数据集合 API

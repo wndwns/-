@@ -1498,6 +1498,20 @@ createApp({
         { label: "样例数据", value: this.formatNumber(total.sample_rows || 0), note: "经营主体、工行授信和保险台账仍需替换" },
       ];
     },
+    dqTotal() {
+      return this.dataQuality?.total || {};
+    },
+    sourceCategoryStats() {
+      const t = this.dataQuality?.total || {};
+      const total = t.total_rows || 0;
+      const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
+      return [
+        { label: "环境观测真实", value: `${this.formatNumber(t.observed_rows || 0)} · ${pct(t.observed_rows)}%`, note: "公开气象/遥感观测" },
+        { label: "业务数据", value: `${this.formatNumber(t.business_rows || 0)} · ${pct(t.business_rows)}%`, note: "业务来源需按证据边界核验" },
+        { label: "派生数据", value: `${this.formatNumber(t.derived_rows || 0)} · ${pct(t.derived_rows)}%`, note: "由原始数据计算，不等同实测" },
+        { label: "样例数据", value: `${this.formatNumber(t.sample_rows || 0)} · ${pct(t.sample_rows)}%`, note: "经营/授信/保险台账待替换" },
+      ];
+    },
     insuranceRows() {
       return this.creditSubjectRows.map((row) => ({
         name: row.name,
@@ -2808,7 +2822,7 @@ createApp({
       if (window.__amapLoadingPromise) return window.__amapLoadingPromise;
       window.__amapLoadingPromise = new Promise((resolve, reject) => {
         const script = document.createElement("script");
-        script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(this.mapConfig.key)}&plugin=AMap.Scale,AMap.ToolBar,AMap.ControlBar`;
+        script.src = `https://webapi.amap.com/maps?v=1.4.15&key=${encodeURIComponent(this.mapConfig.key)}&plugin=AMap.Scale,AMap.ToolBar,AMap.ControlBar`;
         script.async = true;
         script.onload = () => resolve();
         script.onerror = () => reject(new Error("AMap JS API script load failed"));
