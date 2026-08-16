@@ -106,3 +106,9 @@
 - 重大发现并修复：models.py 的 predict()/forecast()/explain_prediction() 之前把原始 X 过 StandardScaler 再喂 XGB（训练用原始 X、预测用标准化 X，树分裂阈值域不匹配导致预测失真，修复前事件月检验仅 0.596/-0.26）。修复后 XGB 走原始特征，RF/Ridge 才走 scaler；pytest 28 passed；8083 已重启。
 - 文档：答辩口径.md 新增第五节"事件月响应检验"；README 新增对应条目。
 - 结论：模型对真实事件有可陈述的响应证据（训练集内口径含泄漏；时间前向方向一致但较弱）。
+
+## 2026-08-16 授信情景参数依据 + 敏感性分析 + 模型与授信链关系（多专家行动②③）
+- 新增《授信情景参数依据与敏感性分析.md》：snow 1.10/0.70/1.15、composite 1.20/0.50/1.30 的量级锚点（历史事件集）与敏感性结果；credit_decision.py SCENARIOS 加依据注释；注意生产参数实际来自 credit_cases.json 的 case.scenarios（SCENARIOS 仅为 fallback）。
+- 敏感性结论：90 万在参数 ±10% 内稳健（瓶颈=基准合格融资需求）；需求系数/到场价 +10% 即触发 infeasible（系统诚实拒绝放款）；复合极端扰动不影响金额（设计正确）。
+- 答辩口径.md 新增第六节"模型与授信链关系"（mermaid 流程图：模型只进核查优先级，金额=纯计算链）。
+- 测试 28 passed。
