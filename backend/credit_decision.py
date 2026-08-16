@@ -541,6 +541,10 @@ def evaluate_credit_case(case: dict[str, Any], inputs: dict[str, Any] | None = N
 
     # 复合极端 DSCR（用候选金额检验），不生成第二个金额
     composite_cf = _run_cashflow(ctx, candidate, "composite")
+    # 复合极端取全 12 月现金最差月（此前固定取首月，2027-02 最差月曾被漏检，缺口低估约 2.1 倍）
+    composite_worst = min(
+        composite_cf["monthly_rows"], key=lambda x: x["cash_after_financing_yuan"]
+    )
     composite_plan = _monthly_plan(ctx, "composite")
     non_forage = ctx.get("monthly_non_forage_net_cash_yuan") or ctx["operating"].get("monthly_net_cash_yuan") or []
     composite_avail = sum(_dec(non_forage[i], "0") for i in range(len(MONTHS))) - composite_plan["total_purchase_cost_yuan"]
@@ -576,14 +580,14 @@ def evaluate_credit_case(case: dict[str, Any], inputs: dict[str, Any] | None = N
             "purchase_cost_yuan": composite_plan["total_purchase_cost_yuan"],
             "available_cash_yuan": composite_avail,
             "dscr": composite_dscr,
-            # 复合极端固定展示首个压力月（2027-01）的现金与缺口，不输出第二个金额
-            "min_cash_yuan": composite_cf["monthly_rows"][0]["cash_after_financing_yuan"],
-            "min_cash_month": composite_cf["monthly_rows"][0]["month"],
+            # 复合极端展示全 12 月现金最差月的现金与缺口，不输出第二个金额
+            "min_cash_yuan": composite_worst["cash_after_financing_yuan"],
+            "min_cash_month": composite_worst["month"],
             "min_cash_gap_yuan": max(
                 Decimal("0"),
-                composite_cf["minimum_cash_reserve_yuan"] - composite_cf["monthly_rows"][0]["cash_after_financing_yuan"],
+                composite_cf["minimum_cash_reserve_yuan"] - composite_worst["cash_after_financing_yuan"],
             ),
-            "vulnerable": composite_cf["monthly_rows"][0]["cash_after_financing_yuan"]
+            "vulnerable": composite_worst["cash_after_financing_yuan"]
             < composite_cf["minimum_cash_reserve_yuan"],
             "generates_second_amount": False,
         },

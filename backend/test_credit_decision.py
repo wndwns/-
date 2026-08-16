@@ -10,7 +10,7 @@
   - 黄金主案例：feasible / 900000 / 利息 34020 / DSCR≈1.2416 / 支持上限≈988716.52
      / 雪灾最低现金≈303065.50 @ 2027-01 / 峰值余额 2560000 / 瓶颈=基准合格融资需求
   - 复合极端：不生成第二金额，采购成本 2087670 / 可用现金 2777675.50 / DSCR≈1.0451
-     / 2027-01 现金≈109672 / 缺口≈40328
+     / 2027-02 现金≈25798 / 缺口≈124202（全 12 月最差月）
   - 不可行反例：雪灾偿债现金 3127248 → 支持上限 850000 → infeasible / 缺口 50000
   - 取整边界：必要外部资金 895000 → infeasible（不向上取整）
   - 百巴村资料不足 → blocked，无推荐金额
@@ -101,9 +101,9 @@ def test_composite_does_not_generate_second_amount():
     _assert_close(c["purchase_cost_yuan"], 2087670, 0.5, "复合极端采购成本")
     _assert_close(c["available_cash_yuan"], 2777675.50, 0.5, "复合极端可用于偿债经营现金")
     _assert_close(c["dscr"], 1.0451, 0.0005, "复合极端 DSCR")
-    _assert_close(c["min_cash_yuan"], 109672, 1.0, "复合极端 2027-01 月末现金")
-    assert c["min_cash_month"] == "2027-01"
-    _assert_close(c["min_cash_gap_yuan"], 40328, 1.0, "复合极端现金缺口")
+    _assert_close(c["min_cash_yuan"], 25798, 1.0, "复合极端 2027-02 月末现金（全月最差）")
+    assert c["min_cash_month"] == "2027-02"
+    _assert_close(c["min_cash_gap_yuan"], 124202, 1.0, "复合极端现金缺口")
     assert c["vulnerable"] is True
 
 
