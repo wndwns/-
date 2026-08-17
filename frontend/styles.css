@@ -6427,6 +6427,42 @@ input, select, textarea { font: inherit; }
 }
 .dg-fade-enter-active, .dg-fade-leave-active { transition: opacity .2s ease, transform .2s ease; }
 .dg-fade-enter-from, .dg-fade-leave-to { opacity: 0; transform: translateY(8px); }
+
+/* ---- 演示助手增强：头部动作 / Markdown / 消息操作 / 停止 ---- */
+.dg-head { display: flex; align-items: center; gap: 8px; }
+.dg-head-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.dg-clear {
+  border: 1px solid var(--border, #d0d7de); background: transparent;
+  color: var(--text-muted); border-radius: 6px; padding: 2px 10px;
+  font-size: 12px; cursor: pointer; line-height: 1.6;
+}
+.dg-clear:hover { color: var(--primary, #0a66c2); border-color: var(--primary, #0a66c2); }
+
+.dg-bubble p { margin: 4px 0; }
+.dg-bubble ul { margin: 4px 0; padding-left: 18px; }
+.dg-bubble li { margin: 2px 0; }
+.dg-bubble h1, .dg-bubble h2, .dg-bubble h3, .dg-bubble h4 {
+  margin: 8px 0 4px; font-size: 13px; line-height: 1.4;
+}
+.dg-bubble code {
+  background: rgba(0, 0, 0, .06); padding: 1px 4px; border-radius: 3px; font-size: 12px;
+}
+.dg-bubble pre {
+  background: #f4f6f8; border: 1px solid #e3e8ee; border-radius: 6px;
+  padding: 8px; overflow: auto; margin: 6px 0;
+}
+.dg-bubble pre code { background: transparent; padding: 0; }
+.dg-bubble strong { font-weight: 700; }
+
+.dg-msg-actions { display: flex; gap: 6px; margin-top: 4px; padding: 0 4px; }
+.dg-act {
+  border: none; background: transparent; color: var(--text-muted);
+  font-size: 12px; cursor: pointer; padding: 0;
+}
+.dg-act:hover { color: var(--primary, #0a66c2); }
+
+.dg-stop { background: var(--text-muted) !important; }
+
 @media (max-width: 480px) {
   .dg-panel { right: 8px; bottom: 8px; width: calc(100vw - 16px); }
   .dg-fab { right: 16px; bottom: 16px; }

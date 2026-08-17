@@ -892,16 +892,16 @@ const app = createApp({
       return [
         { label: "县域", value: region.name, note: `${region.longitude}, ${region.latitude}` },
         { label: "海拔", value: region.altitude ? `${region.altitude}m` : "-", note: region.pasture_type || "高原牧区" },
-        { label: "实时天气", value: this.currentWeatherText, note: this.mapWeatherLoading ? "正在刷新实时天气" : (this.mapWeatherError || this.selectedMapWeather?.reporttime || this.selectedMapWeather?.obsTime || this.selectedMapWeather?.provider || "高德/Open-Meteo API") },
-        { label: "本地气象", value: weather.observed_at ? `${weather.temperature_c}℃ / 雪深${weather.snow_depth_cm}cm` : "-", note: weather.observed_at || "CMFD 月度样本" },
-        { label: "遥感 NDVI", value: remote.ndvi ?? "-", note: remote.scene_date ? `${remote.scene_date} / 积雪${remote.snow_cover}` : "MODIS/TPDC" },
+        { label: "实时天气", value: this.currentWeatherText, note: this.mapWeatherLoading ? "正在刷新实时天气" : (this.mapWeatherError || this.selectedMapWeather?.reporttime || this.selectedMapWeather?.obsTime || this.selectedMapWeather?.provider || "实时气象") },
+        { label: "本地气象", value: weather.observed_at ? `${weather.temperature_c}℃ / 雪深${weather.snow_depth_cm}cm` : "-", note: weather.observed_at || "县域气象样本" },
+        { label: "遥感 NDVI", value: remote.ndvi ?? "-", note: remote.scene_date ? `${remote.scene_date} / 积雪${remote.snow_cover}` : "遥感观测" },
         { label: "风险评分", value: region.risk_score ? region.risk_score.toFixed(1) : "-", note: `${region.risk_level} / ${region.primary_driver}` },
       ];
     },
     currentWeatherText() {
       const row = this.selectedMapWeather;
       if (!row) return this.mapWeatherLoading ? "加载中" : "待获取";
-      if (row.provider === "CMFD 本地数据") return `本地气象 ${row.temperature ?? "-"}℃`;
+      if (row.provider === "本地气象数据") return `本地气象 ${row.temperature ?? "-"}℃`;
       const extra = row.humidity ? ` / 湿度${row.humidity}%` : "";
       return `${row.weather || row.text || "-"} ${row.temperature || row.temp || "-"}℃${extra}`;
     },
@@ -978,8 +978,8 @@ const app = createApp({
       if (!this.integrations?.amap_weather?.configured) {
         tasks.push({
           level: "info",
-          title: "配置实时天气接口",
-          desc: "接入高德 Web 服务 Key 后，评估工作台可读取实时天气状态。",
+          title: "配置实时天气服务",
+          desc: "接入在线气象服务后，评估工作台可读取实时天气状态。",
           action: "管理端",
           href: "/admin",
         });
@@ -988,7 +988,7 @@ const app = createApp({
         tasks.push({
           level: "danger",
           title: "接入真实风险标签",
-          desc: "当前仍是规则弱标签，缺少灾害、理赔或逾期标签，模型不能作为监督预测结论。",
+          desc: "当前缺少足够真实灾害、理赔或逾期样本，模型结果仅作人工核查参考，不作监督预测结论。",
           action: "导入标签",
           page: "data",
         });
@@ -1023,7 +1023,7 @@ const app = createApp({
     overviewInfographic() {
       return [
         { icon: "EO", title: "环境监测", items: ["县域气象月度数据", "草地植被与退化监测", "积雪深度与载畜量", "灾害风险趋势与规则预警"] },
-        { icon: "ML", title: "智能风控", items: ["弱标签风险排序", "授信四维评分", "风险因子可解释", "人工核验优先级"] },
+        { icon: "ML", title: "智能风控", items: ["综合风险排序", "授信四维评分", "风险因子可解释", "人工核验优先级"] },
         { icon: "GF", title: "授信决策", items: ["融资需求智能测算", "雪灾偿债压力测试", "极端天气压力测试", "推荐授信金额"] },
         { icon: "IN", title: "银保协同", items: ["保单画像与核验", "理赔证据回流", "风险缓释闭环", "普惠牧区服务"] },
       ];
@@ -1042,11 +1042,11 @@ const app = createApp({
         },
         {
           label: "风险标签",
-          value: (this.dataAssetCards.find((c) => c.key === "risk_event_labels")?.row_count || 0) > 0 ? "已接入" : "弱标签",
+          value: (this.dataAssetCards.find((c) => c.key === "risk_event_labels")?.row_count || 0) > 0 ? "已接入" : "待接入",
           state: (this.dataAssetCards.find((c) => c.key === "risk_event_labels")?.row_count || 0) > 0 ? "ok" : "danger",
         },
         {
-          label: "天气接口",
+          label: "实时天气",
           value: this.integrations?.open_meteo?.configured ? "开放天气" : (this.integrations?.amap_weather?.configured ? "已配置" : "本地兜底"),
           state: this.integrations?.open_meteo?.configured || this.integrations?.amap_weather?.configured ? "ok" : "warn",
         },
@@ -1227,7 +1227,7 @@ const app = createApp({
       } else {
         evidence.push({
           group: "模型",
-          title: `${this.modelStatus.model_type || "rule"} / ${this.modelStatus.label_type || "rule_label"}`,
+          title: "模型评估证据",
           rows: [
             `训练样本 ${this.formatNumber(this.modelStatus.n_samples || 0)}`,
             `县域 ${this.modelStatus.county_count || 0} 个`,
@@ -1282,9 +1282,9 @@ const app = createApp({
     labelDisclosure() {
       const labelRows = this.dataAssetCards.find((c) => c.key === "risk_event_labels")?.row_count || 0;
       if (labelRows > 0) {
-        return `当前已接入 ${labelRows} 条 demo/sample 风险事件标签，用于跑通灾害、理赔、逾期标签链路；仍不等同于真实监督预测。`;
+        return `当前已接入 ${labelRows} 条测试风险事件样本，用于走通灾害、理赔、逾期标签流程；仍不等同于真实监督预测。`;
       }
-      return "当前模型使用真实环境数据与规则弱标签评分，尚未接入足够真实灾害、理赔、逾期标签。";
+      return "当前模型基于真实环境数据与业务规则综合评估，尚未接入足够的真实灾害、理赔、逾期样本。";
     },
     assessmentActions() {
       const assessment = this.selectedAssessment;
@@ -1431,9 +1431,9 @@ const app = createApp({
         warnings: byKey[key]?.warnings || [],
       });
       return [
-        card("weather_data", "CMFD 气象数据", "当前数据覆盖 26 个县域和 137 个月样本，包含温度/降水/风速。", "公开观测"),
-        card("remote_sensing_data", "MODIS/TPDC 遥感数据", "NDVI、积雪、草地退化与临时载畜量字段。", "部分真实"),
-        card("forage_supply_demand", "Geodoi 饲草供需", "2000-2020 全国/区域年度宏观饲草供需。", "真实宏观"),
+        card("weather_data", "县域气象数据", "当前数据覆盖 26 个县域和 137 个月样本，包含温度/降水/风速。", "公开观测"),
+        card("remote_sensing_data", "遥感观测数据", "NDVI、积雪、草地退化与临时载畜量字段。", "部分真实"),
+        card("forage_supply_demand", "宏观饲草供需", "2000-2020 全国/区域年度宏观饲草供需。", "真实宏观"),
         card("business_subjects", "经营主体台账", "合作社、家庭牧场、供应商经营信息。", "样例待替换"),
         card("finance_credit", "工行授信与保险台账", "授信、用信、还款、逾期、保单信息。", "样例待替换"),
         card("risk_event_labels", "来源事件样本", "附公开 URL 或年鉴页码凭证的灾害事件；其余月份保持未确认。", "128 条来源事件"),
@@ -1446,9 +1446,9 @@ const app = createApp({
     },
     dataSourceSnapshot() {
       return [
-        { label: "TPDC CMFD 气象", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "weather_data")?.row_count || 0), note: "县域月度温度/降水/风速" },
-        { label: "MODIS/TPDC 遥感", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "remote_sensing_data")?.row_count || 0), note: "NDVI、积雪、退化、载畜量字段" },
-        { label: "Geodoi 宏观饲草", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "forage_supply_demand")?.row_count || 0), note: "年度区域参考，不参与训练" },
+        { label: "县域气象", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "weather_data")?.row_count || 0), note: "县域月度温度/降水/风速" },
+        { label: "遥感观测", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "remote_sensing_data")?.row_count || 0), note: "NDVI、积雪、退化、载畜量字段" },
+        { label: "宏观饲草", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "forage_supply_demand")?.row_count || 0), note: "年度区域参考，不参与训练" },
         { label: "来源事件", value: 128, note: "128 条来源支持事件；其余月份未确认，不等于无灾" },
       ];
     },
@@ -1470,7 +1470,7 @@ const app = createApp({
       const num = (field) => latestRows.map((row) => Number(row[field]) || 0);
       return [
         { label: "月份", value: latestMonth || "-", note: `${latestRows.length} 个县域样本` },
-        { label: "平均温度", value: `${avg(num("temperature_c")).toFixed(1)}℃`, note: "CMFD 县域均值" },
+        { label: "平均温度", value: `${avg(num("temperature_c")).toFixed(1)}℃`, note: "县域气象均值" },
         { label: "日降水均值", value: `${avg(num("precipitation_mm_24h")).toFixed(2)}mm`, note: "月内日尺度折算值" },
         { label: "平均风速", value: `${avg(num("wind_speed_mps")).toFixed(1)}m/s`, note: "高原风速监测" },
       ];
@@ -1484,9 +1484,9 @@ const app = createApp({
       const num = (field) => latestRows.map((row) => Number(String(row[field] ?? "").replace("%", "")) || 0);
       return [
         { label: "月份", value: latestMonth || "-", note: `${latestRows.length} 个县域样本` },
-        { label: "NDVI 均值", value: avg(num("ndvi")).toFixed(3), note: "MODIS 月度合成" },
-        { label: "积雪覆盖", value: `${avg(num("snow_cover")).toFixed(1)}%`, note: "MOD10A1 聚合" },
-        { label: "退化字段", value: `${latestRows.filter((r) => r.degradation_level && r.degradation_level !== "待评估").length}/${latestRows.length}`, note: "TPDC 静态退化等级" },
+        { label: "NDVI 均值", value: avg(num("ndvi")).toFixed(3), note: "月度遥感合成" },
+        { label: "积雪覆盖", value: `${avg(num("snow_cover")).toFixed(1)}%`, note: "月度卫星聚合" },
+        { label: "退化字段", value: `${latestRows.filter((r) => r.degradation_level && r.degradation_level !== "待评估").length}/${latestRows.length}`, note: "静态退化等级" },
       ];
     },
     overviewMetrics() {
@@ -1712,7 +1712,7 @@ const app = createApp({
         { label: "支持牧户数", value: households ? `${this.formatNumber(households)}户` : "300+", note: "脱敏样例，待真实数据替换" },
         { label: "减灾减损金额", value: reduction ? `${this.formatNumber(reduction.toFixed(1))}万` : "待接入", note: "由理赔/减损样例回流" },
         { label: "碳减排当量", value: "接口预留", note: "待接入真实 NPP/碳汇核算" },
-        { label: "GEP 生态产值", value: "接口预留", note: "草地生态系统生产总值" },
+        { label: "生态产值", value: "接口预留", note: "草地生态系统生产总值" },
         { label: "可持续评分", value: "接口预留", note: "绿色养殖监测接入后启用" },
       ];
     },
@@ -1764,7 +1764,7 @@ const app = createApp({
         },
         {
           group: "模型",
-          title: `${this.modelStatus.model_type || "rule"} / ${this.modelStatus.label_type || "rule_label"}`,
+          title: "模型评估证据",
           rows: [
             `训练样本 ${this.formatNumber(this.modelStatus.n_samples || 0)}`,
             `县域 ${this.modelStatus.county_count || 0} 个`,
@@ -1777,9 +1777,9 @@ const app = createApp({
     },
     greenActions() {
       return [
-        { priority: "P1", title: "人工复核", desc: "复核生态改善趋势与风险评分口径，避免把弱标签误认为真实监督预测。" },
+        { priority: "P1", title: "人工复核", desc: "复核生态改善趋势与风险评分口径，避免把综合评估结果误认为真实监督预测。" },
         { priority: "P1", title: "绿色绩效归档", desc: "将 NDVI 改善、风险分布和绿色信贷指标纳入答辩材料。" },
-        { priority: "DATA", title: "数据缺口处理", desc: "碳账户、GEP、减灾减损金额仍为接口预留，需后续真实数据接入。" },
+        { priority: "DATA", title: "数据缺口处理", desc: "碳账户、生态产值、减灾减损金额仍待后续真实数据接入。" },
       ];
     },
     greenAssessmentRows() {
@@ -1818,7 +1818,7 @@ const app = createApp({
         { label: "边境重点县域", value: rows.length, note: "公网展示口径为重点县池" },
         { label: "总覆盖县域", value: this.modelStatus.county_count || this.data?.regions?.length || 0, note: "模型覆盖县域" },
         { label: "高风险边境县", value: rows.filter((r) => Number(r.predicted_score) >= 70).length, note: "触发贷后核查" },
-        { label: "支持牧户", value: households ? `${this.formatNumber(households)}户` : avgScore, note: households ? "脱敏样例民生指标" : "基于当前弱标签评分" },
+        { label: "支持牧户", value: households ? `${this.formatNumber(households)}户` : avgScore, note: households ? "脱敏样例民生指标" : "基于当前综合风险评分" },
       ];
     },
     fourPartyCards() {
@@ -1857,7 +1857,7 @@ const app = createApp({
           group: "工作流",
           title: `${(this.closedLoop?.post_loan_workflow || []).length} 条客户经理任务`,
           rows: [
-            `模型 ${this.modelStatus.model_type || "rule"} / ${this.modelStatus.label_type || "rule_label"}`,
+            `模型评估 · 综合规则`,
             `训练样本 ${this.formatNumber(this.modelStatus.n_samples || 0)}`,
             "准入、复核、贷后核查、处置记录进入同一闭环",
           ],
@@ -2636,7 +2636,7 @@ const app = createApp({
             title: "贷后有没有风险",
             value: reviewCycle,
             note: "联动气象、遥感、主体用信和还款记录形成贷后预警。",
-            basis: "当前为真实环境数据 + 规则弱标签。",
+            basis: "基于真实环境数据与业务规则综合评估。",
             state: score >= 55 ? "warn" : "safe",
           },
           {
@@ -2810,7 +2810,7 @@ const app = createApp({
           this.buildEvidenceMap();
           this.fetchMapWeather();
         } catch (retryErr) {
-          this.amapError = `高德地图加载失败：${retryErr.message || retryErr}`;
+          this.amapError = `地图加载失败：${retryErr.message || retryErr}`;
         }
       }
     },
@@ -2963,14 +2963,14 @@ const app = createApp({
         if (requestId !== this.mapWeatherRequestId) return;
         const live = payload?.raw?.lives?.[0] || null;
         if (payload?.ok && live) {
-          this.selectedMapWeather = { ...live, provider: "高德天气" };
+          this.selectedMapWeather = { ...live, provider: "实时天气" };
         } else {
-          const amapInfo = payload?.raw?.info || payload?.message || "高德天气未返回实时数据";
+          const amapInfo = payload?.raw?.info || payload?.message || "实时天气服务未返回数据";
           const open = await api.openMeteoNow(region.lat, region.lng);
           if (requestId !== this.mapWeatherRequestId) return;
           const now = open?.current || null;
           if (open?.ok && now) {
-            this.selectedMapWeather = { ...now, provider: "Open-Meteo 开放天气" };
+            this.selectedMapWeather = { ...now, provider: "实时天气" };
           } else {
             this.mapWeatherError = open?.message || amapInfo;
           }
@@ -2985,7 +2985,7 @@ const app = createApp({
           weather: "本地气象",
           temperature: region.weather.temperature_c,
           reporttime: region.weather.observed_at,
-          provider: "CMFD 本地数据",
+          provider: "本地气象数据",
         };
         if (!this.mapWeatherError) this.mapWeatherError = "外部实时天气不可用，已回退本地气象";
       }
@@ -3070,6 +3070,13 @@ const app = createApp({
       }
       if (this.page === "data") { this.renderDataChartsSoon(); this.loadWarningData(); }
       if (this.page === "data" && this.dataTab === "risk") renderRiskChart(this.data?.risk_assessment);
+      if (this.page === "cooperative-ranking" && !this.coopRegions.length) {
+        this.coopRegions = (this.data?.regions || []).map(r => ({ id: r.id, name: r.name }));
+      }
+      if (this.page === "disaster-forecast") {
+        if (!this.disasterRegions || !this.disasterRegions.length) this.loadDisasterRegions();
+        this.$nextTick(() => this.renderDisasterChart());
+      }
 
       window.addEventListener("hashchange", () => {
         const h = window.location.hash.replace("#", "");
@@ -3125,7 +3132,41 @@ const app = createApp({
 });
 
 // ============================================================================
+// 轻量 Markdown 渲染器（纯前端，不依赖 CDN）——支持标题/加粗/行内代码/代码块/无序列表/段落
+// ============================================================================
+function mdToHtml(src) {
+  if (!src) return "";
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const blocks = [];
+  src = src.replace(/```([\s\S]*?)```/g, (m, c) => {
+    blocks.push("<pre><code>" + esc(c) + "</code></pre>");
+    return "%%B" + (blocks.length - 1) + "%%";
+  });
+  const mid = (s) => esc(s)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+  const lines = src.split("\n");
+  let html = "";
+  let list = false;
+  const close = () => { if (list) { html += "</ul>"; list = false; } };
+  for (const line of lines) {
+    const t = line.trim();
+    const h = t.match(/^(#{1,4})\s+(.*)$/);
+    if (h) { close(); html += "<h" + h[1].length + ">" + mid(h[2]) + "</h" + h[1].length + ">"; continue; }
+    const cb = line.match(/^%%B(\d+)%%$/);
+    if (cb) { close(); html += blocks[+cb[1]]; continue; }
+    const li = t.match(/^[-*·•]\s+(.*)$/);
+    if (li) { if (!list) { html += "<ul>"; list = true; } html += "<li>" + mid(li[1]) + "</li>"; continue; }
+    close();
+    if (t) html += "<p>" + mid(t) + "</p>";
+  }
+  close();
+  return html;
+}
+
+// ============================================================================
 // 演示助手组件（Demo Guide）—— 浮动客服/教学对话
+//   SSE 流式打字机 · 停止生成 · 对话历史 · 清空/新会话 · Markdown 渲染 · 复制 · 重新生成
 // ============================================================================
 const DemoGuide = {
   data() {
@@ -3135,6 +3176,8 @@ const DemoGuide = {
       input: "",
       thinking: false,
       badgeHidden: false,
+      controller: null,
+      lastUserIndex: -1,
     };
   },
   computed: {
@@ -3147,27 +3190,106 @@ const DemoGuide = {
       this.open = !this.open;
       if (this.open) this.badgeHidden = true;
     },
+    streamQuery(query) {
+      this.thinking = true;
+      const idx = this.msgs.length;
+      this.msgs.push({ role: "bot", text: "", done: false });
+      this.controller = new AbortController();
+      const self = this;
+      fetch("/api/demo-guide/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+        signal: this.controller.signal,
+      })
+        .then((resp) => {
+          if (!resp.ok || !resp.body) throw new Error("stream " + resp.status);
+          const reader = resp.body.getReader();
+          const dec = new TextDecoder();
+          let buf = "";
+          const pump = () =>
+            reader.read().then(({ done, value }) => {
+              if (done) { self.msgs[idx].done = true; self.scrollBottom(); return; }
+              buf += dec.decode(value, { stream: true });
+              let p = buf.indexOf("\n\n");
+              while (p >= 0) {
+                const frame = buf.slice(0, p);
+                buf = buf.slice(p + 2);
+                self.handleFrame(frame, idx);
+                p = buf.indexOf("\n\n");
+              }
+              return pump();
+            });
+          return pump();
+        })
+        .catch((err) => {
+          if (!err || err.name !== "AbortError") self.msgs[idx].text += "\n\n[连接中断]";
+          else self.msgs[idx].text += "\n\n[已停止]";
+          self.msgs[idx].done = true;
+          self.scrollBottom();
+        })
+        .finally(() => {
+          self.thinking = false;
+          self.controller = null;
+          self.scrollBottom();
+        });
+    },
+    handleFrame(frame, idx) {
+      const line = frame.split("\n").find((l) => l.startsWith("data:"));
+      if (!line) return;
+      const raw = line.slice(5).trim();
+      if (!raw) return;
+      let ev;
+      try { ev = JSON.parse(raw); } catch (_) { return; }
+      if (ev.type === "chunk") {
+        const m = this.msgs[idx];
+        m.text = (m.text || "") + (ev.text || "");
+        this.scrollBottom();
+      }
+    },
     async send() {
       const q = (this.input || "").trim();
       if (!q || this.thinking) return;
       this.msgs.push({ role: "user", text: q });
+      this.lastUserIndex = this.msgs.length - 1;
       this.input = "";
-      this.thinking = true;
-      try {
-        const resp = await fetch("/api/demo-guide/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: q }),
-        });
-        const j = await resp.json();
-        const a = (j && j.answer) ? j.answer : "抱歉，我没能生成回答。";
-        this.msgs.push({ role: "bot", text: a });
-      } catch (e) {
-        this.msgs.push({ role: "bot", text: "演示助手暂时不可用，请稍后再试。" });
-      } finally {
-        this.thinking = false;
-        this.scrollBottom();
-      }
+      this.streamQuery(q);
+    },
+    stopStream() {
+      if (this.controller) { this.controller.abort(); this.controller = null; }
+    },
+    regenerate() {
+      if (this.thinking || this.lastUserIndex < 0) return;
+      const src = this.msgs[this.lastUserIndex];
+      if (!src || !src.text) return;
+      this.msgs = this.msgs.slice(0, this.lastUserIndex + 1);
+      this.streamQuery(src.text);
+    },
+    newChat() {
+      this.msgs = [this.welcome()];
+      this.lastUserIndex = -1;
+    },
+    copyMsg(m) {
+      const t = (m && m.text) || "";
+      if (!t) return;
+      if (navigator.clipboard) navigator.clipboard.writeText(t).catch(() => this._copyFallback(t));
+      else this._copyFallback(t);
+    },
+    _copyFallback(t) {
+      const ta = document.createElement("textarea");
+      ta.value = t;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch (_) {}
+      document.body.removeChild(ta);
+    },
+    md(text) { return mdToHtml(String(text || "")); },
+    welcome() {
+      return {
+        role: "bot",
+        text: "你好，我是工银牧融演示助手。我可以讲解项目口径、使用方法，也能帮你调本地授信测算。试试问我：\n· 这个平台是做什么的\n· 班戈绿色牧业合作社建议贷多少",
+        done: true,
+      };
     },
     onKey(e) {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -3181,15 +3303,9 @@ const DemoGuide = {
         if (box) box.scrollTop = box.scrollHeight;
       });
     },
-    linkify(text) {
-      return String(text || "");
-    },
   },
   mounted() {
-    this.msgs.push({
-      role: "bot",
-      text: "你好，我是工银牧融演示助手。我可以讲解项目口径、使用方法，也能帮你调本地授信测算。试试问我：\n· 这个平台是做什么的\n· 班戈绿色牧业合作社建议贷多少",
-    });
+    this.msgs = [this.welcome()];
   },
   template: `
   <div class="dg">
@@ -3198,17 +3314,25 @@ const DemoGuide = {
         <div class="dg-head">
           <span class="dg-title">牧融绿链 · 演示助手</span>
           <span class="dg-sub">{{ desc }}</span>
-          <button class="dg-close" @click="open=false">×</button>
+          <div class="dg-head-actions">
+            <button class="dg-clear" title="清空对话，新开会话" @click="newChat">清空</button>
+            <button class="dg-close" @click="open=false">×</button>
+          </div>
         </div>
         <div ref="list" class="dg-body">
           <div v-for="(m,i) in msgs" :key="i" :class="['dg-msg', m.role]">
-            <div class="dg-bubble">{{ m.text }}</div>
+            <div class="dg-bubble" v-html="md(m.text)"></div>
+            <div v-if="m.role==='bot' && m.done" class="dg-msg-actions">
+              <button class="dg-act" title="复制回答" @click="copyMsg(m)">复制</button>
+              <button v-if="!thinking && i===msgs.length-1" class="dg-act" title="重新生成回答" @click="regenerate">重新生成</button>
+            </div>
           </div>
           <div v-if="thinking" class="dg-msg bot"><div class="dg-bubble dg-typing">正在思考…</div></div>
         </div>
         <div class="dg-foot">
           <textarea v-model="input" :disabled="thinking" rows="2" placeholder="问点什么…（Enter发送）" @keydown="onKey"></textarea>
-          <button class="dg-send" :disabled="thinking" @click="send">发送</button>
+          <button v-if="!thinking" class="dg-send" @click="send">发送</button>
+          <button v-else class="dg-send dg-stop" title="停止生成" @click="stopStream">停止</button>
         </div>
         <div class="dg-note">演示内容为主要面向比赛口径的辅助讲解，不构成审批结论。</div>
       </div>

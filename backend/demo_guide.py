@@ -25,128 +25,43 @@ from openai import OpenAI
 ROOT = Path(__file__).resolve().parent.parent
 BACKEND = Path(__file__).resolve().parent
 
-KNOWLEDGE_FILES = [
-    ("项目全景说明", BACKEND.parent / "项目全景说明（Codex读）.md"),
-    ("答辩口径", BACKEND.parent / "答辩口径.md"),
-    ("项目书用户阅读版", BACKEND.parent / "工银牧融项目书（用户阅读版）.md"),
-    ("深化优化方案", BACKEND.parent / "项目深化优化方案（实施前待批准）.md"),
-]
+# 客服对外唯一知识源：一份面向用户的客服文档，全量固定进 system，不检索、不喂内部文档。
+# （内部/答辩/开发类文档不进客服上下文，从源头杜绝仓库地址、版本分层等内部信息流出。）
+_KB_PATH = BACKEND.parent / "客服知识库（面向用户）.md"
+_KB_FULL = _KB_PATH.read_text(encoding="utf-8", errors="replace") if _KB_PATH.exists() else ""
+
+# 参考来源标记（用于前端元信息展示）
+KB_SECTIONS_REF = ["客服知识库（面向用户）·全文"]
 
 # 固定进 system 的核心口径与红线（总是携带，不参与选段）
-SYSTEM_HEAD = """你是「工银牧融（前端品牌：牧融绿链）·高原畜牧绿色金融演示助手」。你的任务是帮用户理解这个项目怎么用、能算什么、什么时候不能算。
+SYSTEM_HEAD = """你是「工银牧融（前端品牌：牧融绿链）·高原畜牧绿色金融演示助手」。任务是教用户这个平台怎么用、每个页面能干什么、结论怎么来的、能算什么、什么时候不能算。
 
-【项目定性】这是一个面向青藏高原牧区的绿色金融辅助决策平台，把气象、遥感、草场、牲畜、经营、授信、保险和贷后资料整理成工行客户经理可核验的证据链。它【不是】自动审批系统、【不是】工行生产系统、【不是】违约或灾害预测器。
+【该怎么答】
+- 先直接给出答案和数字，再补一句依据；不自说自话地堆免责声明，语气自然、具体，像平台的产品引导。
+- 面向“教用户用项目”。用户问“贷多少 / 能贷吗 / 某案例建议多少”时，优先调用工具 credit_evaluate 拿本地测算的真实金额，不要自己编数。
 
-【真实性红线——必须严格遵守，任何回答不得违反】
-1. 不得把样例/派生/待核验数据说成真实工行业务：百巴村 21 户主体与 1135 头牦牛是“资产/耳标登记参考”，不是“1135 份有效保险合同”。
-2. 不得出现放款/批贷/拒贷承诺，不给“自动审批结论”。最终授信由人工完成。
-3. 授信金额/偿债上限数值若用户问到，必须引用本地授信测算（工具 credit_evaluate 返回的真实字段），不得由你编造数字。
-4. 模型(四维风险分 / XGBoost)只用于“人工核查优先排序”，不进入金额计算，不得说成能预测灾害或违约概率。
-5. 不得输出个人敏感字段：姓名、手机号、地址、耳标明细、API Key、会话文件、数据库密码。
-6. “当前条件下无可行贷款方案”是正常业务结果（infeasible/blocked），不是自动拒贷，也不是永远不能贷。
-7. 数据审定事实：气象 3120 行/26 县、遥感 2392 行、NPP 26 县、环境数据多为公开/派生；经营与金融主表多为脱敏比赛样例。
+【必须守住的口径（关系到数据可靠性与合规，违反就是错答）】
+1. 金额与状态一律引用本地授信测算结果(credit_evaluate)；只有测算链给出的推荐金额才算数。
+2. 四维风险分 / 模型只用于人工核查的优先级排序，不直接决定贷多少，也不代表能预测灾害或违约概率；表述成“用于优先核查”即可，不要升级成“预测”。
+3. 演示样例与待核验资料要如实说明是“演示 / 待核验”口径，不要当成真实现有保单或真实工行台账。
+4. “当前条件下无可行贷款方案”是“按现有资料暂算不出可行方案”，不是被拒贷，也不是永远不能贷；补充资料后可重算。
+5. 不输出个人敏感信息（姓名、手机号、地址、耳标明细、密钥、数据库密码）。自动审批 / 承诺放款不在平台能力内，最终由人工决定；点到一句即可，不必反复强调。
+6. 不要复述数据规模的精确行数、牲畜头数清单或演示样例的具体金额等数字（例如“3120 行”“2392 行”“980 头牛”“271 万”），改用定性描述（如“覆盖高原牧区县”“脱敏的比赛样例”）；平台授信测算给出的唯一建议金额除外。
+7. 用户询问源码 / 代码 / 仓库 / 内部实现时，用一句话简短回绝即可，不算作功能，不做引导性展开或解释。
 
-【回答要求】
-- 回答简短、清晰，面向“教用户怎么用这个项目/这个页面能干什么/这个结论怎么来的”。
-- 所有结论先给答案，再给依据（依据要能从项目口径追溯）。
-- 若问题需要计算实时授信额，优先调用工具 credit_evaluate 而非自己推算。
+【不要给内部开发信息】
+- 不要提供或复述任何仓库地址、git 分支 / commit、服务器或目录路径、内部分层(如 server_v2/server_v3、frontend_v2)或“以某分支/某代码为准”“去代码 / data 文件核对”这类指向内部维护的内容。
+- 用户问到“源码 / 代码 / 放在哪”时，简短说明这是演示项目即可，不给仓库链接或内部入口。
 """
+
+# 全量知识块：固定拼进每个 system（约 2k token），保证所有对外要点常驻、不依赖检索命中。
+KNOWLEDGE_BLOCK = ("\n\n【项目知识库（全量，仅对外客服文档）】\n" + _KB_FULL) if _KB_FULL else ""
 
 # 选择系统可用时，给出可调用的工具说明（用于提示 LLM 何时走工具）
 TOOL_HINT = """
 【可用工具】
 - credit_evaluate(case_id): 调用本地授信测算，返回唯一建议金额/状态/关键财务字段。当用户问“贷多少、建议金额、能否可行、授信测算结果”时，必须优先调用它，不能自己算金额。
 """
-
-
-# ---------------------------------------------------------------------------
-# 知识库：按标题分节
-# ---------------------------------------------------------------------------
-
-_KNOWLEDGE: list[dict[str, Any]] | None = None
-
-
-def _split_markdown(path: Path) -> list[dict[str, str]]:
-    """按二级/三级标题把 md 分成节。"""
-    text = path.read_text(encoding="utf-8", errors="replace")
-    lines = text.splitlines()
-    sections: list[dict[str, str]] = []
-    cur_title = "(前言)"
-    cur_lines: list[str] = []
-    heading_re = re.compile(r"^\s{0,3}(#{1,4})\s+(.*)$")
-
-    def flush():
-        body = "\n".join(cur_lines).strip()
-        if body and len(body) >= 8:
-            sections.append({
-                "source": path.stem,
-                "title": cur_title,
-                "text": body,
-            })
-
-    for ln in lines:
-        m = heading_re.match(ln)
-        if m and len(ln) < 120:
-            flush()
-            cur_title = m.group(2).strip()
-            cur_lines = [ln.strip()]
-        else:
-            if ln.strip():
-                cur_lines.append(ln.strip())
-    flush()
-    return sections
-
-
-def get_knowledge() -> list[dict[str, Any]]:
-    """返回知识节列表（惰性构建，进程内缓存）。"""
-    global _KNOWLEDGE
-    if _KNOWLEDGE is not None:
-        return _KNOWLEDGE
-    sections: list[dict[str, Any]] = []
-    for _, path in KNOWLEDGE_FILES:
-        if path.exists():
-            for sec in _split_markdown(path):
-                sec["source"] = sec["source"]
-                sec["chars"] = len(sec["text"])
-                sections.append(sec)
-    _KNOWLEDGE = sections
-    return sections
-
-
-# ---------------------------------------------------------------------------
-# 选段：关键词 + 来源加权（无外部依赖，稳定）
-# ---------------------------------------------------------------------------
-
-_EMPTY_STOP = {"的", "了", "吗", "呢", "是", "为", "吗", "什么", "怎么", "如何", "一个", "这个", "那个"}
-
-
-def _tokens(text: str) -> set[str]:
-    toks = set(re.findall(r"[\u4e00-\u9fff]{2,}|[A-Za-z]{2,}|\d+", text))
-    return toks - _EMPTY_STOP
-
-
-def select_sections(query: str, top_n: int = 4) -> list[dict[str, Any]]:
-    """基于关键词重叠 + 标题加成，返回最相关的知识节。"""
-    k = get_knowledge()
-    qtok = _tokens(query)
-    if not qtok:
-        return k[:top_n]
-    scored: list[tuple[float, dict[str, Any]]] = []
-    for sec in k:
-        text_tok = _tokens(sec["text"])
-        title_tok = _tokens(sec["title"])
-        text_hits = len(qtok & text_tok)
-        title_hits = len(qtok & title_tok)
-        score = text_hits * 2 + title_hits * 4
-        if len(sec["text"]) < 120:
-            score -= 4  # 过短的段落较少成段信息
-        scored.append((score, sec))
-    scored.sort(key=lambda x: x[0], reverse=True)
-    # 只保留有命中或相关性最高的几段
-    best = [s for sc, s in scored if sc > 0][:top_n]
-    if not best:
-        best = [s for _, s in scored[:top_n]]
-    return best
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +106,16 @@ def _chat_text(system: str, user: str) -> str:
         instructions=system,
     )
     return r.output_text if hasattr(r, "output_text") else str(r)
+
+
+def _chat_text_stream(system: str, user: str) -> Any:
+    """调用 LLM，返回流式响应对象（调用方逐 chunk 读取 output_text）。"""
+    return _get_client().responses.create(
+        model=os.environ.get("OPENAI_CHAT_MODEL", "gpt-5.6-luna"),
+        input=user,
+        instructions=system,
+        stream=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -250,12 +175,19 @@ def run_credit_evaluate(case_id: str, inputs: dict[str, Any] | None = None) -> d
 
 def _route(query: str) -> str:
     """判断是否需要实时数据。返回 'tools' 或 'knowledge'。"""
-    # 强信号：直接提到授信测算 / 建议金额 / 可行方案
-    tool_kw = ["建议金额", "贷多少", "贷款金额", "授信测算", "授信结果", "测算看看",
-               "建议贷款", "金额", "可行", "可行性", "能贷多少", "credit_evaluate"]
     q = query
+    # 优先：明确的授信测算触发词（要"给某主体算额度/测算结果"）
+    tool_kw = ["建议贷多少", "能贷多少", "可贷多少", "贷多少", "贷多少钱", "贷款多少",
+               "授信测算结果", "credit_evaluate", "帮我算", "帮我测算", "算一下",
+               "测算一下", "建议贷款", "推荐贷款", "建议授信"]
     if any(k in q for k in tool_kw):
         return "tools"
+    # 次优先：教学 / 使用引导问法（怎么用、怎么算、步骤、是什么）→ 知识，别再误触测算
+    teach_kw = ["怎么用", "如何用", "怎么操作", "如何操作", "怎么弄", "怎么算",
+                "怎么计算", "如何计算", "计算步骤", "使用方法", "怎么", "如何",
+                "是什么", "干什么", "干嘛", "流程", "步骤", "介绍"]
+    if any(k in q for k in teach_kw):
+        return "knowledge"
     # 进一步用一次轻量 LLM 判断（知识问题走这里）
     try:
         sys_p = (
@@ -307,11 +239,8 @@ def answer(query: str, history: list[dict[str, str]] | None = None) -> dict[str,
     # 1) 意图路由
     route = _route(query)
 
-    # 2) 准备上下文片段
-    sections = select_sections(query, top_n=4)
-    context_blob = "\n\n".join(
-        f"【来自《{s['source']}》·{s['title']}】\n{s['text'][:1500]}" for s in sections
-    )
+    # 2) 知识：对外文档全量固定进 system（KNOWLEDGE_BLOCK），此处仅保留参考来源标记
+    sections = KB_SECTIONS_REF
 
     tool_result = None
     tool = None
@@ -329,13 +258,11 @@ def answer(query: str, history: list[dict[str, str]] | None = None) -> dict[str,
 
     # 3) 拼装回答 prompt
     user_prompt = f"用户问题：{query}\n\n"
-    if context_blob:
-        user_prompt += f"以下是与问题相关的项目资料片段：\n{context_blob}\n\n"
     if tool_result:
         safe = _strip_sensitive(json.dumps(tool_result, ensure_ascii=False, default=str)[:3000])
         user_prompt += f"实时授信测算结果（本地复算，供你引用真实数据）：\n{safe}\n"
 
-    sys_p = SYSTEM_HEAD
+    sys_p = SYSTEM_HEAD + KNOWLEDGE_BLOCK
     if route == "tools":
         sys_p += "\n\n用户明确要授信结果。请把上方【实时授信测算结果】中的关键字段（状态、唯一建议金额、关键瓶颈)转述给用户，并说明这是本地授信测算链的可复算结果、非自动审批决定。"
 
@@ -345,9 +272,87 @@ def answer(query: str, history: list[dict[str, str]] | None = None) -> dict[str,
         "answer": answer_text,
         "tool": tool,
         "tool_result": tool_result,
-        "sections": [f"{s['source']}·{s['title']}" for s in sections],
+        "sections": sections,
         "needs_verification": route == "tools" and bool(tool_result),
     }
+
+
+def _prepare(query: str, history: list[dict[str, str]] | None = None) -> dict[str, Any]:
+    """公共的意图路由 + 上下文/工具准备（answer 与 answer_stream 共用）。"""
+    query = (query or "").strip()
+    history = history or []
+    route = _route(query)
+    sections = KB_SECTIONS_REF
+    tool_result = None
+    tool = None
+    if route == "tools":
+        cid = "bankgong-green-coop"
+        if any(k in query for k in ["百巴", "babba", "资料不足", "blocked"]):
+            for c in available_cases():
+                if c.get("blocked"):
+                    cid = c["id"]
+                    break
+        raw_result = run_credit_evaluate(cid)
+        tool = "credit_evaluate"
+        tool_result = raw_result
+    user_prompt = f"用户问题：{query}\n\n"
+    if tool_result:
+        safe = _strip_sensitive(json.dumps(tool_result, ensure_ascii=False, default=str)[:3000])
+        user_prompt += f"实时授信测算结果（本地复算，供你引用真实数据）：\n{safe}\n"
+    sys_p = SYSTEM_HEAD + KNOWLEDGE_BLOCK
+    if route == "tools":
+        sys_p += "\n\n用户明确要授信结果。请把上方【实时授信测算结果】中的关键字段（状态、唯一建议金额、关键瓶颈)转述给用户，并说明这是本地授信测算链的可复算结果、非自动审批决定。"
+    return {
+        "route": route, "sys_p": sys_p, "user_prompt": user_prompt,
+        "tool": tool, "tool_result": tool_result,
+        "sections": sections,
+    }
+
+
+def answer_stream(query: str, history: list[dict[str, str]] | None = None):
+    """流式回答生成器。yield dict 事件序列：
+      {"type":"meta", "tool":..., "tool_result":..., "needs_verification":bool, "sections":[...]}
+      {"type":"chunk", "text": "..."}           # 逐段文本
+      {"type":"done"}
+    问候/空输入同样以 chunk/done 给出。
+    """
+    query = (query or "").strip()
+    if not query:
+        yield {"type": "meta", "tool": None, "tool_result": None, "needs_verification": False, "sections": []}
+        yield {"type": "chunk", "text": "请问想了解工银牧融平台的哪一方面？"}
+        yield {"type": "done"}
+        return
+    if query in {"你好", "您好", "hi", "hello", "在吗"}:
+        yield {"type": "meta", "tool": None, "tool_result": None, "needs_verification": False, "sections": []}
+        greeting = ("你好，我是工银牧融演示助手。我懂这个项目的口径和用法，也能帮你调本地授信测算。你可以问我：\n"
+                    "· 这个平台是做什么的？\n· 授信工作台怎么用？\n· 某案例建议贷多少？\n· 模型和授信是什么关系？")
+        yield {"type": "chunk", "text": greeting}
+        yield {"type": "done"}
+        return
+    prep = _prepare(query, history)
+    yield {
+        "type": "meta",
+        "tool": prep["tool"], "tool_result": prep["tool_result"],
+        "needs_verification": prep["route"] == "tools" and bool(prep["tool_result"]),
+        "sections": prep["sections"],
+    }
+    try:
+        stream = _chat_text_stream(prep["sys_p"], prep["user_prompt"])
+        # 流式响应必须迭代事件才有增量文本；不能读未消费的 stream.output_text（迭代前为空）
+        for ev in stream:
+            piece = ""
+            dt = getattr(ev, "delta", None)
+            if isinstance(dt, str):
+                piece = dt
+            elif dt is not None:
+                piece = getattr(dt, "text", None) or ""
+            if not piece:
+                piece = getattr(ev, "text", None) or ""
+            if piece:
+                yield {"type": "chunk", "text": piece}
+    except Exception:
+        yield {"type": "chunk", "text": "\n\n[回答生成中断，请稍后再试。]"}
+    yield {"type": "done"}
 
 
 def _strip_sensitive(text: str) -> str:

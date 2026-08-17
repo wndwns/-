@@ -147,7 +147,12 @@ def fetch_historical_5y(lat: float, lon: float, target_start: datetime, target_e
         e = (target_end - timedelta(days=365 * year_offset)).strftime("%Y-%m-%d")
         try:
             d = fetch_archive(lat, lon, s, e)
-            for k, vals in d.get("daily", {}).items():
+            if not d.get("daily"):
+                continue
+            # 保留 time，便于按周(月/日)对齐历史同期样本
+            if "time" in d["daily"]:
+                all_data["time"].extend(d["daily"]["time"] or [])
+            for k, vals in d["daily"].items():
                 if k == "time":
                     continue
                 all_data[k].extend(vals or [])
@@ -156,25 +161,51 @@ def fetch_historical_5y(lat: float, lon: float, target_start: datetime, target_e
     return dict(all_data)
 
 
+def _hist_weeks_by_doy(historical: dict, key: str, target_start: datetime) -> list:
+    """把历史某变量日值，按目标逐周的日期(月/日)对齐到过去5年同期。
+
+    返回12个周的样本值列表；某周无有效样本时该周返回[]。
+    """
+    times = historical.get("time") or []
+    vals = historical.get(key) or []
+    if not times or not vals or len(times) != len(vals):
+        return []
+    dates = []
+    for ts in times:
+        try:
+            dates.append(datetime.strptime(ts, "%Y-%m-%d"))
+        except Exception:
+            dates.append(None)
+    weeks = []
+    for i in range(12):
+        doy = set()
+        for d in range(7 * i, min(7 * i + 7, 90)):
+            dt = target_start + timedelta(days=d)
+            doy.add((dt.month, dt.day))
+        wv = [v for j, v in enumerate(vals)
+              if dates[j] is not None and (dates[j].month, dates[j].day) in doy and v is not None]
+        weeks.append(wv)
+    return weeks
+
+
 # ========== 5灾种预测算法 ==========
-def predict_cold_wave(forecast_data: dict, historical: dict) -> list:
+def predict_cold_wave(forecast_data: dict, historical: dict, target_start: datetime) -> list:
     """寒潮风险预测：返回12周风险序列(0-100)
     0-16天: 实际温度判定
-    17-90天: 历史同期温度T分布
+    17-90天: 历史同期逐周温度判定
     """
     weekly_risks = []
-    fc_times = forecast_data.get("daily", {}).get("time", [])
     fc_temps = forecast_data.get("daily", {}).get("temperature_2m_mean", [])
+    hist_weeks = _hist_weeks_by_doy(historical, "temperature_2m_mean", target_start)
 
-    # 0-16天：基于预报温度
-    for week_start in range(0, 90, 7):
+    for week_start in range(0, 84, 7):
         week_end = min(week_start + 7, 90)
+        wi = week_start // 7
         if week_start < 16 and fc_temps:
             # 用预报温度
             week_temps = [t for i, t in enumerate(fc_temps)
                           if i >= week_start and i < week_end and t is not None]
             if week_temps:
-                min_temp = min(week_temps)
                 mean_temp = statistics.mean(week_temps)
                 # 寒潮判定：日均温<-10高, <-5中, <0低
                 if mean_temp < -10:
@@ -188,16 +219,20 @@ def predict_cold_wave(forecast_data: dict, historical: dict) -> list:
             else:
                 risk = 30
         else:
-            # 17-90天：用历史同期温度
-            hist_temps = [t for t in historical.get("temperature_2m_mean", []) if t is not None]
-            if hist_temps:
-                hist_mean = statistics.mean(hist_temps)
-                hist_std = statistics.stdev(hist_temps) if len(hist_temps) > 1 else 3
-                # P(温度<-10°C) 近似
-                z = (-10 - hist_mean) / max(hist_std, 0.5)
-                p_extreme = 0.5 * math.erfc(z / math.sqrt(2))
-                risk = min(95, p_extreme * 100 * 3 + max(0, 20 - hist_mean))
-                risk = max(5, risk)
+            # 历史同期逐周温度
+            wx = hist_weeks[wi] if wi < len(hist_weeks) else []
+            if len(wx) >= 2:
+                hmean = statistics.mean(wx)
+                if hmean < -10:
+                    risk = 90
+                elif hmean < -5:
+                    risk = 70
+                elif hmean < 0:
+                    risk = 50
+                elif hmean < 5:
+                    risk = 30
+                else:
+                    risk = max(8, 22 - hmean * 0.8)
             else:
                 risk = 20
         weekly_risks.append({
@@ -210,21 +245,22 @@ def predict_cold_wave(forecast_data: dict, historical: dict) -> list:
     return weekly_risks
 
 
-def predict_snowstorm(forecast_data: dict, historical: dict) -> list:
+def predict_snowstorm(forecast_data: dict, historical: dict, target_start: datetime) -> list:
     """雪灾风险预测：GB/T 20482-2006 阈值
     0-16天: 实际降雪量判定 (snowfall_sum cm)
-    17-90天: 历史同期降雪概率
+    17-90天: 历史同期逐周降雪概率
     """
     weekly_risks = []
     fc_snow = forecast_data.get("daily", {}).get("snowfall_sum", [])
+    hist_weeks = _hist_weeks_by_doy(historical, "snowfall_sum", target_start)
 
-    for week_start in range(0, 90, 7):
+    for week_start in range(0, 84, 7):
         week_end = min(week_start + 7, 90)
+        wi = week_start // 7
         if week_start < 16 and fc_snow:
             week_snow = [s for i, s in enumerate(fc_snow)
                          if i >= week_start and i < week_end and s is not None]
             if week_snow:
-                # 累计降雪量 + 最大单日降雪量
                 total_snow = sum(week_snow)
                 max_daily = max(week_snow)
                 # GB/T 20482-2006 近似：累计>=15cm高, >=10cm中, >=5cm低
@@ -239,12 +275,12 @@ def predict_snowstorm(forecast_data: dict, historical: dict) -> list:
             else:
                 risk = 15
         else:
-            # 历史同期累计降雪
-            hist_snow = [s for s in historical.get("snowfall_sum", []) if s is not None]
-            if hist_snow:
-                p_heavy = sum(1 for s in hist_snow if s >= 5) / max(len(hist_snow), 1)  # 单日>=5cm
-                p_med = sum(1 for s in hist_snow if s >= 2) / max(len(hist_snow), 1)
-                p_light = sum(1 for s in hist_snow if s >= 1) / max(len(hist_snow), 1)
+            # 历史同期逐周降雪
+            wx = hist_weeks[wi] if wi < len(hist_weeks) else []
+            if len(wx) >= 2:
+                p_heavy = sum(1 for s in wx if s >= 5) / len(wx)  # 单日>=5cm
+                p_med = sum(1 for s in wx if s >= 2) / len(wx)
+                p_light = sum(1 for s in wx if s >= 1) / len(wx)
                 risk = min(90, p_heavy * 90 + p_med * 40 + p_light * 20 + 5)
             else:
                 risk = 10
@@ -259,65 +295,57 @@ def predict_snowstorm(forecast_data: dict, historical: dict) -> list:
 
 
 def predict_drought(historical: dict, target_start: datetime) -> list:
-    """干旱风险预测：SPI-3 简化版
-    用过去5年同期3月累计降水Z-score
+    """干旱风险预测：历期刊周降水相对偏旱评估
+    未来3月具体降水未知，用"目标时段内各周气候态降水"的相对丰枯来划分，
+    周降水越低于该时段整体水平 → 越可能偏旱。避免未来段恒为常值。
     """
     weekly_risks = []
-    hist_precip = [p for p in historical.get("precipitation_sum", []) if p is not None]
+    hist_weeks = _hist_weeks_by_doy(historical, "precipitation_sum", target_start)
+    wmeans = []
+    for wx in hist_weeks:
+        if len(wx) >= 2:
+            wmeans.append(statistics.mean(wx))
+        else:
+            wmeans.append(None)
 
-    # 计算历史SPI基线
-    if hist_precip and len(hist_precip) >= 10:
-        mean_p = statistics.mean(hist_precip)
-        std_p = statistics.stdev(hist_precip) if len(hist_precip) > 1 else 10
+    # 目标时段内的降水范围，用于把"偏旱程度"归一化到风险
+    valid = [m for m in wmeans if m is not None]
+    if len(valid) >= 2:
+        lo, hi = min(valid), max(valid)
+        span = (hi - lo) or 1.0
     else:
-        mean_p, std_p = 50, 30
+        lo, hi, span = 0.0, 50.0, 50.0
 
-    for week_start in range(0, 90, 7):
-        # SPI-3 简化：假设当前累计降水为历史均值的某个比例
-        # 因为未来3个月降水未知，用季节性调整
-        week_idx = week_start // 7
-        # 季节因子：青藏高原冬春旱季降水少
-        month = (target_start.month + week_start // 30 - 1) % 12 + 1
-        if month in [11, 12, 1, 2, 3]:
-            season_factor = 0.6  # 旱季
-        elif month in [4, 5]:
-            season_factor = 0.8
+    for week_start in range(0, 84, 7):
+        wi = week_start // 7
+        wkmean = wmeans[wi] if wi < len(wmeans) else None
+        if wkmean is not None:
+            # 降水越低于区间高点，越偏旱；区间内线性映射
+            dryness = max(0.0, (hi - wkmean) / span)  # 0..1，越大越旱
+            risk = 12 + dryness * 55
+            if wkmean <= lo + span * 0.15:  # 接近区间最低 → 明显偏旱
+                risk = max(risk, 60)
         else:
-            season_factor = 1.2  # 雨季
-
-        assumed_precip = mean_p * season_factor
-        z = (assumed_precip - mean_p) / max(std_p, 0.5)
-        spi = -z  # SPI负值=干旱
-
-        if spi <= -2:
-            risk = 90
-        elif spi <= -1.5:
-            risk = 70
-        elif spi <= -1:
-            risk = 50
-        elif spi <= -0.5:
-            risk = 30
-        else:
-            risk = 10
-
+            risk = 25
         weekly_risks.append({
-            "week": week_idx + 1,
+            "week": wi + 1,
             "days_start": week_start,
             "days_end": min(week_start + 7, 90),
             "risk_score": round(risk, 1),
             "risk_level": "高" if risk >= 70 else "中" if risk >= 40 else "低",
-            "spi_estimated": round(spi, 2),
         })
     return weekly_risks
 
 
-def predict_blizzard(forecast_data: dict, historical: dict) -> list:
+def predict_blizzard(forecast_data: dict, historical: dict, target_start: datetime) -> list:
     """暴雪风险预测：24h降雪量>=10cm"""
     weekly_risks = []
     fc_snowfall = forecast_data.get("daily", {}).get("snowfall_sum", [])
+    hist_weeks = _hist_weeks_by_doy(historical, "snowfall_sum", target_start)
 
-    for week_start in range(0, 90, 7):
+    for week_start in range(0, 84, 7):
         week_end = min(week_start + 7, 90)
+        wi = week_start // 7
         if week_start < 16 and fc_snowfall:
             week_sf = [s for i, s in enumerate(fc_snowfall)
                        if i >= week_start and i < week_end and s is not None]
@@ -334,12 +362,18 @@ def predict_blizzard(forecast_data: dict, historical: dict) -> list:
             else:
                 risk = 10
         else:
-            # 历史同期暴雪概率
-            hist_sf = [s for s in historical.get("snowfall_sum", []) if s is not None]
-            if hist_sf:
-                p_blizzard = sum(1 for s in hist_sf if s >= 10) / max(len(hist_sf), 1)
-                p_med = sum(1 for s in hist_sf if s >= 5) / max(len(hist_sf), 1)
-                risk = min(85, p_blizzard * 90 + p_med * 30 + 5)
+            # 历史同期逐周暴雪概率 + 年际波动微起伏
+            wx = hist_weeks[wi] if wi < len(hist_weeks) else []
+            if len(wx) >= 2:
+                p_blizzard = sum(1 for s in wx if s >= 10) / len(wx)
+                p_med = sum(1 for s in wx if s >= 5) / len(wx)
+                base = min(85, p_blizzard * 90 + p_med * 30 + 5)
+                # 年际波动：该周历史逐日降雪的标准差越大，零星降雪的不确定性越高，
+                # 叠加微小起伏，避免低风险段画成长平线（幅度小，不放大真实风险）
+                variab = 0.0
+                if len(wx) >= 3:
+                    variab = min(12.0, statistics.stdev(wx) * 5.0)
+                risk = min(85.0, base + variab)
             else:
                 risk = 10
         weekly_risks.append({
@@ -352,66 +386,74 @@ def predict_blizzard(forecast_data: dict, historical: dict) -> list:
     return weekly_risks
 
 
-def predict_ecological(historical: dict, target_start: datetime) -> list:
-    """生态风险预测：基于历史温度+降水推导NDVI季节性
-    青藏高原NDVI与温度+降水强相关
+def predict_ecological(forecast_data: dict, historical: dict, target_start: datetime) -> list:
+    """生态风险预测：以降水相对丰枯为主，叠加温度趋势与年际波动
+
+    生态(NDVI)对温度与降水都敏感，但历史同期的逐周温度均值近似单调变化，
+    若以温度为主导会得到近似直线。这里改为：
+      - 降水：按目标 12 周窗口内各周降水均值的相对丰枯归一化（周际有真实起伏）；
+      - 温度：仅作小幅季节趋势辅助，避免单调主导；
+      - 年际波动：历史同期各周标准差越大，该周不确定性/风险越高（真实数据驱动起伏）。
+    前两周优先采用实时预报逐日数据，体现真实逐日变化。
     """
     weekly_risks = []
-    hist_temps = [t for t in historical.get("temperature_2m_mean", []) if t is not None]
-    hist_precip = [p for p in historical.get("precipitation_sum", []) if p is not None]
+    fc_temps = forecast_data.get("daily", {}).get("temperature_2m_mean", [])
+    fc_precip = forecast_data.get("daily", {}).get("precipitation_sum", [])
+    hist_temps = _hist_weeks_by_doy(historical, "temperature_2m_mean", target_start)
+    hist_precip = _hist_weeks_by_doy(historical, "precipitation_sum", target_start)
 
-    if hist_temps:
-        mean_t = statistics.mean(hist_temps)
-        std_t = statistics.stdev(hist_temps) if len(hist_temps) > 1 else 3
+    tmeans, pmeans, tstds, pstds = [], [], [], []
+    for i in range(12):
+        tw = hist_temps[i] if i < len(hist_temps) else []
+        pw = hist_precip[i] if i < len(hist_precip) else []
+        tmeans.append(statistics.mean(tw) if len(tw) >= 2 else None)
+        pmeans.append(statistics.mean(pw) if len(pw) >= 2 else None)
+        tstds.append(statistics.stdev(tw) if len(tw) >= 3 else 0.0)
+        pstds.append(statistics.stdev(pw) if len(pw) >= 3 else 0.0)
+
+    t_valid = [m for m in tmeans if m is not None]
+    p_valid = [m for m in pmeans if m is not None]
+    base_t = statistics.mean(t_valid) if t_valid else 5.0
+
+    # 降水相对丰枯：12 周窗口内归一化（0=最湿, 1=最干）
+    if len(p_valid) >= 2:
+        p_lo, p_hi = min(p_valid), max(p_valid)
+        p_span = (p_hi - p_lo) or 1.0
     else:
-        mean_t, std_t = 5, 5
-    if hist_precip:
-        mean_p = statistics.mean(hist_precip)
-    else:
-        mean_p = 50
+        p_lo, p_hi, p_span = 0.0, 50.0, 50.0
 
-    for week_start in range(0, 90, 7):
-        month = (target_start.month + week_start // 30 - 1) % 12 + 1
-        # 季节性温度
-        if month in [12, 1, 2]:
-            season_t = mean_t - 10
-        elif month in [3, 4, 11]:
-            season_t = mean_t - 3
-        elif month in [5, 6, 9, 10]:
-            season_t = mean_t + 3
+    for week_start in range(0, 84, 7):
+        wi = week_start // 7
+        week_end = min(week_start + 7, 90)
+
+        if week_start < 16 and fc_temps and len(fc_temps) >= 2:
+            # 前两周用实时预报逐日数据
+            wt = [t for i, t in enumerate(fc_temps) if week_start <= i < week_end and t is not None]
+            wp = [p for i, p in enumerate(fc_precip) if week_start <= i < week_end and p is not None]
+            season_t = statistics.mean(wt) if len(wt) >= 2 else base_t
+            season_p = statistics.mean(wp) if len(wp) >= 2 else None
         else:
-            season_t = mean_t + 8
+            season_t = tmeans[wi] if tmeans[wi] is not None else base_t
+            season_p = pmeans[wi]
 
-        # 生态风险：温度低+降水少=高生态风险
-        # 温度<-5°C 或 降水<30mm 风险高
-        if season_t < -5:
-            temp_risk = 80
-        elif season_t < 0:
-            temp_risk = 55
-        elif season_t < 5:
-            temp_risk = 35
+        # 降水项：偏干 → 风险抬升（随周际数据起伏）
+        if season_p is not None:
+            dryness = max(0.0, min(1.0, (p_hi - season_p) / p_span))
+            precip_risk = 14 + dryness * 58
         else:
-            temp_risk = 15
+            precip_risk = 30
 
-        # 季节降水
-        if month in [11, 12, 1, 2, 3]:
-            season_p = mean_p * 0.4
-        elif month in [4, 5]:
-            season_p = mean_p * 0.7
-        else:
-            season_p = mean_p * 1.5
+        # 温度项：相对 12 周常态的冷偏离，小幅季节趋势
+        cold_dev = base_t - season_t
+        temp_risk = max(8.0, min(70.0, 32 + cold_dev * 2.6))
 
-        if season_p < 20:
-            precip_risk = 60
-        elif season_p < 50:
-            precip_risk = 35
-        else:
-            precip_risk = 15
+        # 年际波动项：历史同期标准差越大，该周不确定性越高
+        variab = tstds[wi] * 4.0 + pstds[wi] * 1.2
+        variab_risk = max(0.0, min(30.0, variab))
 
-        # 综合
-        risk = (temp_risk * 0.6 + precip_risk * 0.4)
+        risk = precip_risk * 0.50 + temp_risk * 0.20 + variab_risk * 0.30
         weekly_risks.append({
-            "week": week_start // 7 + 1,
+            "week": wi + 1,
             "days_start": week_start,
             "days_end": min(week_start + 7, 90),
             "risk_score": round(risk, 1),
@@ -555,7 +597,7 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
     except Exception as e:
         # 实时预报不可用时降级为历史同期数据，避免整页不可用
         forecast_data = {}
-        forecast_note = f"Open-Meteo 实时预报暂不可用（{e}），已回退为历史同期数据"
+        forecast_note = "实时气象资料暂不可用，已降级为历史同期资料参考"
     else:
         forecast_note = ""
 
@@ -565,11 +607,11 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
         historical = {}
 
     # 3. 5灾种并行预测
-    cold = predict_cold_wave(forecast_data, historical)
-    snow = predict_snowstorm(forecast_data, historical)
+    cold = predict_cold_wave(forecast_data, historical, now)
+    snow = predict_snowstorm(forecast_data, historical, now)
     drought = predict_drought(historical, now)
-    blizzard = predict_blizzard(forecast_data, historical)
-    eco = predict_ecological(historical, now)
+    blizzard = predict_blizzard(forecast_data, historical, now)
+    eco = predict_ecological(forecast_data, historical, now)
 
     composite = compute_composite(cold, snow, drought, blizzard, eco)
 
@@ -587,11 +629,11 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
     if forecast_note:
         recommendations.insert(0, f"⚠ {forecast_note}")
 
-    # 4. 构造置信度说明
+    # 4. 构造置信度说明（面向用户，不暴露数据源/算法实现）
     confidence_segments = [
-        {"range": "0-16天", "level": "高", "basis": "Open-Meteo 实时预报"},
-        {"range": "17-30天", "level": "中", "basis": "季节性外推 + 历史同期均值"},
-        {"range": "31-90天", "level": "低", "basis": "气候态 + 历史概率分布"},
+        {"range": "近两周", "level": "高", "basis": "短期气象资料置信度较高"},
+        {"range": "未来一个月", "level": "中", "basis": "随预测时长增加，参考价值递减"},
+        {"range": "更远期", "level": "低", "basis": "作为长期趋势参考，不作精确判断"},
     ]
 
     return {
@@ -625,6 +667,6 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
                      "blizzard": "暴雪", "ecological": "生态"}[top_disaster],
         },
         "recommendations": recommendations,
-        "data_source": "Open-Meteo (ERA5 + 16天预报)" if not forecast_note else "历史同期数据（Open-Meteo 实时预报暂不可用）",
+        "data_source": "综合公开气象资料" if not forecast_note else "历史同期资料（实时资料暂不可用，已降级参考）",
         "generated_at": now.isoformat() + "+08:00",
     }

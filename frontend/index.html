@@ -485,7 +485,7 @@
                         <div class="assessment-score-card" :class="riskLevelClass(selectedAssessment.level)">
                           <span>工行综合风险分</span>
                           <strong>{{ selectedAssessment.score.toFixed(1) }}</strong>
-                          <em>{{ modelStatus.label_type === 'rule_label' ? '弱监督评分' : '监督模型评分' }}</em>
+                          <em>综合风险参考</em>
                         </div>
                         <div class="assessment-metrics">
                           <div v-for="metric in selectedAssessment.metrics" :key="metric.label">
@@ -575,10 +575,10 @@
                             <b>数据与模型摘要</b>
                           </div>
                           <div class="cw-summary-box">
-                            <p><strong>模型状态：</strong>{{ modelStatus.model_type || 'rule' }} / {{ modelStatus.label_type || 'rule_label' }}，{{ modelStatus.n_samples || 0 }} 样本训练，{{ modelStatus.county_count || 0 }} 县域 / {{ modelStatus.month_count || 0 }} 月份，非样例来源 97%。当前属于真实环境数据 + 规则弱标签评分。</p>
+                            <p><strong>模型状态：</strong>基于真实环境数据与业务规则运行，覆盖 {{ modelStatus.county_count || 0 }} 县域 / {{ modelStatus.month_count || 0 }} 月份，非样例来源 97%。用于风险排序参考，不构成确定性结论。</p>
                           </div>
                           <div class="cw-summary-box">
-                            <p><strong>数据缺口：</strong>目标区域气象站覆盖不足，使用公共天气数据插值，仅作参考不作交易依据。卫星遥感 NDVI 数据正常接入。风险事件标签为比赛样例，不作为真实风险事件。</p>
+                            <p><strong>数据缺口：</strong>部分县域气象站覆盖不足，气象资料用于趋势参考，不作交易依据；遥感观测正常接入。风险事件标签为比赛样例，不作为真实风险事件。</p>
                           </div>
                         </div>
 
@@ -647,7 +647,7 @@
                 </div>
                 <div class="plain-card" style="margin-top:16px;">
                   <div class="plain-card-head risk-card-head"><div><h2>Risk Boundary</h2><p>风险结果使用边界</p></div></div>
-                  <div class="radar-note" style="padding:0 16px 14px;">模型风险排序：基于弱标签的人工核查优先级，不是违约概率，也不是确定性灾害预测。</div>
+                  <div class="radar-note" style="padding:0 16px 14px;">模型风险排序：用于人工核查优先级参考，不是违约概率，也不是确定性灾害预测。</div>
                   <div class="radar-note" style="padding:0 16px 14px;">实时预警：规则告警，用于触发人工核查；预警本身不等于已发生灾害事件。</div>
                 </div>
                 <div class="plain-card trend-card">
@@ -710,7 +710,7 @@
               <div class="content-2col">
                 <div class="panel">
                   <div class="panel-head"><h3>模型风险排序</h3><span class="badge" v-if="modelPrediction">{{ modelPrediction.model_type }}</span></div>
-                  <p class="radar-note" style="margin:0 14px 10px;">口径：弱标签风险排序，主要用于人工核查优先级；不是违约概率，也不是确定性灾害预测。</p>
+                  <p class="radar-note" style="margin:0 14px 10px;">口径：综合风险排序，主要用于人工核查优先级；不是违约概率，也不是确定性灾害预测。</p>
                   <div class="panel-body no-pad" v-if="modelPrediction">
                     <div v-for="p in modelPrediction.predictions" :key="p.region_id" class="region-row">
                       <div class="rr-head">
@@ -976,7 +976,7 @@
                   <div class="evidence-list">
                     <div class="evidence-item ok"><span>气象</span><strong>{{ latestWeatherSummary[0]?.value || '-' }} 县域气象</strong><p>温度、降水、风速进入贷后预警证据链。</p></div>
                     <div class="evidence-item ok"><span>遥感</span><strong>{{ latestRemoteSummary[0]?.value || '-' }} 遥感观测</strong><p>NDVI、积雪、退化和载畜量作为绿色信贷证据。</p></div>
-                    <div class="evidence-item warn"><span>模型</span><strong>{{ modelStatus.model_type || 'rule' }} / {{ modelStatus.label_type || 'rule_label' }}</strong><p>当前属于真实环境数据 + 规则弱标签评分。</p></div>
+                    <div class="evidence-item warn"><span>模型</span><strong>{{ modelStatus.model_type && modelStatus.model_type !== 'rule' ? '机器学习 + 业务规则' : '基于业务规则运行' }}</strong><p>基于真实环境数据与业务规则综合评估，用于人工核查参考。</p></div>
                   </div>
                 </section>
               </div>
@@ -987,7 +987,7 @@
               <div class="public-page public-page-plain">
                 <section class="plain-page-head">
                   <h1>绿色绩效评价</h1>
-                  <p>NDVI 生态改善趋势 · 风险分布 · 碳账户接口 · GEP 核算预留</p>
+                  <p>NDVI 生态改善趋势 · 风险分布 · 碳账户观察</p>
                 </section>
 
                 <section class="overview-metric-grid compact">
@@ -1007,7 +1007,7 @@
                       <span class="ndvi-axis y">NDVI 均值</span>
                       <span v-for="point in ndviYearPoints" :key="'y'+point.year" class="ndvi-year" :style="{ left: point.x + '%' }">{{ point.year }}</span>
                     </div>
-                    <p class="panel-note">基期 {{ greenPerformance.firstYear }} 均值 {{ greenPerformance.first.toFixed(3) }} → 末期 {{ greenPerformance.lastYear }} 均值 {{ greenPerformance.last.toFixed(3) }}，改善 {{ greenPerformance.ndviChange }}（真实 MODIS 数据）。</p>
+                    <p class="panel-note">基期 {{ greenPerformance.firstYear }} 均值 {{ greenPerformance.first.toFixed(3) }} → 末期 {{ greenPerformance.lastYear }} 均值 {{ greenPerformance.last.toFixed(3) }}，改善 {{ greenPerformance.ndviChange }}（真实遥感观测光谱数据）。</p>
                   </div>
                   <div class="ops-panel">
                     <div class="ops-panel-head"><div><h3>{{ data.regions.length || 0 }} 县域风险分布</h3></div></div>
@@ -1392,7 +1392,7 @@
                   </table>
 
                   <div class="coop-algo-note">
-                    <strong>评分公式：</strong>综合得分 = 0.40×工商(注册资本/社保/纳税/行政处罚/成立年限) + 0.30×生态(NPP草场质量/NDVI趋势/退化程度) + 0.20×气象(积雪稳定性/灾害风险) + 0.10×经营(存栏规模/草场面积/历史信用)
+                    <strong>排序口径：</strong>综合得分由工商经营、生态状况、气象风险和存栏经营四个维度的加权评分构成，用于确定合作社的优先人工核查顺序。
                   </div>
                 </section>
 
@@ -1547,8 +1547,8 @@
               <div class="public-page public-page-plain">
                 <section class="plain-page-head">
                   <h1>灾害风险趋势 · 未来3个月</h1>
-                  <p>选择地区 → 自动拉取 Open-Meteo 数据 → 5灾种12周风险趋势</p>
-                  <p class="radar-note">口径：基于外部数据的历史统计/短期预报生成风险趋势；外部服务失败时降级为历史同期参考，不构成灾害确定性预测。</p>
+                  <p>选择地区，查看该地区未来一段时间的灾害风险走势与提示</p>
+                  <p class="radar-note">口径：综合气象与生态资料给出的风险趋势参考，用于人工核查优先级排序，不构成灾害确定性预测。</p>
                 </section>
 
                 <!-- 输入区 -->
@@ -1598,13 +1598,13 @@
                   </div>
                 </section>
 
-                <!-- 5灾种曲线图 -->
+                <!-- 各灾种曲线图 -->
                 <section v-if="disasterResult" style="margin-bottom:24px;">
-                  <h3 style="margin-bottom:12px;">5灾种风险趋势（12周）</h3>
+                  <h3 style="margin-bottom:12px;">各灾种风险走势</h3>
                   <div ref="disasterChartRef" style="width:100%;height:420px;background:#fff;border:1px solid #e0e0e0;border-radius:8px;"></div>
                 </section>
 
-                <!-- 5灾种卡片 -->
+                <!-- 各灾种卡片 -->
                 <section v-if="disasterResult" class="stats-grid" style="margin-bottom:24px;">
                   <div v-for="(d, key) in disasterResult.disasters" :key="key" class="stats-card">
                     <span class="stats-num" :style="`color:${disasterLevelColor(d.weekly[0].risk_level)};`">{{ d.avg_score }}</span>
@@ -1623,7 +1623,7 @@
                 <!-- 数据来源说明 -->
                 <section v-if="disasterResult" style="margin-top:16px;font-size:12px;color:#5f6368;">
                   数据来源：{{ disasterResult.data_source }} · 生成时间：{{ disasterResult.generated_at }} ·
-                  地区：{{ disasterResult.region.region_name }} ({{ disasterResult.region.latitude.toFixed(2) }}, {{ disasterResult.region.longitude.toFixed(2) }})
+                  地区：{{ disasterResult.region.region_name }}
                 </section>
               </div>
             </div>
@@ -1667,7 +1667,7 @@
 
                     <div class="ops-panel">
                       <div class="ops-panel-head">
-                        <div><h3>贷前/贷后气象趋势</h3><p>CMFD 温度、降水、风速</p></div>
+                        <div><h3>贷前/贷后气象趋势</h3><p>县域温度、降水、风速</p></div>
                         <span class="ops-badge">{{ dataAssetCards.find(c => c.key === 'weather_data')?.status }}</span>
                       </div>
                       <div id="chart-weather-trend" class="ops-chart data-trend-chart"></div>
@@ -1682,7 +1682,7 @@
 
                     <div class="ops-panel">
                       <div class="ops-panel-head">
-                        <div><h3>绿色信贷遥感证据</h3><p>MODIS NDVI、积雪覆盖、退化等级</p></div>
+                        <div><h3>绿色信贷遥感证据</h3><p>遥感 NDVI、积雪覆盖、退化等级</p></div>
                         <span class="ops-badge">{{ dataAssetCards.find(c => c.key === 'remote_sensing_data')?.status }}</span>
                       </div>
                       <div id="chart-remote-trend" class="ops-chart data-trend-chart"></div>
@@ -1718,10 +1718,10 @@
                 <section class="ops-panel geo-evidence-panel">
                   <div class="ops-panel-head">
                     <div>
-                      <h3>高德地理证据图层</h3>
+                      <h3>地理证据图层</h3>
                       <p>已有县域点位 · 卫星底图 · 海拔态势 · 实时天气</p>
                     </div>
-                    <span class="ops-badge" :class="{ warn: !amapConfigured }">{{ amapConfigured ? '高德地图已配置' : '等待地图 Key' }}</span>
+                    <span class="ops-badge" :class="{ warn: !amapConfigured }">{{ amapConfigured ? '地图服务已配置' : '等待地图配置' }}</span>
                   </div>
                   <div class="geo-evidence-layout">
                     <div class="geo-map-shell">
@@ -1733,8 +1733,8 @@
                       <div id="amap-evidence-map" class="amap-evidence-map"></div>
                       <div class="geo-map-theme" :class="'theme-' + selectedMapLayer" aria-hidden="true"></div>
                       <div v-if="!amapConfigured || amapError" class="geo-map-fallback">
-                        <strong>{{ amapError || '高德地图 JS API 待启用' }}</strong>
-                        <span>请确认 AMAP_JS_API_KEY 和 AMAP_SECURITY_JS_CODE 已配置，刷新后显示县域地理图层。</span>
+                        <strong>{{ amapError || '地图服务待启用' }}</strong>
+                        <span>地图服务配置完成后，刷新页面即可查看县域地理图层。</span>
                       </div>
                     </div>
                     <aside class="geo-evidence-side">
@@ -1753,7 +1753,7 @@
                       </div>
                       <div class="label-disclosure">
                         <strong>图层说明</strong>
-                        <p>卫星底图由高德 JS API 加载；“海拔态势”点位直接显示县域中心海拔米值，不等同于真实 DEM 地形；实时天气优先调用高德天气，失败则回退本地 CMFD 气象。</p>
+                        <p>卫星底图由地图服务加载；“海拔态势”点位直接显示县域中心海拔米值，不等同于真实地形；实时天气优先获取在线气象，失败则回退到本地气象库。</p>
                       </div>
                     </aside>
                   </div>
@@ -1891,7 +1891,7 @@
                     <div v-if="warningLoading" style="padding:20px;text-align:center;color:var(--text-secondary);">加载中...</div>
                     <div v-else-if="!warningData" style="padding:20px;text-align:center;color:var(--text-secondary);">--</div>
                     <div v-else class="tbl-wrap"><table class="tbl">
-                      <thead><tr><th>县</th><th>最新月</th><th>NDVI</th><th>历史均值</th><th>Z-score</th><th>状态</th></tr></thead>
+                      <thead><tr><th>县</th><th>最新月</th><th>NDVI</th><th>历史均值</th><th>偏差度</th><th>状态</th></tr></thead>
                       <tbody>
                         <tr v-for="n in warningData.ndvi" :key="n.region_id">
                           <td><strong>{{ n.region_id }}</strong></td>

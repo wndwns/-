@@ -29,7 +29,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -129,6 +129,11 @@ class DemoGuideRequest(BaseModel):
     """演示助手消息请求。"""
     query: str
     history: list[dict[str, str]] = Field(default_factory=list)
+
+
+def _sse(obj) -> str:
+    """把 dict 序列化为 SSE 的 data 帧文本。default=str 兜底 Decimal 等非 JSON 类型。"""
+    return f"data: {json.dumps(obj, ensure_ascii=False, default=str)}\n\n"
 
 
 # ---------------------------------------------------------------------------
@@ -1803,6 +1808,40 @@ def create_app() -> FastAPI:
                 "error": str(exc)[:300],
             }
         return result
+
+    @app.post("/api/demo-guide/stream")
+    def demo_guide_stream(payload: DemoGuideRequest) -> StreamingResponse:
+        """SSE 流式演示助手：逐段返回文本；可随时断开停止生成。"""
+        try:
+            from demo_guide import answer_stream
+        except ImportError:
+            from backend.demo_guide import answer_stream  # type: ignore[no-redef]
+
+        if os.environ.get("DEMO_GUIDE_ENABLED", "true").lower() != "true":
+            async def _disabled():
+                yield _sse({"type": "meta", "tool": None, "tool_result": None,
+                            "needs_verification": False, "sections": []})
+                yield _sse({"type": "chunk", "text": "演示助手当前已停用。"})
+                yield _sse({"type": "done"})
+            return StreamingResponse(_disabled(), media_type="text/event-stream")
+
+        def event_source():
+            try:
+                for ev in answer_stream(payload.query, payload.history):
+                    yield _sse(ev)
+            except Exception as exc:  # noqa: BLE001
+                yield _sse({"type": "chunk", "text": f"\n\n[演示助手暂时不可用：{str(exc)[:120]}]"})
+                yield _sse({"type": "done"})
+
+        return StreamingResponse(
+            event_source(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     # ======================================================================
     # 404 兜底
