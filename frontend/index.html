@@ -1547,27 +1547,22 @@
               <div class="public-page public-page-plain">
                 <section class="plain-page-head">
                   <h1>灾害风险趋势 · 未来3个月</h1>
-                  <p>输入任意地区名 → 自动拉取 Open-Meteo 数据 → 5灾种12周风险趋势</p>
+                  <p>选择地区 → 自动拉取 Open-Meteo 数据 → 5灾种12周风险趋势</p>
                   <p class="radar-note">口径：基于外部数据的历史统计/短期预报生成风险趋势；外部服务失败时降级为历史同期参考，不构成灾害确定性预测。</p>
                 </section>
 
                 <!-- 输入区 -->
                 <section style="margin-bottom:24px;padding:16px;background:#f7f9fc;border-radius:8px;">
                   <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-                    <input v-model="disasterInput" type="text" placeholder="输入地区名（如：班戈县 / 拉萨 / 那曲）"
-                           style="flex:1;min-width:260px;padding:10px 14px;border:1px solid #d0d7de;border-radius:6px;font-size:14px;"
-                           @keyup.enter="runDisasterForecast" />
+                    <select v-model="disasterInput" @change="runDisasterForecast"
+                            style="flex:1;min-width:260px;padding:10px 14px;border:1px solid #d0d7de;border-radius:6px;font-size:14px;background:#fff;">
+                      <option value="">— 请选择地区（26县）—</option>
+                      <option v-for="r in disasterRegions" :key="r.region_id" :value="r.region_name">{{ r.region_name }}</option>
+                    </select>
                     <button @click="runDisasterForecast" :disabled="disasterLoading"
                             style="padding:10px 22px;background:#c00;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">
                       {{ disasterLoading ? '预测中…' : '开始预测' }}
                     </button>
-                    <select v-if="disasterRegions && disasterRegions.length"
-                            v-model="disasterInput"
-                            @change="runDisasterForecast"
-                            style="padding:10px 14px;border:1px solid #d0d7de;border-radius:6px;font-size:14px;max-width:240px;">
-                      <option value="">— 选择26县 —</option>
-                      <option v-for="r in disasterRegions" :key="r.region_id" :value="r.region_name">{{ r.region_name }}</option>
-                    </select>
                   </div>
                   <p v-if="disasterError" style="color:#c00;margin-top:10px;font-size:13px;">{{ disasterError }}</p>
                 </section>
@@ -2076,9 +2071,9 @@
           </div>
         </div>
       </div>
-    </div>
 
     <demo-guide></demo-guide>
+    </div>
 
     <script src="./vendor/vue.global.prod.js"></script>
     <script src="./vendor/echarts.min.js"></script>

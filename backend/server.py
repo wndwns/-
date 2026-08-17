@@ -44,12 +44,16 @@ _PLATFORM_DATA_KEYS = {
 
 # 灾害预测模块（可选，缺失则降级）
 try:
-    from disaster_forecast import forecast_disaster as _forecast_disaster, load_region_mapping as _load_disaster_regions
+    from backend.disaster_forecast import forecast_disaster as _forecast_disaster, load_region_mapping as _load_disaster_regions
     _DISASTER_FORECAST_OK = True
 except Exception as _e:
-    _DISASTER_FORECAST_OK = False
-    _forecast_disaster = None
-    _load_disaster_regions = None
+    try:
+        from disaster_forecast import forecast_disaster as _forecast_disaster, load_region_mapping as _load_disaster_regions
+        _DISASTER_FORECAST_OK = True
+    except Exception as _e2:
+        _DISASTER_FORECAST_OK = False
+        _forecast_disaster = None
+        _load_disaster_regions = None
 
 # ---------------------------------------------------------------------------
 # 路径

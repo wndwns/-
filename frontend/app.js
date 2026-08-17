@@ -2097,7 +2097,7 @@ const app = createApp({
     async runDisasterForecast() {
       const q = (this.disasterInput || "").trim();
       if (!q) {
-        this.disasterError = "请输入地区名（如：班戈县 / 拉萨 / 那曲）";
+        this.disasterError = "请选择地区（如：班戈县）";
         return;
       }
       this.disasterError = "";
