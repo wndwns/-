@@ -565,7 +565,7 @@ function avg(nums) {
 // Vue App
 // ============================================================================
 
-createApp({
+const app = createApp({
   data() {
     return {
       loading: true,
@@ -3122,4 +3122,104 @@ createApp({
     window.removeEventListener("scroll", this.onScroll);
     document.removeEventListener("visibilitychange", this.handleVisibilityChange);
   },
-}).mount("#app");
+});
+
+// ============================================================================
+// 演示助手组件（Demo Guide）—— 浮动客服/教学对话
+// ============================================================================
+const DemoGuide = {
+  data() {
+    return {
+      open: false,
+      msgs: [],
+      input: "",
+      thinking: false,
+      badgeHidden: false,
+    };
+  },
+  computed: {
+    desc() {
+      return "懂项目口径 · 能帮你调授信测算";
+    },
+  },
+  methods: {
+    toggle() {
+      this.open = !this.open;
+      if (this.open) this.badgeHidden = true;
+    },
+    async send() {
+      const q = (this.input || "").trim();
+      if (!q || this.thinking) return;
+      this.msgs.push({ role: "user", text: q });
+      this.input = "";
+      this.thinking = true;
+      try {
+        const resp = await fetch("/api/demo-guide/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: q }),
+        });
+        const j = await resp.json();
+        const a = (j && j.answer) ? j.answer : "抱歉，我没能生成回答。";
+        this.msgs.push({ role: "bot", text: a });
+      } catch (e) {
+        this.msgs.push({ role: "bot", text: "演示助手暂时不可用，请稍后再试。" });
+      } finally {
+        this.thinking = false;
+        this.scrollBottom();
+      }
+    },
+    onKey(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        this.send();
+      }
+    },
+    scrollBottom() {
+      this.$nextTick(() => {
+        const box = this.$refs.list;
+        if (box) box.scrollTop = box.scrollHeight;
+      });
+    },
+    linkify(text) {
+      return String(text || "");
+    },
+  },
+  mounted() {
+    this.msgs.push({
+      role: "bot",
+      text: "你好，我是工银牧融演示助手。我可以讲解项目口径、使用方法，也能帮你调本地授信测算。试试问我：\n· 这个平台是做什么的\n· 班戈绿色牧业合作社建议贷多少",
+    });
+  },
+  template: `
+  <div class="dg">
+    <transition name="dg-fade">
+      <div v-if="open" class="dg-panel">
+        <div class="dg-head">
+          <span class="dg-title">牧融绿链 · 演示助手</span>
+          <span class="dg-sub">{{ desc }}</span>
+          <button class="dg-close" @click="open=false">×</button>
+        </div>
+        <div ref="list" class="dg-body">
+          <div v-for="(m,i) in msgs" :key="i" :class="['dg-msg', m.role]">
+            <div class="dg-bubble">{{ m.text }}</div>
+          </div>
+          <div v-if="thinking" class="dg-msg bot"><div class="dg-bubble dg-typing">正在思考…</div></div>
+        </div>
+        <div class="dg-foot">
+          <textarea v-model="input" :disabled="thinking" rows="2" placeholder="问点什么…（Enter发送）" @keydown="onKey"></textarea>
+          <button class="dg-send" :disabled="thinking" @click="send">发送</button>
+        </div>
+        <div class="dg-note">演示内容为主要面向比赛口径的辅助讲解，不构成审批结论。</div>
+      </div>
+    </transition>
+    <transition name="dg-fade">
+      <button v-if="!open" class="dg-fab" @click="toggle">
+        <span class="dg-fab-ic">💬</span>
+        <span v-if="!badgeHidden" class="dg-badge">?</span>
+      </button>
+    </transition>
+  </div>`,
+};
+
+app.component("demo-guide", DemoGuide).mount("#app");

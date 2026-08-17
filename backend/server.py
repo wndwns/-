@@ -121,6 +121,12 @@ class CreditDecisionEvaluateRequest(BaseModel):
     inputs: dict[str, Any] = Field(default_factory=dict)
 
 
+class DemoGuideRequest(BaseModel):
+    """演示助手消息请求。"""
+    query: str
+    history: list[dict[str, str]] = Field(default_factory=list)
+
+
 # ---------------------------------------------------------------------------
 # data 模块导入（兼容直接运行和模块运行）
 # ---------------------------------------------------------------------------
@@ -1751,6 +1757,48 @@ def create_app() -> FastAPI:
             })
         cases.sort(key=lambda c: c["id"])
         return {"cases": cases, "count": len(cases)}
+
+    # ======================================================================
+    # 演示助手（Demo Guide）
+    # ======================================================================
+
+    @app.get("/api/demo-guide")
+    def demo_guide_info() -> dict[str, Any]:
+        """返回演示助手状态与可用案例（供前端初始化提示）。"""
+        try:
+            from demo_guide import available_cases
+        except ImportError:
+            from backend.demo_guide import available_cases  # type: ignore[no-redef]
+        return {
+            "enabled": os.environ.get("DEMO_GUIDE_ENABLED", "true").lower() == "true",
+            "cases": available_cases(),
+        }
+
+    @app.post("/api/demo-guide/chat")
+    def demo_guide_chat(payload: DemoGuideRequest) -> dict[str, Any]:
+        """处理演示助手一条消息：知识问答或实时授信测算。"""
+        if not payload.query or not payload.query.strip():
+            return {"answer": "请输入问题。", "tool": None, "tool_result": None, "needs_verification": False}
+        try:
+            from demo_guide import answer
+        except ImportError:
+            from backend.demo_guide import answer  # type: ignore[no-redef]
+
+        # 演示助手是否启用于环境变量
+        if os.environ.get("DEMO_GUIDE_ENABLED", "true").lower() != "true":
+            return {"answer": "演示助手当前已停用。", "tool": None, "tool_result": None, "needs_verification": False}
+
+        try:
+            result = answer(payload.query, payload.history)
+        except Exception as exc:  # noqa: BLE001 - 兜底返回可控错误，避免前端白屏
+            return {
+                "answer": f"演示助手暂时不可用（内部错误）。您可以稍后再试，或改用页面功能。",
+                "tool": None,
+                "tool_result": None,
+                "needs_verification": False,
+                "error": str(exc)[:300],
+            }
+        return result
 
     # ======================================================================
     # 404 兜底
