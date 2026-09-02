@@ -199,11 +199,15 @@ function heroImage(scene) {
 
 function buildHeroSlides() {
   return [
-    { scene: "snow", kicker: "ICBC 绿色金融", title: "牧融绿链", desc: "面向高原牧区，把气象遥感、经营台账、授信还款、产业链资金和保险协同转化为工行客户经理可执行的风险评估结论。", image: "" },
+    { scene: "snow", kicker: "ICBC 绿色金融", title: "牧融绿链", desc: "生态监测 → 风险识别 → 授信测算 → 贷后处置，把高原牧区难核验的风险变成可追溯的绿色金融证据链，回答能不能贷、贷多少、贷后怎么管。", image: "" },
     { scene: "grassland", kicker: "授信准入", title: "让高原畜牧数据进入工行风控链路", desc: "从缺抵押、难核验、灾害风险高的牧区场景出发，形成风险筛查、证据核验和客户经理处置清单。", image: "" },
     { scene: "river", kicker: "贷后管理", title: "从放款到回款的闭环监测", desc: "围绕贷款用途、饲草采购、活体交易、物流回款和保险保障，支撑工行贷后核查和风险处置。", image: "" },
     { scene: "sunset", kicker: "银保协同", title: "绿色信贷与保险资料核验", desc: "用雪灾、草场退化、NDVI 和待核验理赔资料形成风险筛查清单，沉淀可复核的普惠服务证据。", image: "" },
   ];
+}
+
+function assessmentActionsTitles(actions) {
+  return (actions || []).map((a) => a.title).join("；");
 }
 
 // ============================================================================
@@ -570,38 +574,26 @@ const app = createApp({
     return {
       loading: true,
       data: null,
-      page: "dashboard",
+      page: "home",
       dashboardTab: "credit",
       creditSubTab: "assessment",
       selectedModule: null,
       dataTab: "weather",
       scrolled: false,
-      // 导航分组（14 个逻辑页面全部保留）
-      navGroups: [
-        {
-          label: "核心业务",
-          items: [
-            { page: "dashboard", name: "授信与贷后工作台" },
-            { page: "supply-chain", name: "产业链" },
-            { page: "insurance", name: "保险协同" },
-            { page: "green-performance", name: "绿色绩效" },
-            { page: "cooperative-ranking", name: "合作社排序" },
-          ],
-        },
-        {
-          label: "数据与证据",
-          items: [
-            { page: "data", name: "数据底座" },
-            { page: "disaster-forecast", name: "灾害预测" },
-          ],
-        },
-        {
-          label: "平台",
-          items: [
-            { page: "home", name: "首页" },
-            { page: "insurance-portfolio", name: "资产/保险资料核验" },
-          ],
-        },
+      // 顶部导航：8 个一级入口 + "更多"下拉（14 个逻辑页面全部保留可达）
+      navMain: [
+        { page: "home", name: "首页" },
+        { page: "dashboard", name: "授信与贷后" },
+        { page: "data", name: "数据底座" },
+        { page: "disaster-forecast", name: "灾害预测" },
+        { page: "supply-chain", name: "产业链" },
+        { page: "insurance", name: "保险协同" },
+        { page: "cooperative-ranking", name: "合作社排序" },
+        { page: "green-performance", name: "绿色绩效" },
+      ],
+      navMoreOpen: false,
+      navMore: [
+        { page: "insurance-portfolio", name: "资产/保险资料核验" },
       ],
 
       // Hero
@@ -611,6 +603,7 @@ const app = createApp({
 
       // 模型
       modelStatus: {},
+      workflowStepKey: "01",
       modelPrediction: null,
       modelTraining: false,
       dataQuality: null,
@@ -961,7 +954,7 @@ const app = createApp({
         tasks.push({
           level: "warn",
           title: "补齐真实业务数据",
-          desc: `当前非样例来源统计为 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}；公开观测、派生数据和待核验来源不等同于真实业务数据。`,
+          desc: `当前公开数据占比 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}；公开观测、派生数据和待核验来源不等同于真实业务数据。`,
           action: "数据底座",
           page: "data",
         });
@@ -1232,7 +1225,7 @@ const app = createApp({
             `训练样本 ${this.formatNumber(this.modelStatus.n_samples || 0)}`,
             `县域 ${this.modelStatus.county_count || 0} 个`,
             `月份 ${this.modelStatus.month_count || 0} 个`,
-            `非样例来源 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}`,
+            `公开数据占比 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}`,
           ],
           state: this.modelStatus.model_type === "ml_hybrid" ? "ok" : "warn",
         });
@@ -1260,6 +1253,73 @@ const app = createApp({
         { key: "05", title: "处置记录", note: matched?.next_action || (score >= 70 || hasOverdue ? "生成处置建议" : "保留监测记录"), state: state(5) },
       ];
     },
+    // 当前评估对象匹配到的贷后工作流任务（五步流程第 04/05 步数据源）
+    workflowMatched() {
+      const assessment = this.selectedAssessment;
+      if (!assessment) return null;
+      const workflow = this.closedLoop?.post_loan_workflow || [];
+      return workflow.find((row) =>
+        row.subject_name === assessment.title || row.region_id === assessment.region_id
+      ) || null;
+    },
+    // 第 01 步：准入画像（主体走画像字段，县域走风险概况）
+    workflowProfileRows() {
+      const assessment = this.selectedAssessment;
+      if (!assessment) return [];
+      if (assessment.type === "subject") return this.subjectProfileRows;
+      const row = assessment.raw || {};
+      return [
+        { label: "对象类型", value: "县域风险池" },
+        { label: "所在县域", value: row.region_name || assessment.title },
+        { label: "评估月份", value: row.month || "-" },
+        { label: "综合风险分", value: row.predicted_score ?? assessment.score.toFixed(1) },
+        { label: "风险等级", value: assessment.level },
+        { label: "主风险因子", value: row.primary_driver || "-" },
+        { label: "建议动作", value: row.action || "-" },
+        { label: "数据属性", value: "公开观测" },
+      ];
+    },
+    // 第 03 步：人工复核任务
+    workflowReviewRows() {
+      const assessment = this.selectedAssessment;
+      if (!assessment) return [];
+      const rows = [];
+      rows.push({
+        title: "复核触发条件",
+        desc: assessment.score >= 55 || (assessment.type === "subject" && assessment.raw.overdue > 0)
+          ? "综合风险分达到人工复核阈值（≥55）或存在逾期记录，需客户经理复核。"
+          : "当前评分低于人工复核阈值，暂不触发复核，保持月度自动评估。",
+      });
+      (assessment.metrics || []).slice(0, 4).forEach((m) => {
+        rows.push({ title: m.label, desc: String(m.value) });
+      });
+      return rows;
+    },
+    // 第 04 步：贷后核查清单
+    workflowCheckRows() {
+      const matched = this.workflowMatched;
+      const assessment = this.selectedAssessment;
+      const rows = [];
+      rows.push({ label: "核查任务状态", value: matched?.task_status || (assessment && assessment.score >= 65 ? "进入核查队列" : "持续观察") });
+      rows.push({ label: "触发方式", value: matched?.trigger_type || "月度风险评估" });
+      rows.push({ label: "责任团队", value: matched?.assigned_to || "工行牧区客户经理" });
+      rows.push({ label: "办理时限", value: matched?.due_date || "-" });
+      rows.push({ label: "材料状态", value: matched?.action_result || "待客户经理确认" });
+      rows.push({ label: "核查要点", value: "经营台账、牲畜存栏、保险状态与资金用途" });
+      return rows;
+    },
+    // 第 05 步：处置记录
+    workflowDisposalRows() {
+      const matched = this.workflowMatched;
+      const assessment = this.selectedAssessment;
+      const rows = [];
+      rows.push({ label: "处置建议", value: matched?.next_action || (assessment && assessment.score >= 70 ? "生成处置建议" : "保留监测记录") });
+      rows.push({ label: "当前进展", value: matched?.action_result || "暂无处置记录" });
+      rows.push({ label: "流程阶段", value: matched?.workflow_stage || "评估报告" });
+      const actions = assessmentActionsTitles(this.assessmentActions);
+      rows.push({ label: "工行动作清单", value: actions || "持续监测" });
+      return rows;
+    },
     subjectProfileRows() {
       const assessment = this.selectedAssessment;
       if (!assessment || assessment.type !== "subject") return [];
@@ -1276,7 +1336,7 @@ const app = createApp({
         { label: "逾期次数", value: `${row.overdue || 0} 次` },
         { label: "保险状态", value: row.insurance_status || row.insurance || "-" },
         { label: "贷款用途", value: row.loan_purpose || "-" },
-        { label: "数据属性", value: row.is_sample ? "sample / demo" : "real" },
+        { label: "数据属性", value: row.is_sample ? "演示样例" : "公开观测" },
       ];
     },
     labelDisclosure() {
@@ -1342,7 +1402,7 @@ const app = createApp({
         { label: "待评估对象", value: this.assessmentObjects.length, note: this.assessmentMode === "region" ? "县域对象池" : "主体授信池" },
         { label: "高风险", value: high, note: "建议立即核查" },
         { label: "中风险", value: medium, note: "进入人工复核" },
-        { label: "模型样本", value: this.formatNumber(this.modelStatus.n_samples || 0), note: this.modelStatus.model_type || "rule" },
+        { label: "模型样本", value: this.formatNumber(this.modelStatus.n_samples || 0), note: this.modelStatus.model_type === "ml_hybrid" ? "机器学习 + 业务规则" : "业务规则模式" },
       ];
     },
     publicRiskKpis() {
@@ -1432,16 +1492,16 @@ const app = createApp({
       });
       return [
         card("weather_data", "县域气象数据", "当前数据覆盖 26 个县域和 137 个月样本，包含温度/降水/风速。", "公开观测"),
-        card("remote_sensing_data", "遥感观测数据", "NDVI、积雪、草地退化与临时载畜量字段。", "部分真实"),
-        card("forage_supply_demand", "宏观饲草供需", "2000-2020 全国/区域年度宏观饲草供需。", "真实宏观"),
-        card("business_subjects", "经营主体台账", "合作社、家庭牧场、供应商经营信息。", "样例待替换"),
-        card("finance_credit", "工行授信与保险台账", "授信、用信、还款、逾期、保单信息。", "样例待替换"),
-        card("risk_event_labels", "来源事件样本", "附公开 URL 或年鉴页码凭证的灾害事件；其余月份保持未确认。", "128 条来源事件"),
-        card("insurance_claims", "银保理赔查勘", "出险、查勘、理赔金额和贷后回流动作。", "脱敏样例"),
-        card("supply_chain_orders", "产业链订单台账", "饲草采购、活体交易、物流验收和关联授信。", "脱敏样例"),
-        card("supply_chain_payments", "工行资金流向", "定向支付、收款方、到账状态和用途核验。", "脱敏样例"),
-        card("post_loan_workflow", "客户经理工作流", "准入、评估、复核、贷后核查和处置记录。", "脱敏样例"),
-        card("green_performance_metrics", "绿色绩效指标", "绿色信贷、减灾减损、牧户覆盖和民生指标。", "脱敏样例"),
+        card("remote_sensing_data", "遥感观测数据", "NDVI、积雪、草地退化与临时载畜量字段。", "公开观测"),
+        card("forage_supply_demand", "宏观饲草供需", "2000-2020 全国/区域年度宏观饲草供需。", "公开观测"),
+        card("business_subjects", "经营主体台账", "合作社、家庭牧场、供应商经营信息。", "演示样例"),
+        card("finance_credit", "工行授信与保险台账", "授信、用信、还款、逾期、保单信息。", "演示样例"),
+        card("risk_event_labels", "来源事件样本", "附公开 URL 或年鉴页码凭证的灾害事件；其余月份保持未确认。", "待人工核验"),
+        card("insurance_claims", "银保理赔查勘", "出险、查勘、理赔金额和贷后回流动作。", "演示样例"),
+        card("supply_chain_orders", "产业链订单台账", "饲草采购、活体交易、物流验收和关联授信。", "演示样例"),
+        card("supply_chain_payments", "工行资金流向", "定向支付、收款方、到账状态和用途核验。", "演示样例"),
+        card("post_loan_workflow", "客户经理工作流", "准入、评估、复核、贷后核查和处置记录。", "演示样例"),
+        card("green_performance_metrics", "绿色绩效指标", "绿色信贷、减灾减损、牧户覆盖和民生指标。", "演示样例"),
       ];
     },
     dataSourceSnapshot() {
@@ -1613,29 +1673,26 @@ const app = createApp({
         { icon: "OK", title: "贷后核销", note: "还款与风险更新" },
       ];
     },
-    supplyChainUploadFields() {
-      return ["order_id", "subject_name", "order_type", "supplier", "amount", "linked_credit_id", "payment_id", "from_account", "to_account"];
-    },
     supplyChainOrderSchema() {
       return [
-        { field: "order_id", label: "订单号", example: "ORD-2024-001" },
-        { field: "subject_name", label: "采购主体", example: "扎西高原牧业合作社" },
-        { field: "region_id", label: "所在县域", example: "naqu-bange" },
-        { field: "order_type", label: "订单类型", example: "饲草采购" },
-        { field: "supplier", label: "供应商", example: "仁青冷链供草中心" },
-        { field: "amount", label: "金额（万元）", example: "85.5" },
-        { field: "linked_credit_id", label: "关联授信", example: "CRD-2024-003" },
+        { field: "order_id", label: "订单号", meaning: "产业链订单唯一编号", example: "ORD-2024-001" },
+        { field: "subject_name", label: "采购主体", meaning: "使用贷款的牧业经营主体", example: "扎西高原牧业合作社" },
+        { field: "region_id", label: "所在县域", meaning: "主体所在的高原牧区县域", example: "那曲市班戈县" },
+        { field: "order_type", label: "订单类型", meaning: "贷款资金的具体用途", example: "饲草采购" },
+        { field: "supplier", label: "供应商", meaning: "定向支付的备案供应商", example: "仁青冷链供草中心" },
+        { field: "amount", label: "金额（万元）", meaning: "本笔订单支付金额", example: "85.5" },
+        { field: "linked_credit_id", label: "关联授信", meaning: "对应的授信业务编号", example: "CRD-2024-003" },
       ];
     },
     supplyChainPaymentSchema() {
       return [
-        { field: "payment_id", label: "流水号", example: "PAY-2024-001" },
-        { field: "order_id", label: "关联订单", example: "ORD-2024-001" },
-        { field: "from_account", label: "付款方", example: "工行绿色信贷账户" },
-        { field: "to_account", label: "收款方", example: "仁青冷链供草中心" },
-        { field: "amount", label: "金额（万元）", example: "85.5" },
-        { field: "channel", label: "支付渠道", example: "工行网银定向支付" },
-        { field: "status", label: "状态", example: "已到账" },
+        { field: "payment_id", label: "流水号", meaning: "资金流向唯一编号", example: "PAY-2024-001" },
+        { field: "order_id", label: "关联订单", meaning: "资金对应的产业链订单", example: "ORD-2024-001" },
+        { field: "from_account", label: "付款方", meaning: "贷款资金定向支付出口", example: "工行绿色信贷账户" },
+        { field: "to_account", label: "收款方", meaning: "备案供应商收款账户", example: "仁青冷链供草中心" },
+        { field: "amount", label: "金额（万元）", meaning: "本笔支付金额", example: "85.5" },
+        { field: "channel", label: "支付渠道", meaning: "资金划转通道", example: "工行网银定向支付" },
+        { field: "status", label: "状态", meaning: "到账与回款核验状态", example: "已到账" },
       ];
     },
     supplyChainOrders() {
@@ -1769,7 +1826,7 @@ const app = createApp({
             `训练样本 ${this.formatNumber(this.modelStatus.n_samples || 0)}`,
             `县域 ${this.modelStatus.county_count || 0} 个`,
             `月份 ${this.modelStatus.month_count || 0} 个`,
-            `非样例来源 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}`,
+            `公开数据占比 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}`,
           ],
           state: "warn",
         },
@@ -1823,10 +1880,10 @@ const app = createApp({
     },
     fourPartyCards() {
       return [
-        { icon: "GOV", role: "生态保护 · 草场管理 · 乡村振兴", title: "地方政府", desc: "县域畜牧统计、生态补偿政策", status: "数据接口预留" },
-        { icon: "ICBC", role: "绿色授信 · 贷后预警 · 普惠金融", title: "工商银行", desc: "授信台账、还款记录、贷后核查", status: "样本待替换" },
-        { icon: "INS", role: "承保定损 · 理赔协同 · 风险减量", title: "保险机构", desc: "保单明细、出险记录、理赔结果", status: "表结构就绪" },
-        { icon: "COOP", role: "养殖管理 · 产品销售 · 数据上报", title: "牧户合作社", desc: "存栏数据、交易记录、防疫档案", status: "样本待替换" },
+        { icon: "GOV", role: "生态保护 · 草场管理 · 乡村振兴", title: "地方政府", desc: "县域畜牧统计、生态补偿政策", status: "待人工核验" },
+        { icon: "ICBC", role: "绿色授信 · 贷后预警 · 普惠金融", title: "工商银行", desc: "授信台账、还款记录、贷后核查", status: "演示样例" },
+        { icon: "INS", role: "承保定损 · 理赔协同 · 风险减量", title: "保险机构", desc: "保单明细、出险记录、理赔结果", status: "演示样例" },
+        { icon: "COOP", role: "养殖管理 · 产品销售 · 数据上报", title: "牧户合作社", desc: "存栏数据、交易记录、防疫档案", status: "演示样例" },
       ];
     },
     livelihoodEvidence() {
@@ -1998,6 +2055,7 @@ const app = createApp({
 
     navigate(page) {
       const previousPage = this.page;
+      this.navMoreOpen = false;
       if (previousPage === "data" && page !== "data") this.disposeEvidenceMap();
       this.page = page;
       window.location.hash = page;
@@ -2009,21 +2067,46 @@ const app = createApp({
         this.stopHero();
       }
       this.$nextTick(() => {
-        if (page === "dashboard") {
-          this.loadModelData();
-        }
-        if (page === "data") { this.renderDataChartsSoon(); this.loadWarningData(); }
-        if (page === "green-performance") this.renderOverviewChartsSoon();
-        if (page === "data" && this.dataTab === "risk") renderRiskChart(this.data?.risk_assessment);
-        if (page === "cooperative-ranking" && !this.coopRegions.length) {
+        this.ensurePageDefaults(page);
+      });
+    },
+
+    // 首次进入各页面时自动加载代表性默认内容，不出现空状态
+    ensurePageDefaults(page) {
+      if (page === "dashboard") {
+        this.loadModelData();
+      }
+      if (page === "data") { this.renderDataChartsSoon(); this.loadWarningData(); }
+      if (page === "green-performance") this.renderOverviewChartsSoon();
+      if (page === "data" && this.dataTab === "risk") renderRiskChart(this.data?.risk_assessment);
+      if (page === "cooperative-ranking") {
+        if (!this.coopRegions.length) {
           this.coopRegions = (this.data?.regions || []).map(r => ({ id: r.id, name: r.name }));
         }
-        if (page === "insurance-portfolio") this.loadPortfolio();
-        if (page === "disaster-forecast") {
-          if (!this.disasterRegions || !this.disasterRegions.length) this.loadDisasterRegions();
-          this.$nextTick(() => this.renderDisasterChart());
+        if (!this.coopSelectedRegion && this.coopRegions.length) {
+          const bange = this.coopRegions.find(r => (r.name || "").includes("班戈"));
+          this.coopSelectedRegion = (bange || this.coopRegions[0]).id;
         }
-      });
+        if (this.coopSelectedRegion && !this.coopRanking.length && !this.coopLoading) {
+          this.loadCooperativeRanking();
+        }
+      }
+      if (page === "insurance-portfolio") this.loadPortfolio();
+      if (page === "disaster-forecast") {
+        this.ensureDisasterDefaults();
+      }
+    },
+
+    async ensureDisasterDefaults() {
+      if (!this.disasterRegions || !this.disasterRegions.length) {
+        await this.loadDisasterRegions();
+      }
+      this.$nextTick(() => this.renderDisasterChart());
+      if (!this.disasterResult && !this.disasterLoading && !this.disasterError) {
+        const bange = (this.disasterRegions || []).find(r => (r.region_name || "").includes("班戈"));
+        this.disasterInput = bange ? bange.region_name : ((this.disasterRegions || [])[0] || {}).region_name || "";
+        if (this.disasterInput) this.runDisasterForecast();
+      }
     },
 
     async loadCooperativeRanking() {
@@ -2139,7 +2222,7 @@ const app = createApp({
         blizzard: "#9c27b0",
         ecological: "#4caf50",
       };
-      const series = Object.entries(this.disasterResult.disasters).map(([key, d]) => ({
+      const series = Object.entries(this.disasterResult.disasters).map(([key, d], idx) => ({
         name: d.name,
         type: "line",
         smooth: true,
@@ -2148,6 +2231,9 @@ const app = createApp({
         lineStyle: { width: 2, color: disasterColors[key] },
         itemStyle: { color: disasterColors[key] },
         data: d.weekly.map(w => w.risk_score),
+        animationDuration: 900,
+        animationEasing: "cubicOut",
+        animationDelay: idx * 140,
       }));
       // 综合风险加粗 + 三段置信度背景
       series.push({
@@ -2159,6 +2245,9 @@ const app = createApp({
         lineStyle: { width: 3, color: "#c00", type: "dashed" },
         itemStyle: { color: "#c00" },
         data: this.disasterResult.composite.weekly.map(w => w.risk_score),
+        animationDuration: 1100,
+        animationEasing: "cubicOut",
+        animationDelay: 700,
         markArea: {
           silent: true,
           data: [
@@ -2169,6 +2258,9 @@ const app = createApp({
         },
       });
       chart.setOption({
+        animation: true,
+        animationDuration: 900,
+        animationEasing: "cubicOut",
         tooltip: { trigger: "axis" },
         legend: { data: series.map(s => s.name), top: 5 },
         grid: { left: 50, right: 20, top: 50, bottom: 40 },
@@ -3068,20 +3160,13 @@ const app = createApp({
       if (this.page === "dashboard") {
         this.renderDashboardChartsSoon();
       }
-      if (this.page === "data") { this.renderDataChartsSoon(); this.loadWarningData(); }
-      if (this.page === "data" && this.dataTab === "risk") renderRiskChart(this.data?.risk_assessment);
-      if (this.page === "cooperative-ranking" && !this.coopRegions.length) {
-        this.coopRegions = (this.data?.regions || []).map(r => ({ id: r.id, name: r.name }));
-      }
-      if (this.page === "disaster-forecast") {
-        if (!this.disasterRegions || !this.disasterRegions.length) this.loadDisasterRegions();
-        this.$nextTick(() => this.renderDisasterChart());
-      }
+      this.ensurePageDefaults(this.page);
 
       window.addEventListener("hashchange", () => {
         const h = window.location.hash.replace("#", "");
         if (h && valid.includes(h) && this.page !== h) this.navigate(h);
       });
+      document.addEventListener("click", () => { this.navMoreOpen = false; });
       window.addEventListener("scroll", this.onScroll);
       document.addEventListener("visibilitychange", this.handleVisibilityChange);
       this.startWeatherAutoRefresh();

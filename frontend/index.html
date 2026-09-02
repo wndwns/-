@@ -28,9 +28,12 @@
               <span class="logo-text">牧融绿链</span>
             </a>
             <nav class="nav-menu">
-              <div class="nav-group" v-for="g in navGroups" :key="g.label">
-                <span class="nav-group-label">{{ g.label }}</span>
-                <a v-for="item in g.items" :key="item.page" :class="{ active: page === item.page }" @click="navigate(item.page)">{{ item.name }}</a>
+              <a v-for="item in navMain" :key="item.page" :class="{ active: page === item.page }" @click="navigate(item.page)">{{ item.name }}</a>
+              <div class="nav-more" :class="{ open: navMoreOpen }">
+                <a :class="{ active: navMore.some(i => i.page === page) }" @click.stop="navMoreOpen = !navMoreOpen">更多 ▾</a>
+                <div class="nav-more-drop">
+                  <a v-for="item in navMore" :key="item.page" :class="{ active: page === item.page }" @click="navigate(item.page); navMoreOpen = false">{{ item.name }}</a>
+                </div>
               </div>
             </nav>
           </div>
@@ -54,9 +57,22 @@
                 <span class="hero-kicker">{{ slide.kicker }}</span>
                 <h1 class="hero-title">{{ slide.title }}</h1>
                 <p class="hero-desc">{{ slide.desc }}</p>
+                <div class="hero-questions">
+                  <button class="hero-q-btn" @click="navigate('dashboard')">
+                    <strong>能不能贷</strong>
+                    <span>主体准入 · 证据核验</span>
+                  </button>
+                  <button class="hero-q-btn" @click="navigate('dashboard')">
+                    <strong>贷多少</strong>
+                    <span>唯一建议金额 · 三情景测算</span>
+                  </button>
+                  <button class="hero-q-btn" @click="navigate('dashboard')">
+                    <strong>贷后怎么管</strong>
+                    <span>预警核查 · 处置闭环</span>
+                  </button>
+                </div>
                 <div class="hero-cta">
-                  <button class="hero-btn hero-btn-primary" @click="navigate('dashboard')">进入风险看板</button>
-                  
+                  <button class="hero-btn hero-btn-primary" @click="navigate('dashboard')">进入授信与贷后工作台</button>
                 </div>
               </div>
               <div class="hero-dots">
@@ -134,7 +150,7 @@
               <div class="stats-gauge-row reveal">
                 <div id="chart-home-gauge" class="home-gauge-chart"></div>
                 <div class="stats-gauge-desc">
-                  <p>平台已就绪 · 模型引擎 <strong>XGBoost</strong></p>
+                  <p>平台已就绪 · 风险评估引擎持续运行</p>
                   <p>覆盖青藏高原 26 县气象遥感与畜牧经营数据，支撑工行绿色信贷全流程</p>
                 </div>
               </div>
@@ -186,7 +202,6 @@
                   <a @click="navigate('dashboard')">风险评估</a>
                   <a @click="navigate('data')">气象遥感</a>
                   <a @click="navigate('disaster-forecast')">灾害预测</a>
-                  <a @click="navigate('admin')">管理端</a>
                 </div>
                 <div class="footer-info">
                   <h4>联系方式</h4>
@@ -555,6 +570,100 @@
                     </aside>
 
                     <div class="cw-evidence-content" v-if="selectedAssessment">
+                      <!-- 五步业务流程：可点击步骤条 -->
+                      <div class="wf-stepper" v-if="managerWorkflowSteps.length">
+                        <button v-for="step in managerWorkflowSteps" :key="step.key"
+                                class="wf-step" :class="[step.state, { current: workflowStepKey === step.key }]"
+                                @click="workflowStepKey = step.key">
+                          <span class="wf-step-key">{{ step.key }}</span>
+                          <span class="wf-step-title">{{ step.title }}</span>
+                          <span class="wf-step-note">{{ step.note }}</span>
+                        </button>
+                      </div>
+
+                      <!-- 步骤内容：任意切换、互相返回 -->
+                      <div class="wf-detail" v-if="managerWorkflowSteps.length">
+                        <div v-if="workflowStepKey === '01'" class="wf-detail-inner">
+                          <div class="ops-panel-head">
+                            <div><h3>准入申请 · 对象画像</h3><p>准入对象的基础画像与授信状态</p></div>
+                            <span class="ops-badge" :class="selectedAssessment.type === 'subject' ? '' : 'warn'">{{ selectedAssessment.type === 'subject' ? '主体准入' : '县域入池' }}</span>
+                          </div>
+                          <div class="wf-kv-grid">
+                            <div v-for="row in workflowProfileRows" :key="row.label" class="wf-kv">
+                              <span>{{ row.label }}</span>
+                              <strong>{{ row.value }}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-else-if="workflowStepKey === '02'" class="wf-detail-inner">
+                          <div class="ops-panel-head">
+                            <div><h3>评估报告 · 综合风险评估</h3><p>{{ selectedAssessment.title }} · {{ selectedAssessment.sub }}</p></div>
+                            <span class="ops-badge" :class="riskLevelClass(selectedAssessment.level)">{{ selectedAssessment.level }} / {{ selectedAssessment.decision }}</span>
+                          </div>
+                          <div class="wf-report-grid">
+                            <div class="wf-score" :class="riskLevelClass(selectedAssessment.level)">
+                              <span>综合风险分</span>
+                              <strong>{{ selectedAssessment.score.toFixed(1) }}</strong>
+                            </div>
+                            <div class="wf-metrics">
+                              <div v-for="metric in selectedAssessment.metrics" :key="metric.label">
+                                <span>{{ metric.label }}</span>
+                                <strong>{{ metric.value }}</strong>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="driver-list">
+                            <p v-for="item in selectedAssessment.driver_details" :key="item.name">
+                              <span>{{ item.name }}</span>
+                              <strong>{{ item.value }}</strong>
+                              <em>{{ item.detail }}</em>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div v-else-if="workflowStepKey === '03'" class="wf-detail-inner">
+                          <div class="ops-panel-head">
+                            <div><h3>人工复核 · 复核任务</h3><p>触发条件与关键指标复核</p></div>
+                            <span class="ops-badge" :class="selectedAssessment.score >= 55 ? 'warn' : ''">{{ selectedAssessment.score >= 55 ? '需复核' : '暂不触发' }}</span>
+                          </div>
+                          <div v-for="(row, idx) in workflowReviewRows" :key="idx" class="wf-review-item">
+                            <strong>{{ row.title }}</strong>
+                            <p>{{ row.desc }}</p>
+                          </div>
+                        </div>
+
+                        <div v-else-if="workflowStepKey === '04'" class="wf-detail-inner">
+                          <div class="ops-panel-head">
+                            <div><h3>贷后核查 · 核查清单</h3><p>客户经理核查任务与材料状态</p></div>
+                            <span class="ops-badge" :class="workflowMatched ? 'warn' : ''">{{ workflowMatched ? '核查任务进行中' : '持续观察' }}</span>
+                          </div>
+                          <div class="wf-kv-grid">
+                            <div v-for="row in workflowCheckRows" :key="row.label" class="wf-kv">
+                              <span>{{ row.label }}</span>
+                              <strong>{{ row.value }}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-else class="wf-detail-inner">
+                          <div class="ops-panel-head">
+                            <div><h3>处置记录 · 处置建议</h3><p>处置建议与工行动作清单</p></div>
+                            <span class="ops-badge" :class="selectedAssessment.score >= 70 ? 'warn' : ''">{{ selectedAssessment.score >= 70 ? '生成处置建议' : '保留监测记录' }}</span>
+                          </div>
+                          <div class="wf-kv-grid">
+                            <div v-for="row in workflowDisposalRows" :key="row.label" class="wf-kv">
+                              <span>{{ row.label }}</span>
+                              <strong>{{ row.value }}</strong>
+                            </div>
+                          </div>
+                          <div class="wf-back-row">
+                            <button class="btn-outline" @click="workflowStepKey = '01'">返回准入申请</button>
+                            <button class="btn-outline" @click="workflowStepKey = '02'">返回评估报告</button>
+                          </div>
+                        </div>
+                      </div>
+
                       <aside class="evidence-panel cw-evidence-panel">
                         <div class="evidence-head">
                           <span>Evidence</span>
@@ -575,7 +684,7 @@
                             <b>数据与模型摘要</b>
                           </div>
                           <div class="cw-summary-box">
-                            <p><strong>模型状态：</strong>基于真实环境数据与业务规则运行，覆盖 {{ modelStatus.county_count || 0 }} 县域 / {{ modelStatus.month_count || 0 }} 月份，非样例来源 97%。用于风险排序参考，不构成确定性结论。</p>
+                            <p><strong>模型状态：</strong>基于真实环境数据与业务规则运行，覆盖 {{ modelStatus.county_count || 0 }} 县域 / {{ modelStatus.month_count || 0 }} 月份，公开数据占比 97%。用于风险排序参考，不构成确定性结论。</p>
                           </div>
                           <div class="cw-summary-box">
                             <p><strong>数据缺口：</strong>部分县域气象站覆盖不足，气象资料用于趋势参考，不作交易依据；遥感观测正常接入。风险事件标签为比赛样例，不作为真实风险事件。</p>
@@ -686,16 +795,15 @@
               <div class="panel" style="margin-bottom:18px;">
                 <div class="panel-head">
                   <h3>模型训练状态</h3>
-                  <span class="badge" :style="{background: modelStatus.model_type === 'ml_hybrid' ? 'rgba(45,125,79,0.12)' : 'rgba(217,138,58,0.12)', color: modelStatus.model_type === 'ml_hybrid' ? 'var(--green)' : 'var(--orange)' }">{{ modelStatus.model_type === 'ml_hybrid' ? 'ML 混合' : '规则模型' }}</span>
+                  <span class="badge" :style="{background: modelStatus.model_type === 'ml_hybrid' ? 'rgba(45,125,79,0.12)' : 'rgba(217,138,58,0.12)', color: modelStatus.model_type === 'ml_hybrid' ? 'var(--green)' : 'var(--orange)' }">{{ modelStatus.model_type === 'ml_hybrid' ? '机器学习 + 业务规则' : '业务规则模式' }}</span>
                 </div>
                 <div class="panel-body">
-                  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;text-align:center;">
+                  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;text-align:center;">
                     <div><span style="font-size:20px;font-weight:700;color:var(--green);">{{ modelStatus.n_samples || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">训练样本</span></div>
                     <div><span style="font-size:20px;font-weight:700;">{{ modelStatus.county_count || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">县域数</span></div>
                     <div><span style="font-size:20px;font-weight:700;">{{ modelStatus.month_count || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">月份数</span></div>
                     <div><span style="font-size:20px;font-weight:700;color:var(--cyan);">{{ ((modelStatus.confidence || 0) * 100).toFixed(0) }}%</span><br /><span style="font-size:10px;color:var(--text-muted);">置信度</span></div>
-                    <div><span style="font-size:20px;font-weight:700;color:var(--gold);">{{ ((modelStatus.non_sample_source_ratio || 0) * 100).toFixed(0) }}%</span><br /><span style="font-size:10px;color:var(--text-muted);">非样例来源</span></div>
-                    <div><span style="font-size:20px;font-weight:700;color:var(--gold);">{{ modelStatus.sklearn_available ? '就绪' : '未安装' }}</span><br /><span style="font-size:10px;color:var(--text-muted);">sklearn</span></div>
+                    <div><span style="font-size:20px;font-weight:700;color:var(--gold);">{{ ((modelStatus.non_sample_source_ratio || 0) * 100).toFixed(0) }}%</span><br /><span style="font-size:10px;color:var(--text-muted);">公开数据占比</span></div>
                   </div>
                   <p style="font-size:10px;color:var(--text-muted);margin-top:8px;text-align:center;">{{ modelStatus.note || '' }} | 训练时间: {{ modelStatus.trained_at ? new Date(modelStatus.trained_at).toLocaleString() : '未训练' }}</p>
                   <div v-if="modelStatus.data_quality_warnings && modelStatus.data_quality_warnings.length > 0" style="margin-top:8px;padding:8px 12px;background:rgba(217,138,58,0.08);border-radius:4px;">
@@ -709,7 +817,7 @@
 
               <div class="content-2col">
                 <div class="panel">
-                  <div class="panel-head"><h3>模型风险排序</h3><span class="badge" v-if="modelPrediction">{{ modelPrediction.model_type }}</span></div>
+                  <div class="panel-head"><h3>模型风险排序</h3><span class="badge" v-if="modelPrediction">{{ modelPrediction.model_type === 'ml_hybrid' ? '机器学习 + 业务规则' : '业务规则模式' }}</span></div>
                   <p class="radar-note" style="margin:0 14px 10px;">口径：综合风险排序，主要用于人工核查优先级；不是违约概率，也不是确定性灾害预测。</p>
                   <div class="panel-body no-pad" v-if="modelPrediction">
                     <div v-for="p in modelPrediction.predictions" :key="p.region_id" class="region-row">
@@ -791,7 +899,7 @@
                   <div class="ops-panel">
                     <div class="ops-panel-head">
                       <div><h3>银保联动台账</h3><p>承保、风险、理赔和工行处置动作</p></div>
-                      <span class="ops-badge warn">sample/demo</span>
+                      <span class="ops-badge warn">演示样例</span>
                     </div>
                     <div class="terminal-table-wrap">
                       <table class="terminal-table">
@@ -811,18 +919,18 @@
                   </div>
                   <aside class="ops-panel">
                     <div class="ops-panel-head">
-                      <div><h3>银保协同字段</h3><p>后续上传真实保单、理赔、查勘记录时建议保留的核心字段</p></div>
-                      <span class="ops-badge">接口预留</span>
+                      <div><h3>银保协同要素</h3><p>承保、理赔与授信关联的核心信息项</p></div>
+                      <span class="ops-badge">信息项就绪</span>
                     </div>
                     <div class="field-grid">
-                      <span>policy_id</span>
-                      <span>subject_name</span>
-                      <span>insurance_type</span>
-                      <span>insured_amount</span>
-                      <span>coverage_ratio</span>
-                      <span>claim_status</span>
-                      <span>claim_amount</span>
-                      <span>linked_credit_id</span>
+                      <span>保单编号</span>
+                      <span>投保主体</span>
+                      <span>保险类型</span>
+                      <span>保额</span>
+                      <span>覆盖比例</span>
+                      <span>理赔状态</span>
+                      <span>理赔金额</span>
+                      <span>关联授信</span>
                     </div>
                   </aside>
                 </section>
@@ -842,7 +950,7 @@
                     </div>
                     <div class="label-disclosure">
                       <strong>边界说明</strong>
-                      <p>当前保险、理赔与授信台账仍为 sample/demo，页面用于还原银保协同链路，不代表真实生产客户数据。</p>
+                      <p>当前保险、理赔与授信台账为演示样例，页面用于还原银保协同链路，不代表真实生产客户数据。</p>
                     </div>
                   </div>
                   <div class="ops-panel livelihood-actions">
@@ -887,18 +995,6 @@
                   <p>饲草采购 · 活体交易 · 物流回款 · 工行贷款定向追踪</p>
                 </section>
 
-                <section class="upload-notice">
-                  <span class="notice-icon">🔗</span>
-                  <div>
-                    <h3>产业链台账待接入</h3>
-                    <p>通过管理端上传订单与资金流向 CSV，系统将自动生成贷款资金闭环追踪与供应商集中度分析。</p>
-                    <div class="notice-fields">
-                      <em v-for="field in supplyChainUploadFields" :key="field">{{ field }}</em>
-                    </div>
-                  </div>
-                  <a class="btn-main" href="/admin" target="_blank">去管理端上传</a>
-                </section>
-
                 <section class="plain-card">
                   <div class="plain-card-head">
                     <h2>工行贷款资金闭环设计</h2>
@@ -912,43 +1008,10 @@
                   </div>
                 </section>
 
-                <section class="public-two-col">
-                  <div class="ops-panel">
-                    <div class="ops-panel-head">
-                      <div><h3>订单表字段（supply_chain_orders）</h3></div>
-                    </div>
-                    <table class="schema-table">
-                      <thead><tr><th>字段</th><th>含义</th><th>示例</th></tr></thead>
-                      <tbody>
-                        <tr v-for="row in supplyChainOrderSchema" :key="row.field">
-                          <td><code>{{ row.field }}</code></td>
-                          <td>{{ row.label }}</td>
-                          <td>{{ row.example }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  <div class="ops-panel">
-                    <div class="ops-panel-head">
-                      <div><h3>资金流向表字段（supply_chain_payments）</h3></div>
-                    </div>
-                    <table class="schema-table">
-                      <thead><tr><th>字段</th><th>含义</th><th>示例</th></tr></thead>
-                      <tbody>
-                        <tr v-for="row in supplyChainPaymentSchema" :key="row.field">
-                          <td><code>{{ row.field }}</code></td>
-                          <td>{{ row.label }}</td>
-                          <td>{{ row.example }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-
                 <section class="ops-panel">
                   <div class="ops-panel-head">
-                    <div><h3>产业链样例台账</h3><p>sample/demo 数据，仅用于展示字段链路和风控动作</p></div>
-                    <span class="ops-badge warn">sample/demo</span>
+                    <div><h3>产业链订单与资金闭环示例</h3><p>贷款用途、采购、物流与回款的全链路追踪</p></div>
+                    <span class="ops-badge warn">演示样例</span>
                   </div>
                   <div class="terminal-table-wrap compact">
                     <table class="terminal-table">
@@ -962,6 +1025,39 @@
                           <td>{{ row.amount }} 万元</td>
                           <td>{{ row.linked_credit_id }}</td>
                           <td>{{ row.action }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section class="public-two-col">
+                  <div class="ops-panel">
+                    <div class="ops-panel-head">
+                      <div><h3>贷款用途与资金流向</h3><p>订单、付款与授信关联示例</p></div>
+                    </div>
+                    <table class="schema-table">
+                      <thead><tr><th>项目</th><th>说明</th><th>示例</th></tr></thead>
+                      <tbody>
+                        <tr v-for="row in supplyChainOrderSchema" :key="row.field">
+                          <td><strong>{{ row.label }}</strong></td>
+                          <td>{{ row.meaning }}</td>
+                          <td>{{ row.example }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="ops-panel">
+                    <div class="ops-panel-head">
+                      <div><h3>资金到账与回款</h3><p>定向支付与销售回款追踪示例</p></div>
+                    </div>
+                    <table class="schema-table">
+                      <thead><tr><th>项目</th><th>说明</th><th>示例</th></tr></thead>
+                      <tbody>
+                        <tr v-for="row in supplyChainPaymentSchema" :key="row.field">
+                          <td><strong>{{ row.label }}</strong></td>
+                          <td>{{ row.meaning }}</td>
+                          <td>{{ row.example }}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1697,11 +1793,11 @@
 
                     <div class="ops-panel">
                       <div class="ops-panel-head">
-                        <div><h3>数据表与工行业务用途</h3><p>说明每张表服务哪个金融风控环节</p></div>
-                        <span class="ops-badge warn">样例需标注</span>
+                        <div><h3>数据资产与工行业务用途</h3><p>说明每类数据服务哪个金融风控环节</p></div>
+                        <span class="ops-badge warn">演示样例已标注</span>
                       </div>
                       <table class="schema-table data-purpose-table">
-                        <thead><tr><th>数据资产</th><th>状态</th><th>行数</th><th>工行业务用途</th></tr></thead>
+                        <thead><tr><th>数据资产</th><th>状态</th><th>记录数</th><th>工行业务用途</th></tr></thead>
                         <tbody>
                           <tr v-for="asset in dataAssetCards" :key="'purpose-' + asset.key">
                             <td><strong>{{ asset.title }}</strong></td>

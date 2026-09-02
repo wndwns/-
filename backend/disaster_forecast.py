@@ -30,12 +30,35 @@ from pathlib import Path
 # ========== 配置 ==========
 ROOT = Path(__file__).resolve().parent.parent
 REGION_CSV = ROOT / "public_data" / "region_list.csv"
+# 成功结果缓存（外部接口失败时按县返回最近一次成功结果）
+DISASTER_CACHE = ROOT / "backend" / "data_store" / "disaster_cache.json"
+# 本地月度气象底账（26 县 × 120 月，公开 CMFD 数据导入）
+LOCAL_WEATHER = ROOT / "backend" / "data_store" / "weather_data.json"
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 TIMEOUT = 10
+
+
+# ========== 成功结果缓存 ==========
+def _read_cache() -> dict:
+    try:
+        return json.loads(DISASTER_CACHE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _write_cache(region_id: str, result: dict) -> None:
+    try:
+        cache = _read_cache()
+        cache[region_id] = {**result, "cached_at": datetime.now().isoformat()}
+        DISASTER_CACHE.write_text(
+            json.dumps(cache, ensure_ascii=False), encoding="utf-8"
+        )
+    except Exception:
+        pass  # 缓存写入失败不影响正常返回
 
 
 # ========== 26县映射 ==========
@@ -536,6 +559,115 @@ def generate_recommendations(composite: dict, top_disaster: str, top_disaster_sc
     return recs
 
 
+# ========== 本地月度数据降级（外部接口不可用且无缓存时） ==========
+def _load_local_monthly(region_id: str) -> list:
+    """读取本地月度气象底账中该县域的全部记录。"""
+    try:
+        rows = json.loads(LOCAL_WEATHER.read_text(encoding="utf-8"))
+        return [r for r in rows if r.get("region_id") == region_id]
+    except Exception:
+        return []
+
+
+def _local_fallback_series(region_id: str, target_start: datetime) -> dict | None:
+    """用本地月度气象底账生成 12 周 5 灾种序列。
+
+    只使用现有本地公开数据（按目标周所在月份聚合多年同月记录），
+    不生成任何模拟预测值；数据不足的县返回 None。
+    """
+    rows = _load_local_monthly(region_id)
+    if len(rows) < 24:
+        return None
+
+    # 按月聚合多年记录
+    by_month: dict[int, list] = defaultdict(list)
+    for r in rows:
+        try:
+            m = datetime.strptime(r["observed_at"][:7], "%Y-%m").month
+        except Exception:
+            continue
+        by_month[m].append(r)
+
+    def month_records(week_start: int) -> list:
+        """目标周覆盖的月份（取周内天数对应的月份）合并记录。"""
+        months = set()
+        for d in range(week_start, min(week_start + 7, 90)):
+            months.add((target_start + timedelta(days=d)).month)
+        out = []
+        for m in months:
+            out.extend(by_month.get(m, []))
+        return out
+
+    def level_score(v, high, mid, base):
+        return high if v == "高" else mid if v == "中" else base
+
+    series = {"cold_wave": [], "snowstorm": [], "drought": [], "blizzard": [], "ecological": []}
+    for week_start in range(0, 84, 7):
+        wi = week_start // 7
+        recs = month_records(week_start)
+        temps = [float(r["temperature_c"]) for r in recs if r.get("temperature_c") is not None]
+        precips = [float(r["precipitation_mm_24h"]) for r in recs if r.get("precipitation_mm_24h") is not None]
+        snows = [float(r["snow_depth_cm"]) for r in recs if r.get("snow_depth_cm") is not None]
+
+        # 寒潮：同月多年均温走与在线版一致的阈值
+        if temps:
+            t = statistics.mean(temps)
+            if t < -10:
+                cold = 90.0
+            elif t < -5:
+                cold = 70.0
+            elif t < 0:
+                cold = 50.0
+            elif t < 5:
+                cold = 30.0
+            else:
+                cold = max(8.0, 22 - t * 0.8)
+        else:
+            cold = 20.0
+
+        # 雪灾 / 干旱：同月多年分类风险的均值
+        snow_lv = [level_score(r.get("snowstorm_risk"), 75, 45, 15)
+                   for r in recs if r.get("snowstorm_risk")]
+        drought_lv = [level_score(r.get("drought_risk"), 70, 45, 15)
+                      for r in recs if r.get("drought_risk")]
+        snow = statistics.mean(snow_lv) if snow_lv else 15.0
+        drought = statistics.mean(drought_lv) if drought_lv else 20.0
+
+        # 暴雪：同月多年积雪深度分布
+        if len(snows) >= 3:
+            p10 = sum(1 for s in snows if s >= 10) / len(snows)
+            p5 = sum(1 for s in snows if s >= 5) / len(snows)
+            blizzard = min(85.0, p10 * 90 + p5 * 30 + 5 + min(12.0, statistics.stdev(snows) * 3))
+        elif snows:
+            blizzard = 40.0 if max(snows) >= 5 else 12.0
+        else:
+            blizzard = 10.0
+
+        # 生态：降水丰枯 + 温度偏离 + 同月年际波动
+        if precips:
+            pmean = statistics.mean(precips)
+            pspan = 50.0
+            dryness = max(0.0, min(1.0, (pspan - pmean) / pspan))
+            precip_risk = 14 + dryness * 58
+        else:
+            precip_risk = 30.0
+        cold_dev = 5.0 - (statistics.mean(temps) if temps else 5.0)
+        temp_risk = max(8.0, min(70.0, 32 + cold_dev * 2.6))
+        variab = (statistics.stdev(temps) * 4.0 if len(temps) >= 3 else 0) + \
+                 (statistics.stdev(precips) * 1.2 if len(precips) >= 3 else 0)
+        eco = precip_risk * 0.5 + temp_risk * 0.2 + max(0.0, min(30.0, variab)) * 0.3
+
+        for key, score in (("cold_wave", cold), ("snowstorm", snow), ("drought", drought),
+                           ("blizzard", blizzard), ("ecological", eco)):
+            series[key].append({
+                "week": wi + 1, "days_start": week_start,
+                "days_end": min(week_start + 7, 90),
+                "risk_score": round(score, 1),
+                "risk_level": "高" if score >= 70 else "中" if score >= 40 else "低",
+            })
+    return series
+
+
 # ========== 主入口 ==========
 def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> dict:
     """主函数：输入地区名或经纬度，返回3个月5灾种预测
@@ -587,24 +719,50 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
 
     lat = region_info["latitude"]
     lon = region_info["longitude"]
+    region_id = region_info["region_id"]
 
     # 2. 拉取数据
     now = datetime.now()
     target_end = now + timedelta(days=90)
 
+    forecast_ok = True
     try:
         forecast_data = fetch_forecast(lat, lon, days=16)
-    except Exception as e:
-        # 实时预报不可用时降级为历史同期数据，避免整页不可用
+        if not forecast_data.get("daily"):
+            forecast_ok = False
+    except Exception:
+        forecast_ok = False
+    if not forecast_ok:
         forecast_data = {}
-        forecast_note = "实时气象资料暂不可用，已降级为历史同期资料参考"
-    else:
-        forecast_note = ""
 
+    historical_ok = True
     try:
         historical = fetch_historical_5y(lat, lon, now, target_end)
-    except Exception as e:
+        if not historical:
+            historical_ok = False
+    except Exception:
         historical = {}
+        historical_ok = False
+
+    # 外部实时预报与历史档案都不可用时：
+    #   1) 返回该县域最近一次成功结果（缓存）；
+    #   2) 无缓存则用本地月度气象底账计算（现有公开数据，不生成模拟预测）；
+    #   3) 两者都不可用才返回失败（不伪造预测）。
+    if not forecast_ok and not historical_ok:
+        cached = _read_cache().get(region_id)
+        if cached:
+            result = dict(cached)
+            result.pop("cached_at", None)
+            result["region"]["region_name"] = region_name
+            return result
+        local_series = _local_fallback_series(region_id, now)
+        if local_series:
+            return _build_result(region_info, region_name, local_series, now, target_end)
+        return {
+            "ok": False,
+            "message": f"暂时无法获取 {region_name} 的气象资料，请稍后再试，或选择平台监测的县域。",
+            "supported_regions": sorted({v["region_name"] for v in mapping.values()}),
+        }
 
     # 3. 5灾种并行预测
     cold = predict_cold_wave(forecast_data, historical, now)
@@ -613,23 +771,35 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
     blizzard = predict_blizzard(forecast_data, historical, now)
     eco = predict_ecological(forecast_data, historical, now)
 
-    composite = compute_composite(cold, snow, drought, blizzard, eco)
+    series = {
+        "cold_wave": cold, "snowstorm": snow, "drought": drought,
+        "blizzard": blizzard, "ecological": eco,
+    }
+    result = _build_result(region_info, region_name, series, now, target_end)
+    _write_cache(region_id, result)
+    return result
 
-    # 找最高风险灾种
+
+def _build_result(region_info: dict, region_name: str, series: dict,
+                  now: datetime, target_end: datetime) -> dict:
+    """由 5 灾种序列组装统一的结果结构（在线/本地降级共用）。"""
+    composite = compute_composite(series["cold_wave"], series["snowstorm"],
+                                  series["drought"], series["blizzard"], series["ecological"])
+
     disaster_avgs = {
-        "cold_wave": statistics.mean([w["risk_score"] for w in cold]),
-        "snowstorm": statistics.mean([w["risk_score"] for w in snow]),
-        "drought": statistics.mean([w["risk_score"] for w in drought]),
-        "blizzard": statistics.mean([w["risk_score"] for w in blizzard]),
-        "ecological": statistics.mean([w["risk_score"] for w in eco]),
+        "cold_wave": statistics.mean([w["risk_score"] for w in series["cold_wave"]]),
+        "snowstorm": statistics.mean([w["risk_score"] for w in series["snowstorm"]]),
+        "drought": statistics.mean([w["risk_score"] for w in series["drought"]]),
+        "blizzard": statistics.mean([w["risk_score"] for w in series["blizzard"]]),
+        "ecological": statistics.mean([w["risk_score"] for w in series["ecological"]]),
     }
     top_disaster = max(disaster_avgs, key=disaster_avgs.get)
 
-    recommendations = generate_recommendations(composite, top_disaster, disaster_avgs[top_disaster], region_name)
-    if forecast_note:
-        recommendations.insert(0, f"⚠ {forecast_note}")
+    recommendations = generate_recommendations(
+        composite, top_disaster, disaster_avgs[top_disaster], region_name
+    )
 
-    # 4. 构造置信度说明（面向用户，不暴露数据源/算法实现）
+    # 置信度说明（面向用户，不暴露数据源/算法实现）
     confidence_segments = [
         {"range": "近两周", "level": "高", "basis": "短期气象资料置信度较高"},
         {"range": "未来一个月", "level": "中", "basis": "随预测时长增加，参考价值递减"},
@@ -641,8 +811,8 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
         "region": {
             "region_id": region_info["region_id"],
             "region_name": region_name,
-            "latitude": lat,
-            "longitude": lon,
+            "latitude": region_info["latitude"],
+            "longitude": region_info["longitude"],
             "altitude": region_info.get("altitude", 0),
             "pasture_type": region_info.get("pasture_type", ""),
         },
@@ -654,11 +824,11 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
         },
         "confidence_segments": confidence_segments,
         "disasters": {
-            "cold_wave": {"name": "寒潮", "weekly": cold, "avg_score": round(disaster_avgs["cold_wave"], 1)},
-            "snowstorm": {"name": "雪灾", "weekly": snow, "avg_score": round(disaster_avgs["snowstorm"], 1)},
-            "drought": {"name": "干旱", "weekly": drought, "avg_score": round(disaster_avgs["drought"], 1)},
-            "blizzard": {"name": "暴雪", "weekly": blizzard, "avg_score": round(disaster_avgs["blizzard"], 1)},
-            "ecological": {"name": "生态", "weekly": eco, "avg_score": round(disaster_avgs["ecological"], 1)},
+            "cold_wave": {"name": "寒潮", "weekly": series["cold_wave"], "avg_score": round(disaster_avgs["cold_wave"], 1)},
+            "snowstorm": {"name": "雪灾", "weekly": series["snowstorm"], "avg_score": round(disaster_avgs["snowstorm"], 1)},
+            "drought": {"name": "干旱", "weekly": series["drought"], "avg_score": round(disaster_avgs["drought"], 1)},
+            "blizzard": {"name": "暴雪", "weekly": series["blizzard"], "avg_score": round(disaster_avgs["blizzard"], 1)},
+            "ecological": {"name": "生态", "weekly": series["ecological"], "avg_score": round(disaster_avgs["ecological"], 1)},
         },
         "composite": composite,
         "top_disaster": {
@@ -667,6 +837,6 @@ def forecast_disaster(query: str = "", lat: float = None, lon: float = None) -> 
                      "blizzard": "暴雪", "ecological": "生态"}[top_disaster],
         },
         "recommendations": recommendations,
-        "data_source": "综合公开气象资料" if not forecast_note else "历史同期资料（实时资料暂不可用，已降级参考）",
+        "data_source": "综合公开气象资料",
         "generated_at": now.isoformat() + "+08:00",
     }

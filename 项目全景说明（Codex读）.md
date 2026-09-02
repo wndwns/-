@@ -1,7 +1,7 @@
 # 工银牧融项目全景说明（Codex 维护档案）
 
-> 最后核验：2026-08-07
-> 核验基线：<code>main</code> 分支，提交 <code>f5ed234</code>
+> 最后核验：2026-08-23
+> 核验基线：<code>feature/demo-guide</code> 分支，提交 <code>8a6df05</code>
 > 仓库：<code>https://github.com/wndwns/-.git</code>
 > 用途：供后续 AI、Codex 和项目成员快速恢复完整上下文。本文记录的是“当前仓库实际状态”，不是宣传稿。
 
@@ -242,22 +242,22 @@
 
 ### 5.4 当前运行统计
 
-2026-08-07 在现有 Python 环境中直接调用模型模块得到：
+> 以下为 2026-08-07 快照，XGBoost 切换与事件集扩充后未重跑，具体数字待重新核验后填写。
 
 | 指标 | 当前值 |
 |---|---:|
-| 县月样本 | 3562 |
+| 县月样本 | _待重跑核验_ |
 | 县域 | 26 |
-| 月份 | 137 |
+| 月份 | _待重跑核验_ |
 | 特征 | 16 |
 | 模型类型 | ml_hybrid（引擎 xgboost） |
-| 规则统计中的“真实数据占比” | 0.97 |
-| 来源支持事件 | 128 |
-| 未确认月份 | 1372 |
+| 规则统计中的“真实数据占比” | _待重跑核验_ |
+| 来源支持事件 | _待重跑核验_ |
+| 未确认月份 | _待重跑核验_ |
 
-一次随机切分评估为 MAE 3.06、RMSE 4.09、R² 0.79、测试样本 653。**这些指标评估的是规则弱标签，不代表真实灾害、损失、理赔、逾期或违约预测能力。**
+一次随机切分评估系旧快照（MAE / RMSE / R² / 测试样本数请以重跑为准）。**这些指标评估的是规则弱标签，不代表真实灾害、损失、理赔、逾期或违约预测能力。**
 
-“真实数据占比 0.97”是按 <code>data_source</code> 字符串分类得出的数据行占比，不是监督标签真实率，也不是生产可用率。
+“真实数据占比”是按 <code>data_source</code> 字符串分类得出的数据行占比，不是监督标签真实率，也不是生产可用率。
 
 ### 5.5 预测与解释
 
@@ -329,6 +329,8 @@
 - 31 至 90 天：气候态和历史概率分布，代码标记为低置信。
 
 它是规则外推和气候背景预测，不是经过当地灾害损失样本校准的商业预报产品。
+
+> 迭代说明：为消除“低风险段画成长平线、视觉无变化”的问题，中后期段（历史同期概率驱动的部分）已叠加基于当年周内历史数据标准差的年际波动微起伏（幅度小，不放大真实风险），使寒潮、雪灾、干旱、暴雪、生态、综合各曲线呈现合理波动；前 1–3 周仍由实时预报主导。
 
 ### 6.5 时空网格
 
@@ -406,6 +408,8 @@
 | <code>supply_chain_payments.json</code> | 12 | 全部样例 |
 | <code>post_loan_workflow.json</code> | 12 | 全部样例 |
 | <code>green_performance_metrics.json</code> | 75 | 全部样例 |
+| <code>credit_cases.json</code> | 2 案例 | 授信测算案例（班戈县绿色牧业合作社主案例 + 百巴村资料不足控制案例），全部为比赛样例/样例假设/政策假设 |
+| <code>real_cooperatives.json</code> | 少量公开命中 | 合作社排序用的真实合作社匹配记录（与生成数据区分） |
 | <code>forage_supply_demand.json</code> | 126 | Geodoi 全国六区域 2000 至 2020 宏观数据，不直接代表项目县域 |
 
 ### 8.2 环境辅助数据
@@ -473,7 +477,7 @@ FastAPI
 
 | 文件 | 责任 |
 |---|---|
-| <code>server.py</code> | FastAPI 应用、78 个路由、静态文件、导入导出、外部集成 |
+| <code>server.py</code> | FastAPI 应用、84 个路由、静态文件、导入导出、外部集成 |
 | <code>data.py</code> | 数据访问、区域/主体/金融/闭环读取、四维风险、平台聚合 |
 | <code>store.py</code> | 11 类 JSON 表、CSV 解析、替换/追加、导入元数据 |
 | <code>db.py</code> | 可选 MySQL 连接池和初始化 |
@@ -484,10 +488,15 @@ FastAPI
 | <code>cooperative_ranking.py</code> | 合作社生成/公开记录匹配、多维排序和来源核验 |
 | <code>insurance_portfolio.py</code> | 百巴村资产登记画像、资料完整度、尽调清单 |
 | <code>spatio_temporal_grid.py</code> | 草地 × 季节 × 年龄时空风险网格 |
-| <code>disaster_forecast.py</code> | Open-Meteo 五灾种 90 天规则预测 |
+| <code>disaster_forecast.py</code> | Open-Meteo 五灾种 90 天规则预测，中后期段已加年际波动微起伏 |
+| <code>credit_decision.py</code> | 唯一授信金额纯计算模块，只公开 <code>evaluate_credit_case()</code>；金额用 Decimal 仅最后向下取整到 1 万元 |
+| <code>demo_guide.py</code> | 演示助手：唯一对外客服知识库全量固定进 system + 意图路由 + 实时授信测算工具桥（LLM 不编造金额）+ SSE 流式回答 |
 | <code>extract_npp.py</code> | NPP 提取工具 |
 | <code>extract_phenology.py</code> | 物候提取工具 |
 | <code>test_truthful_outputs.py</code> | 真实性边界的最小回归检查 |
+| <code>test_credit_decision.py</code>、<code>test_credit_decision_extended.py</code> | 授信测算黄金样例与边界回归检查 |
+| <code>test_event_similarity.py</code> | 事件相似度无监督候选的回归检查 |
+| <code>validate_all.py</code>、<code>validate_daily.py</code>、<code>validate_npp.py</code> | 数据/模型一致性与 NPP 校验脚本 |
 | <code>schema.sql</code>、<code>seed_data.sql</code> | 可选 MySQL 建表和种子数据 |
 
 ### 9.3 存储优先级
@@ -509,6 +518,19 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 - 样式 <code>frontend/styles.css</code>。
 - 独立管理端 <code>frontend/admin.html</code>。
 - <code>overview.html</code>、<code>modules.html</code>、<code>module.html</code>、<code>data.html</code>、<code>roadmap.html</code> 是可直接访问的页面壳或历史兼容入口。
+- 全局演示助手浮窗：Vue 自定义组件 <code>&lt;demo-guide&gt;</code>，挂载在 <code>#app</code> 内；SSE 流式打字机回答，支持停止/重新生成/复制/清空。
+
+#### 9.4.1 演示助手（Demo Guide）
+
+<code>backend/demo_guide.py</code> 实现的对外客服能力，独立于授信测算（<code>credit_decision.py</code>），供公演“教用户用项目”场景使用：
+
+- 不依赖 embedding/向量库，也不依赖 Responses function-calling（稳定性考虑），采用两段式 LLM。
+- 唯一对外知识源是 <code>客服知识库（面向用户）.md</code>，全量固定进 system（不检索、不喂内部/答辩文档），从源头杜绝仓库地址、版本分层等内部信息流出。
+- 意图路由 <code>_route()</code>：先匹配授信测算触发词（需实时金额）→ 再匹配教学/使用引导词（知识）→ 最后用一次轻量 LLM 兜底判断。
+- 实时金额只走本地 <code>evaluate_credit_case()</code>，绝不靠 LLM 编造；结果经脱敏后拼入 prompt 转述。
+- <code>SYSTEM_HEAD</code> 固定红线：金额/状态引用本地测算结果、四维分和模型只用于“优先核查”而非预测、演示样例如实说明、不输出个人敏感信息、不复述精确行数（如“3120 行/920 头”）、源码/仓库问题一句话回绝。
+- 开关：默认 <code>DEMO_GUIDE_ENABLED=true</code>，可用环境变量停用。
+- 对话能力：SSE 流式（<code>/api/demo-guide/stream</code>）、停止生成、重新生成、复制、清空/新会话、Markdown 渲染、Enter 发送。
 
 ### 9.5 当前页面
 
@@ -552,7 +574,7 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 
 ## 10. API 总览
 
-<code>backend/server.py</code> 当前有 78 个路由装饰器。
+<code>backend/server.py</code> 当前有 84 个路由装饰器。
 
 ### 10.1 平台与基础数据
 
@@ -611,6 +633,7 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 - GET <code>/api/model/explain/{region_id}</code>
 - GET <code>/api/model/explain-all</code>
 - GET <code>/api/model/backtest</code>
+- GET <code>/api/model/event-similarity</code> （无监督相似度；返回与来源支持事件最相似的县月 Top-K，供人工核查候选，不产出预测标签、不进入授信金额主链）
 
 ### 10.5 保险/资产资料
 
@@ -623,7 +646,15 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 
 农户详情接口会返回敏感字段，生产化前必须增加鉴权、脱敏和最小权限控制。
 
-### 10.6 饲草、质量和载畜
+### 10.6 授信测算与演示助手
+
+- POST <code>/api/credit-decision/evaluate</code>  唯一授信测算（feasible/infeasible/blocked 返回 200；输入校验失败 422；案例文件不可用 500）
+- GET <code>/api/credit-cases</code>  授信测算案例列表（主案例 + 百巴村控制案例）
+- GET <code>/api/demo-guide</code>  演示助手状态与可用案例
+- POST <code>/api/demo-guide/chat</code>  演示助手单条问答（知识或授信测算）
+- POST <code>/api/demo-guide/stream</code>  演示助手 SSE 流式回答；可随时断开停止
+
+### 10.7 饲草、质量和载畜
 
 - POST <code>/api/feed/estimate</code>
 - GET <code>/api/feed/pasture-info/{region_id}</code>
@@ -635,7 +666,7 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 - GET <code>/api/forage-supply-demand/summary</code>
 - GET <code>/api/carrying-capacity/daily</code>
 
-### 10.7 排序、预警、网格和灾害
+### 10.8 排序、预警、网格和灾害
 
 - GET <code>/api/cooperative-ranking/{region_id}</code>
 - GET <code>/api/cooperative-ranking</code>
@@ -653,7 +684,7 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 - GET <code>/api/disaster-forecast</code>
 - GET <code>/api/disaster-forecast/regions</code>
 
-### 10.8 页面
+### 10.9 页面
 
 - GET <code>/admin</code>
 - GET <code>/{path:path}</code>
@@ -743,7 +774,7 @@ python .\backend\server.py
 - 管理端：<code>http://127.0.0.1:8000/admin</code>
 - API 文档：<code>http://127.0.0.1:8000/docs</code>
 
-2026-08-07 当前被调用的 Python 环境缺少 <code>uvicorn</code>，直接导入 <code>backend.server</code> 会失败。模型模块和数据模块可以运行。首次启动前应安装 <code>requirements.txt</code>。
+2026-08-23 核验：默认端口 <code>8000</code>，可用环境变量 <code>PORT</code> 覆盖；启动前按 <code>requirements.txt</code> 安装依赖（含 uvicorn）。
 
 ### 12.4 可选 MySQL
 
@@ -767,7 +798,7 @@ python .\backend\server.py
 - <code>public_data/scripts/test_portfolio.py</code>。
 - 截图脚本用于视觉回归和答辩材料。
 
-这些多数是脚本式检查，不是完整自动化测试套件。没有 CI 配置、权限测试、并发写入测试、端到端浏览器测试和生产安全测试。
+这些多数是脚本式检查，不是完整自动化测试套件。已配置 GitHub Actions 轻量 CI（<code>.github/workflows/ci.yml</code>，推送后自动执行编译、回归测试和前端语法检查）；但尚未覆盖权限测试、并发写入测试、端到端浏览器测试和生产安全测试。
 
 ### 13.3 每次改动后的最低验证
 
@@ -793,7 +824,8 @@ git diff --check
 | 百巴村资产尽调 | 可演示 | 仅资产/耳标登记，合同和授信待核验 |
 | 产业链订单和支付 | 可演示 | 数据为样例 |
 | 绿色绩效 | 可演示 | 数据为样例 |
-| 灾害预测 | 可运行 | 规则和气候外推，未做损失校准 |
+| 灾害预测 | 可运行 | 规则和气候外推，未做损失校准；中后期段已加年际波动微起伏 |
+| 演示助手（Demo Guide） | 可运行 | 对外客服问答 + 实时授信测算转述；SSE 流式 |
 | 载畜量和饲草成本 | 可运行 | 载畜量派生，迁徙位置为启发式 |
 | 合作社排序 | 可演示 | 含生成数据，不能当正式评级 |
 | MySQL | 预留 | 非当前主存储 |
@@ -838,9 +870,9 @@ git diff --check
 
 ### 15.5 运行和部署
 
-- 当前 Python 环境缺少 Uvicorn，后端尚未在本次核验中启动。
+- 默认 <code>PORT=8000</code>；公演/联调可用环境变量改为其他端口（如 8008）。
 - Vercel 配置只发布静态前端。
-- 项目没有 CI/CD 和生产健康监控。
+- 项目已有轻量 CI（编译+回归+前端检查），但尚无生产健康监控与端到端浏览器测试。
 
 ## 16. 当前深化方向
 
@@ -874,11 +906,12 @@ git diff --check
 
 ## 18. Git 与工作区
 
-- 当前分支：<code>main</code>。
+- 当前分支：<code>feature/demo-guide</code>。
 - 远端：<code>origin = https://github.com/wndwns/-.git</code>。
-- 当前基线提交：<code>f5ed234 fix: prevent unverified records from driving credit outputs</code>。
-- 前一深化提交：<code>94902dc feat: focus on traceable due diligence flow</code>。
+- 当前基线提交：<code>8a6df05 fix: 灾害预测曲线年际波动与前端口径清理，演示助手路由与知识库落地</code>。
+- 前一条主链提交：<code>4a8a06d fix: 修复演示助手浮窗与灾害预测模块加载（demo-guide移入挂载点；灾害导入改用backend前缀并兜底；地区改26县下拉）</code>。
 - 旧版保护分支：<code>codex/backup/pre-deepening-20260807</code>。
+- 2026-08-07 深化基线：<code>f5ed234</code>（<code>main</code>）。
 
 编写本文时，工作区已有用户修改或未跟踪内容：
 

@@ -13,23 +13,26 @@ API 文档: http://127.0.0.1:8000/docs
 
 from __future__ import annotations
 
+import hmac
 import json
 import math
 import os
+import secrets
 import sys
+import time
 import uuid
 from io import BytesIO
 from datetime import datetime, date
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
-from urllib.request import Request, build_opener, ProxyHandler, urlopen
+from urllib.request import Request as UrllibRequest, build_opener, ProxyHandler, urlopen
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -87,6 +90,44 @@ def load_dotenv_file(path: Path = ROOT / ".env") -> None:
 
 load_dotenv_file()
 
+# ---------------------------------------------------------------------------
+# 管理端最小内存会话鉴权（secrets 生成会话值 + hmac.compare_digest 校验凭据）
+# 不引入数据库和第三方认证包；会话仅存于进程内存，退出/重启即失效。
+# ---------------------------------------------------------------------------
+
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+ADMIN_SESSION_COOKIE = "admin_session"
+ADMIN_SESSION_TTL = 12 * 60 * 60  # 12 小时
+
+_ADMIN_SESSIONS: dict[str, float] = {}  # token -> 过期时间戳
+
+
+def _admin_session_valid(request: Request) -> bool:
+    token = request.cookies.get(ADMIN_SESSION_COOKIE, "")
+    if not token:
+        return False
+    expires = _ADMIN_SESSIONS.get(token)
+    if not expires:
+        return False
+    if time.time() > expires:
+        _ADMIN_SESSIONS.pop(token, None)
+        return False
+    return True
+
+
+def _is_admin_protected(path: str, method: str) -> bool:
+    """管理写接口边界：所有 /api/admin/*（登录/会话查询除外）+ CSV 导入 + 数据源配置写入。"""
+    if path in ("/api/admin/login", "/api/admin/session"):
+        return False
+    if path.startswith("/api/admin"):
+        return True
+    if path == "/api/import/csv" and method == "POST":
+        return True
+    if path.startswith("/api/data-sources/") and method == "POST":
+        return True
+    return False
+
 # 允许的静态前端页面
 ADMIN_PAGES = {
     "",
@@ -106,6 +147,11 @@ ADMIN_PAGES = {
 
 class SlidesPayload(BaseModel):
     slides: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class AdminLoginPayload(BaseModel):
+    username: str = ""
+    password: str = ""
 
 
 class PlatformPayload(BaseModel):
@@ -253,6 +299,62 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+    # 管理端会话守卫：统一拦截管理写接口，未登录一律 401
+    @app.middleware("http")
+    async def admin_session_guard(request: Request, call_next):
+        if _is_admin_protected(request.url.path, request.method):
+            if not _admin_session_valid(request):
+                return JSONResponse(
+                    {"ok": False, "detail": "未登录或会话已过期，请先登录管理端"},
+                    status_code=401,
+                )
+        return await call_next(request)
+
+    # ======================================================================
+    # 管理端登录 / 会话
+    # ======================================================================
+
+    @app.post("/api/admin/login")
+    async def admin_login(payload: AdminLoginPayload) -> JSONResponse:
+        if not ADMIN_USERNAME or not ADMIN_PASSWORD:
+            return JSONResponse(
+                {"ok": False, "message": "管理端未配置访问凭据，请在项目根目录 .env 中设置 ADMIN_USERNAME / ADMIN_PASSWORD 后重启服务"},
+                status_code=503,
+            )
+        user_ok = hmac.compare_digest(payload.username.encode("utf-8"), ADMIN_USERNAME.encode("utf-8"))
+        pass_ok = hmac.compare_digest(payload.password.encode("utf-8"), ADMIN_PASSWORD.encode("utf-8"))
+        if not (user_ok and pass_ok):
+            return JSONResponse({"ok": False, "message": "用户名或密码错误"}, status_code=401)
+
+        now = time.time()
+        for token in [t for t, exp in _ADMIN_SESSIONS.items() if exp < now]:
+            _ADMIN_SESSIONS.pop(token, None)
+        token = secrets.token_urlsafe(32)
+        _ADMIN_SESSIONS[token] = now + ADMIN_SESSION_TTL
+
+        response = JSONResponse({"ok": True})
+        response.set_cookie(
+            ADMIN_SESSION_COOKIE, token,
+            max_age=ADMIN_SESSION_TTL,
+            httponly=True,
+            samesite="lax",
+            path="/",
+        )
+        return response
+
+    @app.post("/api/admin/logout")
+    async def admin_logout(request: Request) -> JSONResponse:
+        token = request.cookies.get(ADMIN_SESSION_COOKIE, "")
+        if token:
+            _ADMIN_SESSIONS.pop(token, None)
+        response = JSONResponse({"ok": True})
+        response.delete_cookie(ADMIN_SESSION_COOKIE, path="/")
+        return response
+
+    @app.get("/api/admin/session")
+    async def admin_session(request: Request) -> dict[str, Any]:
+        return {"ok": _admin_session_valid(request)}
 
     # ======================================================================
     # 健康检查
@@ -467,7 +569,7 @@ def create_app() -> FastAPI:
             "current": "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code",
             "timezone": "auto",
         })
-        req = Request(f"{endpoint}?{params}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        req = UrllibRequest(f"{endpoint}?{params}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         try:
             opener = build_opener(ProxyHandler({}))
             with opener.open(req, timeout=8) as resp:
@@ -513,7 +615,7 @@ def create_app() -> FastAPI:
                 "apply_url": "https://lbs.amap.com/api/webservice/guide/api/weatherinfo",
             }
         params = urlencode({"key": key, "city": city, "extensions": extensions, "output": "JSON"})
-        req = Request(f"{endpoint}?{params}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        req = UrllibRequest(f"{endpoint}?{params}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         try:
             with urlopen(req, timeout=8) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
