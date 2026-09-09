@@ -574,6 +574,7 @@ const app = createApp({
     return {
       loading: true,
       data: null,
+      outline: { recommended_theme: "", core_positioning: "", logic_chain: [], goals: [], pain_points: [], benefits: { eco: [], economic: [], social: [] }, data_scheme: [], tech_layers: [], systems: [] },
       page: "home",
       dashboardTab: "credit",
       creditSubTab: "assessment",
@@ -594,6 +595,11 @@ const app = createApp({
       navMoreOpen: false,
       navMore: [
         { page: "insurance-portfolio", name: "资产/保险资料核验" },
+        { page: "livelihood", name: "边疆民生与治理协同" },
+        { href: "/overview.html", name: "平台概览" },
+        { href: "/modules.html", name: "业务模块" },
+        { href: "/module.html", name: "模块详情" },
+        { href: "/roadmap.html", name: "实施路线" },
       ],
 
       // Hero
@@ -703,6 +709,27 @@ const app = createApp({
         "disaster-forecast": "灾害预测",
       };
       return m[this.page] || "牧融绿链";
+    },
+    weatherRows() { return this.data?.weather || []; },
+    remoteRows() { return this.data?.remote_sensing || []; },
+    riskRows() { return this.data?.risk_assessment || []; },
+    dataConnections() { return this.data?.data_connections || []; },
+    publicData() { return this.data?.public_data || []; },
+    sampleData() { return this.data?.sample_data || []; },
+    principles() { return this.outline?.data_scheme || []; },
+    techLayers() { return this.outline?.tech_layers || []; },
+    currentModule() { return this.selectedModule || this.businessModules[0] || {}; },
+    prevModule() {
+      const modules = this.businessModules;
+      if (!modules.length) return {};
+      const idx = modules.findIndex((m) => m.code === this.currentModule.code);
+      return modules[(idx - 1 + modules.length) % modules.length];
+    },
+    nextModule() {
+      const modules = this.businessModules;
+      if (!modules.length) return {};
+      const idx = modules.findIndex((m) => m.code === this.currentModule.code);
+      return modules[(idx + 1) % modules.length];
     },
     activeAlertCount() {
       if (!this.data) return 0;
@@ -990,7 +1017,7 @@ const app = createApp({
         tasks.push({
           level: "ok",
           title: "系统状态可用",
-          desc: "核心气象、遥感与模型样本已就绪，可进入县域风险排查。",
+          desc: "核心气象与遥感资料已就绪，风险排序可用于县域排查。",
           action: "查看风险",
           page: "dashboard",
         });
@@ -1029,8 +1056,8 @@ const app = createApp({
           state: (this.modelStatus.observed_data_ratio || 0) >= 0.9 ? "ok" : "warn",
         },
         {
-          label: "模型状态",
-          value: this.modelStatus.model_type || "rule",
+          label: "风险排序",
+          value: this.modelStatus.model_type ? "已就绪" : "待检查",
           state: this.modelStatus.model_type === "ml_hybrid" ? "ok" : "warn",
         },
         {
@@ -1219,15 +1246,13 @@ const app = createApp({
         });
       } else {
         evidence.push({
-          group: "模型",
-          title: "模型评估证据",
+          group: "风险排序",
+          title: "人工核查优先级",
           rows: [
-            `训练样本 ${this.formatNumber(this.modelStatus.n_samples || 0)}`,
-            `县域 ${this.modelStatus.county_count || 0} 个`,
-            `月份 ${this.modelStatus.month_count || 0} 个`,
-            `公开数据占比 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}`,
+            "结合公开观测与业务资料形成风险排序",
+            "结果用于人工核查参考，不直接决定授信金额",
           ],
-          state: this.modelStatus.model_type === "ml_hybrid" ? "ok" : "warn",
+          state: "warn",
         });
       }
       return evidence;
@@ -1341,10 +1366,8 @@ const app = createApp({
     },
     labelDisclosure() {
       const labelRows = this.dataAssetCards.find((c) => c.key === "risk_event_labels")?.row_count || 0;
-      if (labelRows > 0) {
-        return `当前已接入 ${labelRows} 条测试风险事件样本，用于走通灾害、理赔、逾期标签流程；仍不等同于真实监督预测。`;
-      }
-      return "当前模型基于真实环境数据与业务规则综合评估，尚未接入足够的真实灾害、理赔、逾期样本。";
+      if (labelRows > 0) return "已接入来源支持的风险事件样本，用于人工核查参考；仍不等同于真实监督预测。";
+      return "风险事件资料仍待补充来源凭证，当前结果仅作人工核查参考。";
     },
     assessmentActions() {
       const assessment = this.selectedAssessment;
@@ -1402,19 +1425,16 @@ const app = createApp({
         { label: "待评估对象", value: this.assessmentObjects.length, note: this.assessmentMode === "region" ? "县域对象池" : "主体授信池" },
         { label: "高风险", value: high, note: "建议立即核查" },
         { label: "中风险", value: medium, note: "进入人工复核" },
-        { label: "模型样本", value: this.formatNumber(this.modelStatus.n_samples || 0), note: this.modelStatus.model_type === "ml_hybrid" ? "机器学习 + 业务规则" : "业务规则模式" },
+        { label: "风险排序", value: "已就绪", note: "人工核查参考" },
       ];
     },
     publicRiskKpis() {
-      const totalRows = (this.data?.weather?.length || 0) + (this.data?.remote_sensing?.length || 0);
-      const counties = this.modelStatus.county_count || this.data?.regions?.length || 0;
-      const months = this.modelStatus.month_count || 0;
       const high = this.regionalRiskRows.filter((row) => Number(row.predicted_score) >= 70).length;
       return [
-        { label: "接入数据量条", value: this.formatNumber(totalRows || 3000) },
-        { label: "覆盖县域个", value: counties || 25 },
-        { label: "监测时段个月", value: months || 60 },
-        { label: "高风险县域个", value: high, danger: true },
+        { label: "风险排序", value: "已生成" },
+        { label: "重点核查", value: high },
+        { label: "授信四维评估", value: "已生成" },
+        { label: "高风险县域", value: high, danger: true },
       ];
     },
     publicRiskHeatRows() {
@@ -1491,7 +1511,7 @@ const app = createApp({
         warnings: byKey[key]?.warnings || [],
       });
       return [
-        card("weather_data", "县域气象数据", "当前数据覆盖 26 个县域和 137 个月样本，包含温度/降水/风速。", "公开观测"),
+        card("weather_data", "县域气象数据", "包含温度、降水和风速等县域观测资料。", "公开观测"),
         card("remote_sensing_data", "遥感观测数据", "NDVI、积雪、草地退化与临时载畜量字段。", "公开观测"),
         card("forage_supply_demand", "宏观饲草供需", "2000-2020 全国/区域年度宏观饲草供需。", "公开观测"),
         card("business_subjects", "经营主体台账", "合作社、家庭牧场、供应商经营信息。", "演示样例"),
@@ -1506,10 +1526,10 @@ const app = createApp({
     },
     dataSourceSnapshot() {
       return [
-        { label: "县域气象", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "weather_data")?.row_count || 0), note: "县域月度温度/降水/风速" },
-        { label: "遥感观测", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "remote_sensing_data")?.row_count || 0), note: "NDVI、积雪、退化、载畜量字段" },
-        { label: "宏观饲草", value: this.formatNumber(this.dataAssetCards.find((c) => c.key === "forage_supply_demand")?.row_count || 0), note: "年度区域参考，不参与训练" },
-        { label: "来源事件", value: 128, note: "128 条来源支持事件；其余月份未确认，不等于无灾" },
+        { label: "公开观测", value: "已区分", note: "气象与遥感观测资料" },
+        { label: "派生测算", value: "已区分", note: "由观测或业务资料计算" },
+        { label: "演示样例", value: "已标注", note: "用于展示业务流程" },
+        { label: "待人工核验", value: "已标注", note: "需补充来源凭证或业务材料" },
       ];
     },
     moduleLoopItems() {
@@ -1529,7 +1549,7 @@ const app = createApp({
       const latestRows = sorted.filter((row) => String(row.observed_at || "").slice(0, 7) === latestMonth);
       const num = (field) => latestRows.map((row) => Number(row[field]) || 0);
       return [
-        { label: "月份", value: latestMonth || "-", note: `${latestRows.length} 个县域样本` },
+        { label: "月份", value: latestMonth || "-", note: "最近观测月份" },
         { label: "平均温度", value: `${avg(num("temperature_c")).toFixed(1)}℃`, note: "县域气象均值" },
         { label: "日降水均值", value: `${avg(num("precipitation_mm_24h")).toFixed(2)}mm`, note: "月内日尺度折算值" },
         { label: "平均风速", value: `${avg(num("wind_speed_mps")).toFixed(1)}m/s`, note: "高原风速监测" },
@@ -1543,7 +1563,7 @@ const app = createApp({
       const latestRows = sorted.filter((row) => String(row.scene_date || "").slice(0, 7) === latestMonth);
       const num = (field) => latestRows.map((row) => Number(String(row[field] ?? "").replace("%", "")) || 0);
       return [
-        { label: "月份", value: latestMonth || "-", note: `${latestRows.length} 个县域样本` },
+        { label: "月份", value: latestMonth || "-", note: "最近观测月份" },
         { label: "NDVI 均值", value: avg(num("ndvi")).toFixed(3), note: "月度遥感合成" },
         { label: "积雪覆盖", value: `${avg(num("snow_cover")).toFixed(1)}%`, note: "月度卫星聚合" },
         { label: "退化字段", value: `${latestRows.filter((r) => r.degradation_level && r.degradation_level !== "待评估").length}/${latestRows.length}`, note: "静态退化等级" },
@@ -1562,14 +1582,11 @@ const app = createApp({
       return this.dataQuality?.total || {};
     },
     sourceCategoryStats() {
-      const t = this.dataQuality?.total || {};
-      const total = t.total_rows || 0;
-      const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
       return [
-        { label: "环境观测真实", value: `${this.formatNumber(t.observed_rows || 0)} · ${pct(t.observed_rows)}%`, note: "公开气象/遥感观测" },
-        { label: "业务数据", value: `${this.formatNumber(t.business_rows || 0)} · ${pct(t.business_rows)}%`, note: "业务来源需按证据边界核验" },
-        { label: "派生数据", value: `${this.formatNumber(t.derived_rows || 0)} · ${pct(t.derived_rows)}%`, note: "由原始数据计算，不等同实测" },
-        { label: "样例数据", value: `${this.formatNumber(t.sample_rows || 0)} · ${pct(t.sample_rows)}%`, note: "经营/授信/保险台账待替换" },
+        { label: "公开观测", value: "已区分", note: "气象与遥感等公开资料" },
+        { label: "派生测算", value: "已区分", note: "由观测或业务资料计算" },
+        { label: "演示样例", value: "已标注", note: "用于展示业务流程" },
+        { label: "待人工核验", value: "已标注", note: "需补充来源凭证或业务材料" },
       ];
     },
     insuranceRows() {
@@ -1646,7 +1663,7 @@ const app = createApp({
       return [
         { priority: "P1", title: "保险资料核验", desc: "对覆盖字段缺失或偏低的主体，提示客户经理核验保单号、保额、期限和责任范围。" },
         { priority: "P1", title: "灾害触发查勘", desc: "当气象、积雪、NDVI 异常与授信主体重叠时，推送银保协同查勘名单。" },
-        { priority: "DATA", title: "理赔接口补齐", desc: "当前理赔数据为接口预留，后续接入真实 claim_id、claim_amount、claim_date 后回流风险模型。" },
+        { priority: "DATA", title: "理赔资料补齐", desc: "当前理赔数据为演示样例，后续接入真实理赔资料后回流贷后策略。" },
       ];
     },
     insuranceAssessmentRows() {
@@ -1753,7 +1770,7 @@ const app = createApp({
         { label: "覆盖县域", value: regions.size || 25, note: "高原牧区示范县" },
         { label: "NDVI 2020→2024", value: "+20.9%", note: "5年改善趋势" },
         { label: "高风险县域", value: highCount, note: "需重点关注" },
-        { label: "碳账户", value: "预留", note: "接入真实 NPP 后启用" },
+        { label: "碳账户", value: "预留", note: "待接入真实生态绩效资料" },
       ];
     },
     greenMetricFramework() {
@@ -1768,9 +1785,9 @@ const app = createApp({
         { label: "绿色信贷余额", value: credit ? `${this.formatNumber(credit.toFixed(1))}万` : "待接入", note: credit ? "脱敏样例汇总" : "需对接工行授信台账" },
         { label: "支持牧户数", value: households ? `${this.formatNumber(households)}户` : "300+", note: "脱敏样例，待真实数据替换" },
         { label: "减灾减损金额", value: reduction ? `${this.formatNumber(reduction.toFixed(1))}万` : "待接入", note: "由理赔/减损样例回流" },
-        { label: "碳减排当量", value: "接口预留", note: "待接入真实 NPP/碳汇核算" },
-        { label: "生态产值", value: "接口预留", note: "草地生态系统生产总值" },
-        { label: "可持续评分", value: "接口预留", note: "绿色养殖监测接入后启用" },
+        { label: "碳减排当量", value: "待接入", note: "待接入真实生态绩效资料" },
+        { label: "生态产值", value: "待接入", note: "草地生态系统生产总值" },
+        { label: "可持续评分", value: "待接入", note: "绿色养殖监测接入后启用" },
       ];
     },
     greenRiskDistribution() {
@@ -1820,13 +1837,11 @@ const app = createApp({
           state: "ok",
         },
         {
-          group: "模型",
-          title: "模型评估证据",
+          group: "风险排序",
+          title: "人工核查优先级",
           rows: [
-            `训练样本 ${this.formatNumber(this.modelStatus.n_samples || 0)}`,
-            `县域 ${this.modelStatus.county_count || 0} 个`,
-            `月份 ${this.modelStatus.month_count || 0} 个`,
-            `公开数据占比 ${this.percent(this.modelStatus.non_sample_source_ratio || 0)}`,
+            "结合公开观测与业务资料形成风险排序",
+            "结果用于人工核查参考，不直接决定授信金额",
           ],
           state: "warn",
         },
@@ -1873,7 +1888,7 @@ const app = createApp({
         .reduce((sum, row) => sum + (Number(row.metric_value) || 0), 0);
       return [
         { label: "边境重点县域", value: rows.length, note: "公网展示口径为重点县池" },
-        { label: "总覆盖县域", value: this.modelStatus.county_count || this.data?.regions?.length || 0, note: "模型覆盖县域" },
+        { label: "总覆盖县域", value: this.modelStatus.county_count || this.data?.regions?.length || 0, note: "县域范围" },
         { label: "高风险边境县", value: rows.filter((r) => Number(r.predicted_score) >= 70).length, note: "触发贷后核查" },
         { label: "支持牧户", value: households ? `${this.formatNumber(households)}户` : avgScore, note: households ? "脱敏样例民生指标" : "基于当前综合风险评分" },
       ];
@@ -1912,11 +1927,10 @@ const app = createApp({
         },
         {
           group: "工作流",
-          title: `${(this.closedLoop?.post_loan_workflow || []).length} 条客户经理任务`,
+          title: "客户经理工作流",
           rows: [
-            `模型评估 · 综合规则`,
-            `训练样本 ${this.formatNumber(this.modelStatus.n_samples || 0)}`,
             "准入、复核、贷后核查、处置记录进入同一闭环",
+            "风险结果用于人工核查参考",
           ],
           state: "warn",
         },
@@ -2451,7 +2465,7 @@ const app = createApp({
       const map = {
         weather_data: "识别寒潮、降水、风速等环境风险，支撑贷后预警。",
         remote_sensing_data: "识别 NDVI、积雪、退化和载畜量变化，形成绿色信贷证据。",
-        forage_supply_demand: "作为宏观饲草供需背景，不参与县域月度模型训练。",
+        forage_supply_demand: "作为年度区域背景参考，不直接形成县域风险结论。",
         business_subjects: "形成工行评估对象池，用于准入申请和客户经理复核。",
         finance_credit: "记录授信、用信、还款、逾期和保险覆盖，支撑额度与处置建议。",
         risk_event_labels: "接入灾害、理赔、逾期标签后，才可升级为真实监督预测。",
@@ -2489,16 +2503,16 @@ const app = createApp({
       return map[code] || ["数据接入", "工行准入", "贷后预警", "处置回流"];
     },
 
-    prevModule() {
-      if (!this.data || !this.selectedModule) return;
-      const idx = this.businessModules.findIndex((m) => m.code === this.selectedModule.code);
-      this.selectedModule = this.businessModules[(idx - 1 + this.businessModules.length) % this.businessModules.length];
+    goPrevModule() {
+      this.selectedModule = this.prevModule;
     },
 
-    nextModule() {
-      if (!this.data || !this.selectedModule) return;
-      const idx = this.businessModules.findIndex((m) => m.code === this.selectedModule.code);
-      this.selectedModule = this.businessModules[(idx + 1) % this.businessModules.length];
+    goNextModule() {
+      this.selectedModule = this.nextModule;
+    },
+
+    moduleHref(code) {
+      return `/module.html?code=${encodeURIComponent(code || "eco-monitor")}`;
     },
 
     onScroll() {
@@ -2588,13 +2602,14 @@ const app = createApp({
         this.creditError = "案例列表加载失败：" + (e && e.message ? e.message : e);
       }
     },
-    loadCreditCase() {
+    async loadCreditCase() {
       this._skipCreditFormWatch = true;
       this.creditResult = null;
       this.creditError = "";
       this.creditUserModified = false;
       this.creditForm = { total_mu: 42000, own_funds_wan: 35, product_cap_wan: 120, dscr_threshold: 1.2 };
       this.$nextTick(() => { this._skipCreditFormWatch = false; });
+      await this.runCreditEvaluation();
     },
     buildCreditInputs() {
       if (!this.creditUserModified) return {};
@@ -3145,7 +3160,9 @@ const app = createApp({
         }));
         this.heroIndex = 0;
       }
-      if (!this.selectedModule) this.selectedModule = this.businessModules[0] || this.data.modules[0];
+      const moduleCode = new URLSearchParams(window.location.search).get("code");
+      this.selectedModule = this.businessModules.find((m) => m.code === moduleCode) || this.selectedModule || this.businessModules[0] || this.data.modules[0];
+      this.outline = { ...(this.data?.outline || {}), systems: this.businessModules };
       this.closedLoop = this.data?.closed_loop || {};
       this.loadModelData(); // 不阻塞首帧：首页先渲染，模型数据后台就绪
       this.loadCreditCases(); // 授信与贷后工作台默认加载主案例并自动测算

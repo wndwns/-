@@ -32,7 +32,7 @@
               <div class="nav-more" :class="{ open: navMoreOpen }">
                 <a :class="{ active: navMore.some(i => i.page === page) }" @click.stop="navMoreOpen = !navMoreOpen">更多 ▾</a>
                 <div class="nav-more-drop">
-                  <a v-for="item in navMore" :key="item.page" :class="{ active: page === item.page }" @click="navigate(item.page); navMoreOpen = false">{{ item.name }}</a>
+                  <a v-for="item in navMore" :key="item.page || item.href" :href="item.href || null" :class="{ active: item.page && page === item.page }" @click="item.page ? navigate(item.page) : navMoreOpen = false">{{ item.name }}</a>
                 </div>
               </div>
             </nav>
@@ -248,7 +248,7 @@
                 <div v-show="creditSubTab === 'assessment'" class="cw-subtab-content">
                   <div class="cw-head">
                     <div class="cw-title">
-                      <span class="ops-eyebrow">Credit & Post-Loan Workbench</span>
+                      <span class="ops-eyebrow">授信与贷后</span>
                       <h1>授信与贷后工作台</h1>
                       <p>基准情景确定合格融资需求 · 标准雪灾确定偿债支持上限 · 复合极端仅作压力提示 · 全链只生成一个正式推荐金额</p>
                     </div>
@@ -411,17 +411,17 @@
                     </div>
 
                     <div class="cw-disclosure">
-                      <p>本工作台所有业务数值均为比赛样例 / 样例假设 / 政策假设，不是真实工行客户数据或正式政策。保险第一版不进入金额与现金流；RF/Ridge、四维综合分与旧风险乘数不影响本测算。</p>
+                      <p>本工作台所有业务数值均为比赛样例 / 样例假设 / 政策假设，不是真实工行客户数据或正式政策。保险第一版不进入金额与现金流；风险排序结果不影响本测算。</p>
                     </div>
                   </template>
 
                   <div v-else-if="!creditError && !creditEvaluating" class="cw-loading">请选择测算主体，然后点击"重新测算"。</div>
 
-                  <!-- Assessment Detail Table (5 cols) -->
+                  <!-- 评估明细 Table (5 cols) -->
                   <section class="assessment-table-panel">
                     <div class="assessment-table-head">
                       <div>
-                        <span>Assessment Detail</span>
+                        <span>评估明细</span>
                         <h2>工行评估明细</h2>
                       </div>
                       <div id="chart-dashboard-quality" class="quality-mini-chart"></div>
@@ -457,7 +457,7 @@
                     <aside class="assessment-pool">
                       <div class="assessment-pool-head">
                         <div>
-                          <span>Object Pool</span>
+                          <span>评估对象池</span>
                           <h2>工行评估对象池</h2>
                         </div>
                         <b>{{ assessmentObjects.length }}</b>
@@ -486,7 +486,7 @@
                     <div class="cw-risk-content" v-if="selectedAssessment">
                       <div class="assessment-report-head">
                         <div>
-                          <span>{{ selectedAssessment.type === 'region' ? 'County Report' : 'Credit Report' }}</span>
+                          <span>{{ selectedAssessment.type === 'region' ? '县域评估报告' : '授信主体评估报告' }}</span>
                           <h2>{{ selectedAssessment.title }}</h2>
                           <p>{{ selectedAssessment.month }} · {{ selectedAssessment.primary_driver }}驱动</p>
                         </div>
@@ -513,7 +513,7 @@
                       <div class="assessment-charts">
                         <div class="assessment-chart-card">
                           <div class="mini-head">
-                            <span>Drivers</span>
+                            <span>风险因子</span>
                             <b>风险因子贡献</b>
                           </div>
                           <div id="chart-dashboard-driver" class="ops-chart small"></div>
@@ -527,7 +527,7 @@
                         </div>
                         <div class="assessment-chart-card">
                           <div class="mini-head">
-                            <span>Trend</span>
+                            <span>走势</span>
                             <b>风险走势</b>
                           </div>
                           <div id="chart-dashboard-trend" class="ops-chart"></div>
@@ -543,7 +543,7 @@
                     <aside class="assessment-pool">
                       <div class="assessment-pool-head">
                         <div>
-                          <span>Object Pool</span>
+                          <span>评估对象池</span>
                           <h2>工行评估对象池</h2>
                         </div>
                         <b>{{ assessmentObjects.length }}</b>
@@ -666,7 +666,7 @@
 
                       <aside class="evidence-panel cw-evidence-panel">
                         <div class="evidence-head">
-                          <span>Evidence</span>
+                          <span>证据</span>
                           <h2>工行证据链与处置</h2>
                         </div>
                         <div class="evidence-list">
@@ -680,11 +680,11 @@
                         <!-- Merged: Data Gap + Model Summary -->
                         <div class="cw-data-summary">
                           <div class="mini-head">
-                            <span>Data & Model</span>
+                            <span>数据与依据</span>
                             <b>数据与模型摘要</b>
                           </div>
                           <div class="cw-summary-box">
-                            <p><strong>模型状态：</strong>基于真实环境数据与业务规则运行，覆盖 {{ modelStatus.county_count || 0 }} 县域 / {{ modelStatus.month_count || 0 }} 月份，公开数据占比 97%。用于风险排序参考，不构成确定性结论。</p>
+                            <p><strong>模型状态：</strong>基于公开观测与业务资料形成风险排序，用于人工核查参考，不构成确定性结论。</p>
                           </div>
                           <div class="cw-summary-box">
                             <p><strong>数据缺口：</strong>部分县域气象站覆盖不足，气象资料用于趋势参考，不作交易依据；遥感观测正常接入。风险事件标签为比赛样例，不作为真实风险事件。</p>
@@ -693,7 +693,7 @@
 
                         <div class="action-checklist">
                           <div class="mini-head">
-                            <span>Actions</span>
+                            <span>处置动作</span>
                             <b>处置动作</b>
                           </div>
                           <div v-for="item in assessmentActions" :key="item.priority + item.title" class="action-item">
@@ -723,7 +723,7 @@
                   <div class="plain-card risk-heat-card">
                     <div class="plain-card-head risk-card-head">
                       <div>
-                        <h2>County Risk Heat</h2>
+                        <h2>县域风险热力</h2>
                         <p>县域风险热力总览</p>
                       </div>
                       <em>授信四维 · 0.40/0.30/0.20/0.10</em>
@@ -744,7 +744,7 @@
                   </div>
                   <div class="plain-card radar-card">
                     <div class="plain-card-head risk-card-head">
-                      <div><h2>Credit 4-Dim Radar</h2><p>{{ selectedPublicRiskRow?.region_name || '授信四维评分雷达图' }}</p></div>
+                      <div><h2>授信四维评分</h2><p>{{ selectedPublicRiskRow?.region_name || '授信四维评分雷达图' }}</p></div>
                       <em>{{ selectedPublicRiskRow?.display_level || '请选择县域' }}</em>
                     </div>
                     <div id="chart-public-radar" class="ops-chart public-radar-chart"></div>
@@ -755,13 +755,13 @@
                   </div>
                 </div>
                 <div class="plain-card" style="margin-top:16px;">
-                  <div class="plain-card-head risk-card-head"><div><h2>Risk Boundary</h2><p>风险结果使用边界</p></div></div>
+                  <div class="plain-card-head risk-card-head"><div><h2>风险结果边界</h2><p>风险结果使用边界</p></div></div>
                   <div class="radar-note" style="padding:0 16px 14px;">模型风险排序：用于人工核查优先级参考，不是违约概率，也不是确定性灾害预测。</div>
                   <div class="radar-note" style="padding:0 16px 14px;">实时预警：规则告警，用于触发人工核查；预警本身不等于已发生灾害事件。</div>
                 </div>
                 <div class="plain-card trend-card">
                   <div class="plain-card-head risk-card-head">
-                    <div><h2>Risk Trend</h2><p>全县域平均风险趋势（近60个月）</p></div>
+                    <div><h2>风险趋势</h2><p>全县域平均风险趋势（近60个月）</p></div>
                   </div>
                   <div id="chart-public-risk-trend" class="ops-chart"></div>
                 </div>
@@ -791,33 +791,21 @@
                   <span class="si-label">高风险区域</span>
                 </div>
               </div>
-              <!-- 模型状态卡片 -->
+              <!-- 风险排序状态 -->
               <div class="panel" style="margin-bottom:18px;">
                 <div class="panel-head">
-                  <h3>模型训练状态</h3>
-                  <span class="badge" :style="{background: modelStatus.model_type === 'ml_hybrid' ? 'rgba(45,125,79,0.12)' : 'rgba(217,138,58,0.12)', color: modelStatus.model_type === 'ml_hybrid' ? 'var(--green)' : 'var(--orange)' }">{{ modelStatus.model_type === 'ml_hybrid' ? '机器学习 + 业务规则' : '业务规则模式' }}</span>
+                  <h3>风险排序依据</h3>
+                  <span class="badge">人工核查参考</span>
                 </div>
                 <div class="panel-body">
-                  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;text-align:center;">
-                    <div><span style="font-size:20px;font-weight:700;color:var(--green);">{{ modelStatus.n_samples || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">训练样本</span></div>
-                    <div><span style="font-size:20px;font-weight:700;">{{ modelStatus.county_count || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">县域数</span></div>
-                    <div><span style="font-size:20px;font-weight:700;">{{ modelStatus.month_count || 0 }}</span><br /><span style="font-size:10px;color:var(--text-muted);">月份数</span></div>
-                    <div><span style="font-size:20px;font-weight:700;color:var(--cyan);">{{ ((modelStatus.confidence || 0) * 100).toFixed(0) }}%</span><br /><span style="font-size:10px;color:var(--text-muted);">置信度</span></div>
-                    <div><span style="font-size:20px;font-weight:700;color:var(--gold);">{{ ((modelStatus.non_sample_source_ratio || 0) * 100).toFixed(0) }}%</span><br /><span style="font-size:10px;color:var(--text-muted);">公开数据占比</span></div>
-                  </div>
-                  <p style="font-size:10px;color:var(--text-muted);margin-top:8px;text-align:center;">{{ modelStatus.note || '' }} | 训练时间: {{ modelStatus.trained_at ? new Date(modelStatus.trained_at).toLocaleString() : '未训练' }}</p>
-                  <div v-if="modelStatus.data_quality_warnings && modelStatus.data_quality_warnings.length > 0" style="margin-top:8px;padding:8px 12px;background:rgba(217,138,58,0.08);border-radius:4px;">
-                    <p v-for="w in modelStatus.data_quality_warnings" :key="w" style="font-size:10px;color:var(--orange);margin:0;">⚠ {{ w }}</p>
-                  </div>
-                  <div style="text-align:center;margin-top:8px;">
-                    <button class="btn-outline" @click="trainModel" :disabled="modelTraining">{{ modelTraining ? '训练中…' : '重新训练模型' }}</button>
-                  </div>
+                  <p class="radar-note" style="margin:0;">结合公开观测与业务资料形成风险排序，帮助客户经理优先核查重点对象。</p>
+                  <p class="radar-note" style="margin:8px 0 0;">风险排序不等同于违约概率或确定性灾害预测；最终授信和处置由人工核验决定。</p>
                 </div>
               </div>
 
               <div class="content-2col">
                 <div class="panel">
-                  <div class="panel-head"><h3>模型风险排序</h3><span class="badge" v-if="modelPrediction">{{ modelPrediction.model_type === 'ml_hybrid' ? '机器学习 + 业务规则' : '业务规则模式' }}</span></div>
+                  <div class="panel-head"><h3>模型风险排序</h3><span class="badge" v-if="modelPrediction">优先核查</span></div>
                   <p class="radar-note" style="margin:0 14px 10px;">口径：综合风险排序，主要用于人工核查优先级；不是违约概率，也不是确定性灾害预测。</p>
                   <div class="panel-body no-pad" v-if="modelPrediction">
                     <div v-for="p in modelPrediction.predictions" :key="p.region_id" class="region-row">
@@ -835,7 +823,7 @@
                       </div>
                     </div>
                   </div>
-                  <div class="panel-body" v-else><p style="color:var(--text-muted);">模型未就绪，请先训练。</p></div>
+                  <div class="panel-body" v-else><p style="color:var(--text-muted);">风险排序暂不可用，请稍后重试。</p></div>
                 </div>
                 <div class="panel">
                   <div class="panel-head"><h3>实时预警</h3></div>
@@ -938,7 +926,7 @@
                 <section class="livelihood-evidence-stack">
                   <div class="evidence-panel public-evidence plain-evidence">
                     <div class="evidence-head">
-                      <span>Evidence</span>
+                      <span>证据</span>
                       <h2>工行证据链与处置</h2>
                     </div>
                     <div class="evidence-list livelihood-evidence-list">
@@ -954,7 +942,7 @@
                     </div>
                   </div>
                   <div class="ops-panel livelihood-actions">
-                    <div class="ops-panel-head"><div><span class="ops-eyebrow">Actions</span></div><strong>处置动作</strong></div>
+                    <div class="ops-panel-head"><div><span class="ops-eyebrow">处置动作</span></div><strong>处置动作</strong></div>
                     <div class="action-list">
                       <div v-for="item in insuranceActions" :key="item.title" class="action-row">
                         <span>{{ item.priority }}</span>
@@ -964,7 +952,7 @@
                   </div>
                   <div class="ops-panel assessment-table-panel livelihood-detail-panel">
                     <div class="ops-panel-head">
-                      <div><span class="ops-eyebrow">Assessment Detail</span><h3>工行评估明细</h3></div>
+                      <div><span class="ops-eyebrow">评估明细</span><h3>工行评估明细</h3></div>
                     </div>
                     <div class="terminal-table-wrap compact">
                       <table class="terminal-table">
@@ -1066,13 +1054,13 @@
 
                 <section class="evidence-panel public-evidence plain-evidence">
                   <div class="evidence-head">
-                    <span>Evidence</span>
+                    <span>证据</span>
                     <h2>工行证据链与处置</h2>
                   </div>
                   <div class="evidence-list">
                     <div class="evidence-item ok"><span>气象</span><strong>{{ latestWeatherSummary[0]?.value || '-' }} 县域气象</strong><p>温度、降水、风速进入贷后预警证据链。</p></div>
                     <div class="evidence-item ok"><span>遥感</span><strong>{{ latestRemoteSummary[0]?.value || '-' }} 遥感观测</strong><p>NDVI、积雪、退化和载畜量作为绿色信贷证据。</p></div>
-                    <div class="evidence-item warn"><span>模型</span><strong>{{ modelStatus.model_type && modelStatus.model_type !== 'rule' ? '机器学习 + 业务规则' : '基于业务规则运行' }}</strong><p>基于真实环境数据与业务规则综合评估，用于人工核查参考。</p></div>
+                    <div class="evidence-item warn"><span>模型</span><strong>风险排序依据</strong><p>基于真实环境数据与业务规则综合评估，用于人工核查参考。</p></div>
                   </div>
                 </section>
               </div>
@@ -1119,7 +1107,7 @@
                 </section>
 
                 <section class="ops-panel">
-                  <div class="ops-panel-head"><div><h3>绿色信贷指标框架</h3><p><span class="status-ok">接口预留</span></p></div></div>
+                  <div class="ops-panel-head"><div><h3>绿色信贷指标框架</h3><p><span class="status-ok">待人工核验</span></p></div></div>
                   <div class="green-metric-list public-green-list">
                     <div v-for="item in greenMetricFramework" :key="item.label">
                       <span>{{ item.label }}</span>
@@ -1132,7 +1120,7 @@
                 <section class="livelihood-evidence-stack">
                   <div class="evidence-panel public-evidence plain-evidence">
                     <div class="evidence-head">
-                      <span>Evidence</span>
+                      <span>证据</span>
                       <h2>工行证据链与处置</h2>
                     </div>
                     <div class="evidence-list livelihood-evidence-list">
@@ -1144,7 +1132,7 @@
                     </div>
                     <div class="action-checklist livelihood-actions">
                       <div class="mini-head">
-                        <span>Actions</span>
+                        <span>处置动作</span>
                         <b>处置动作</b>
                       </div>
                       <div v-for="item in greenActions" :key="item.priority + item.title" class="action-item">
@@ -1158,7 +1146,7 @@
                   <section class="assessment-table-panel livelihood-detail-panel">
                     <div class="assessment-table-head">
                       <div>
-                        <span>Assessment Detail</span>
+                        <span>评估明细</span>
                         <h2>工行评估明细</h2>
                       </div>
                     </div>
@@ -1245,7 +1233,7 @@
                 <section class="livelihood-evidence-stack">
                   <div class="evidence-panel public-evidence plain-evidence">
                     <div class="evidence-head">
-                      <span>Evidence</span>
+                      <span>证据</span>
                       <h2>工行证据链与处置</h2>
                     </div>
                     <div class="evidence-list livelihood-evidence-list">
@@ -1257,7 +1245,7 @@
                     </div>
                     <div class="action-checklist livelihood-actions">
                       <div class="mini-head">
-                        <span>Actions</span>
+                        <span>处置动作</span>
                         <b>处置动作</b>
                       </div>
                       <div v-for="item in livelihoodActions" :key="item.priority + item.title" class="action-item">
@@ -1271,7 +1259,7 @@
                   <section class="assessment-table-panel livelihood-detail-panel">
                     <div class="assessment-table-head">
                       <div>
-                        <span>Assessment Detail</span>
+                        <span>评估明细</span>
                         <h2>工行评估明细</h2>
                       </div>
                     </div>
@@ -1741,24 +1729,22 @@
                         <h3>{{ asset.title }}</h3>
                         <p>{{ asset.desc }}</p>
                       </div>
-                      <strong>{{ formatNumber(asset.row_count) }}</strong>
                     </div>
                   </aside>
 
                   <div class="data-workbench">
                     <div class="ops-panel">
                       <div class="ops-panel-head">
-                        <div><h3>数据来源构成</h3><p>环境观测真实 / 业务 / 派生 / 样例，四类互斥统计</p></div>
-                        <span class="ops-badge">共 {{ formatNumber(dqTotal.total_rows) }} 行</span>
+                        <div><h3>数据来源构成</h3><p>按公开观测、派生测算、演示样例和待人工核验区分</p></div>
+                        <span class="ops-badge">口径已区分</span>
                       </div>
-                      <div class="metric-strip relaxed" v-if="dqTotal.total_rows">
+                      <div class="metric-strip relaxed">
                         <div v-for="item in sourceCategoryStats" :key="item.label">
                           <span>{{ item.label }}</span>
                           <strong>{{ item.value }}</strong>
                           <em>{{ item.note }}</em>
                         </div>
                       </div>
-                      <p v-else class="radar-note" style="margin:12px 0;">数据质量统计暂不可用。</p>
                     </div>
 
                     <div class="ops-panel">
@@ -1797,12 +1783,11 @@
                         <span class="ops-badge warn">演示样例已标注</span>
                       </div>
                       <table class="schema-table data-purpose-table">
-                        <thead><tr><th>数据资产</th><th>状态</th><th>记录数</th><th>工行业务用途</th></tr></thead>
+                        <thead><tr><th>数据资产</th><th>状态</th><th>工行业务用途</th></tr></thead>
                         <tbody>
                           <tr v-for="asset in dataAssetCards" :key="'purpose-' + asset.key">
                             <td><strong>{{ asset.title }}</strong></td>
                             <td><span class="asset-status" :class="dataAssetStatusClass(asset)">{{ asset.status }}</span></td>
-                            <td>{{ formatNumber(asset.row_count) }}</td>
                             <td>{{ dataAssetPurpose(asset.key) }}</td>
                           </tr>
                         </tbody>
@@ -1907,12 +1892,12 @@
                 <div v-if="dailyCapacityLoading" style="padding:12px;color:var(--text-secondary);">加载中...</div>
                 <div v-else-if="dailyCapacity" style="padding:0;">
                   <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:var(--text-secondary);">
-                    <span>NPP 预测: <strong>{{ dailyCapacity.npp_value }}</strong></span>
+                    <span>生态供给预测: <strong>{{ dailyCapacity.npp_value }}</strong></span>
                     <span>基准载畜量: <strong>{{ dailyCapacity.npp_base }} 羊单位</strong></span>
                     <span>日均: <strong>{{ dailyCapacity.statistics.capacity_mean }}~{{ dailyCapacity.statistics.capacity_max }}</strong></span>
                     <span>退化: <strong>{{ dailyCapacity.degradation_coef }}</strong> ({{ dailyCapacity.degradation_level }})</span>
-                    <span v-if="dailyCapacity.gdi_risk !== '低风险'" style="color:var(--red);">GDI: <strong>{{ dailyCapacity.gdi_risk }}</strong> — {{ dailyCapacity.gdi_advisory }}</span>
-                    <span v-else style="color:var(--green);">GDI: 安全</span>
+                    <span v-if="dailyCapacity.gdi_risk !== '低风险'" style="color:var(--red);">综合草地风险：<strong>{{ dailyCapacity.gdi_risk }}</strong> — {{ dailyCapacity.gdi_advisory }}</span>
+                    <span v-else style="color:var(--green);">综合草地风险：安全</span>
                   </div>
                   <div class="tbl-wrap" style="max-height:400px;"><table class="tbl" style="font-size:11px;">
                     <thead><tr><th>日期</th><th>NDVI</th><th>季节</th><th>物候</th><th>雪盖</th><th>退化</th><th style="color:var(--accent);">载畜量</th></tr></thead>
@@ -1959,12 +1944,12 @@
               <div v-if="dataTab === 'warning'" class="content-2col">
                 <!-- GDI 退化风险 -->
                 <div class="panel">
-                  <div class="panel-head"><h3>Li 2025 草地退化预警 (GDI)</h3></div>
+                  <div class="panel-head"><h3>草地退化风险预警</h3></div>
                   <div class="panel-body no-pad">
                     <div v-if="warningLoading" style="padding:20px;text-align:center;color:var(--text-secondary);">加载中...</div>
                     <div v-else-if="!warningData" style="padding:20px;text-align:center;color:var(--text-secondary);">预警数据暂不可用</div>
                     <div v-else class="tbl-wrap"><table class="tbl">
-                      <thead><tr><th>县</th><th>草地类型</th><th>草产量 g/m²</th><th>阈值</th><th>GDI</th><th>NPP趋势</th><th>风险</th></tr></thead>
+                      <thead><tr><th>县</th><th>草地类型</th><th>草产量</th><th>参考线</th><th>综合风险</th><th>生态趋势</th><th>风险</th></tr></thead>
                       <tbody>
                         <tr v-for="g in warningData.gdi" :key="g.region_id">
                           <td><strong>{{ g.region_id }}</strong></td>
@@ -1987,7 +1972,7 @@
                     <div v-if="warningLoading" style="padding:20px;text-align:center;color:var(--text-secondary);">加载中...</div>
                     <div v-else-if="!warningData" style="padding:20px;text-align:center;color:var(--text-secondary);">--</div>
                     <div v-else class="tbl-wrap"><table class="tbl">
-                      <thead><tr><th>县</th><th>最新月</th><th>NDVI</th><th>历史均值</th><th>偏差度</th><th>状态</th></tr></thead>
+                      <thead><tr><th>县</th><th>最近月份</th><th>植被指数</th><th>历史均值</th><th>偏差度</th><th>状态</th></tr></thead>
                       <tbody>
                         <tr v-for="n in warningData.ndvi" :key="n.region_id">
                           <td><strong>{{ n.region_id }}</strong></td>
@@ -2089,12 +2074,12 @@
                   </div>
                 </div>
 
-                <!-- SHAP 风险解释报告 -->
+                <!-- 风险解释报告 -->
                 <div class="panel" style="grid-column:1/-1">
                   <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
                     <div>
-                      <h3>风险解释报告（SHAP）</h3>
-                      <p style="margin:4px 0 0;font-size:12px;color:var(--text-secondary)">基于 SHAP 可解释性，展示每个特征对风险评分的贡献方向与大小</p>
+                      <h3>风险解释报告</h3>
+                      <p style="margin:4px 0 0;font-size:12px;color:var(--text-secondary)">展示各类风险因素对评分方向与大小的影响</p>
                     </div>
                     <select v-model="explainSelectedRegion" @change="loadExplainData()" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
                       <option value="">选择县</option>
@@ -2120,8 +2105,8 @@
                           <div style="font-size:18px;font-weight:600;margin-top:4px">{{ explainData.base_value?.toFixed(1) }}</div>
                         </div>
                         <div style="padding:12px;background:var(--bg-secondary);border-radius:8px">
-                          <div style="font-size:11px;color:var(--text-secondary)">SHAP 引擎</div>
-                          <div style="font-size:14px;font-weight:600;margin-top:4px">{{ explainData.shap_available ? 'SHAP TreeExplainer' : '规则权重近似' }}</div>
+                          <div style="font-size:11px;color:var(--text-secondary)">解释方式</div>
+                          <div style="font-size:14px;font-weight:600;margin-top:4px">{{ explainData.shap_available ? '因素贡献分析' : '业务规则解释' }}</div>
                         </div>
                       </div>
 
@@ -2142,7 +2127,7 @@
                             </div>
                             <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-bottom:4px">
                               <span>值: {{ d.feature_value }}</span>
-                              <span>SHAP: {{ d.shap_value > 0 ? '+' : '' }}{{ d.shap_value }}</span>
+                              <span>影响分: {{ d.shap_value > 0 ? '+' : '' }}{{ d.shap_value }}</span>
                             </div>
                             <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
                               <div :style="{height: '100%', width: Math.min(100, Math.abs(d.shap_value) * 20) + '%', background: d.shap_value > 0 ? 'var(--red)' : d.shap_value < 0 ? 'var(--green)' : 'var(--text-secondary)'}"></div>

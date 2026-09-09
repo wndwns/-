@@ -336,7 +336,6 @@ def create_app() -> FastAPI:
         response = JSONResponse({"ok": True})
         response.set_cookie(
             ADMIN_SESSION_COOKIE, token,
-            max_age=ADMIN_SESSION_TTL,
             httponly=True,
             samesite="lax",
             path="/",

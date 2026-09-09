@@ -29,12 +29,11 @@
 
         <section class="section-block">
           <div class="section-heading">
-            <span>ICBC Modules</span>
+            <span>业务模块</span>
             <h2>点击查看工行绿色信贷风控能力</h2>
           </div>
           <div class="module-grid modules-page-grid">
             <a v-for="module in outline.systems" :key="module.code" class="module-card link-card" :href="moduleHref(module.code)">
-              <small>{{ module.code }}</small>
               <h3>{{ module.name }}</h3>
               <p>{{ module.value }}</p>
               <span class="card-link">打开详情</span>
