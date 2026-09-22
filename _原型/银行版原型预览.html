@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="o5SVDxrzqi6gguy8IOct8K">
+<head data-page-node-id="wwYGBmThUqKyWFCNmJtBaN">
+<meta charset="UTF-8" data-page-node-id="k9V2OHzrnozg6kLdWBMqcd">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="BZBr5JBa0EQtdf1wNMSfxl">
+<title>工银牧融 · 银行版原型预览 v3</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --red:#C7000B; --red-bg:#FFF1F0; --red-line:#FFCCC7;
+    --ink:#1F2329; --ink2:#4E5969; --ink3:#86909C;
+    --line:#E5E6EB; --bg:#F5F6F8; --card:#FFFFFF;
+    --ok:#1FA463; --ok-bg:#E8F8F0;
+    --warn:#D9822B; --warn-bg:#FFF7E8;
+    --danger:#D93026; --danger-bg:#FFF1F0;
+    --info:#1D6FD0; --info-bg:#EAF2FE;
+  }
+  body{ font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--ink); font-size:14px; line-height:1.6; }
+  .demo-flag{ background:#FFFBE6; border-bottom:1px solid #FFE58F; color:#874D00; font-size:12px; padding:6px 20px; }
+  .app{ display:flex; min-height:calc(100vh - 30px); }
+
+  .sidebar{ width:216px; flex:0 0 216px; background:var(--card); border-right:1px solid var(--line); display:flex; flex-direction:column; }
+  .brand{ padding:18px 20px 14px; border-bottom:1px solid var(--line); }
+  .brand h1{ font-size:16px; font-weight:700; letter-spacing:.5px; }
+  .brand h1 span{ color:var(--red); }
+  .brand p{ font-size:11px; color:var(--ink3); margin-top:2px; }
+  .nav{ padding:8px 0 24px; flex:1; }
+  .nav-group-t{ font-size:11px; color:var(--ink3); padding:14px 20px 6px; letter-spacing:1px; }
+  .nav-item{ padding:9px 20px; cursor:pointer; border-left:3px solid transparent; display:flex; align-items:center; justify-content:space-between; color:var(--ink); }
+  .nav-item:hover{ background:#FAFAFA; }
+  .nav-item.active{ background:var(--red-bg); border-left-color:var(--red); color:var(--red); font-weight:600; }
+  .nav-item .cnt{ font-size:11px; color:var(--ink3); font-weight:400; }
+  .nav-item.active .cnt{ color:var(--red); }
+
+  .main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .topbar{ height:52px; background:var(--card); border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; padding:0 24px; }
+  .topbar .crumb{ font-size:13px; color:var(--ink2); }
+  .topbar .user{ font-size:12px; color:var(--ink3); }
+  .content{ padding:18px 24px 40px; flex:1; }
+  .page{ display:none; }
+  .page.on{ display:block; }
+
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:8px; padding:18px 20px; margin-bottom:14px; }
+  .card-h{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .card-h h2{ font-size:15px; font-weight:600; }
+  .card-h .hint{ font-size:12px; color:var(--ink3); }
+
+  /* 客户切换器 */
+  .custbar{
+    background:var(--card); border:1px solid var(--line); border-radius:8px;
+    padding:12px 20px; margin-bottom:14px; display:flex; align-items:center;
+    gap:14px; flex-wrap:wrap;
+  }
+  .custbar .cb-tag{ font-size:12px; color:var(--ink3); }
+  .custbar select{
+    font-size:15px; font-weight:600; color:var(--ink); padding:7px 12px;
+    border:1px solid var(--line); border-radius:6px; background:#fff;
+    min-width:280px; cursor:pointer; outline:none;
+  }
+  .custbar select:focus{ border-color:var(--red); }
+  .custbar .cb-meta{ font-size:12px; color:var(--ink3); margin-left:auto; }
+  .custbar .cb-meta b{ color:var(--ink2); font-weight:500; }
+  .custbar .cb-prev, .custbar .cb-next{
+    width:30px; height:30px; line-height:28px; text-align:center;
+    border:1px solid var(--line); border-radius:6px; cursor:pointer; color:var(--ink2);
+    font-size:14px; user-select:none;
+  }
+  .custbar .cb-prev:hover, .custbar .cb-next:hover{ border-color:var(--red); color:var(--red); }
+
+  .verdict{
+    background:var(--card); border:1px solid var(--line); border-left:4px solid var(--red);
+    border-radius:8px; padding:20px 24px; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;
+  }
+  .verdict.tone-ok{ border-left-color:var(--ok); }
+  .verdict.tone-warn{ border-left-color:var(--warn); }
+  .verdict.tone-danger{ border-left-color:var(--danger); }
+  .verdict .v-main{ min-width:300px; }
+  .verdict .v-label{ font-size:12px; color:var(--ink3); }
+  .verdict .v-big{ font-size:32px; font-weight:700; letter-spacing:-.5px; line-height:1.2; }
+  .verdict .v-big em{ font-style:normal; font-size:18px; font-weight:600; margin-left:2px; }
+  .verdict .v-note{ font-size:12px; color:var(--ink3); margin-top:4px; }
+  .verdict .v-acts{ display:flex; gap:10px; flex-wrap:wrap; }
+  .kpis{ display:flex; gap:32px; flex-wrap:wrap; }
+  .kpi .k-l{ font-size:12px; color:var(--ink3); }
+  .kpi .k-v{ font-size:22px; font-weight:700; }
+  .kpi .k-v small{ font-size:12px; font-weight:400; color:var(--ink3); margin-left:2px; }
+
+  .btn{ display:inline-block; padding:7px 16px; border-radius:6px; font-size:13px; cursor:pointer; border:1px solid var(--line); background:#fff; color:var(--ink); white-space:nowrap; }
+  .btn:hover{ border-color:#C9CDD4; }
+  .btn-main{ background:var(--red); border-color:var(--red); color:#fff; font-weight:500; }
+  .btn-main:hover{ background:#A80009; }
+  .btn-sm{ padding:3px 10px; font-size:12px; }
+  .btn-ghost{ color:var(--red); border-color:var(--red-line); }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th{ text-align:left; padding:10px 12px; background:#FAFAFA; color:var(--ink2); font-weight:500; font-size:12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  td{ padding:11px 12px; border-bottom:1px solid #F2F3F5; vertical-align:middle; }
+  tr:last-child td{ border-bottom:0; }
+  tbody tr:hover{ background:#FCFCFD; }
+  .num{ font-variant-numeric:tabular-nums; }
+  .r{ text-align:right; }
+
+  .badge{ display:inline-block; padding:1px 8px; border-radius:4px; font-size:12px; line-height:18px; white-space:nowrap; }
+  .b-ok{ background:var(--ok-bg); color:var(--ok); }
+  .b-warn{ background:var(--warn-bg); color:var(--warn); }
+  .b-danger{ background:var(--danger-bg); color:var(--danger); }
+  .b-info{ background:var(--info-bg); color:var(--info); }
+  .b-gray{ background:#F2F3F5; color:var(--ink3); }
+
+  details.fold{ margin-top:14px; border:1px dashed var(--line); border-radius:6px; background:#FCFCFD; }
+  details.fold > summary{ cursor:pointer; padding:10px 16px; font-size:13px; color:var(--ink2); list-style:none; user-select:none; }
+  details.fold > summary::-webkit-details-marker{ display:none; }
+  details.fold > summary::before{ content:"▸ "; color:var(--ink3); }
+  details.fold[open] > summary::before{ content:"▾ "; }
+  details.fold .fold-body{ padding:4px 16px 16px; font-size:13px; color:var(--ink2); }
+  details.fold .fold-body h4{ font-size:12px; color:var(--ink3); font-weight:500; margin:12px 0 6px; }
+  details.fold .fold-body ul{ padding-left:18px; }
+  details.fold .fold-body li{ margin-bottom:4px; }
+
+  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:16px; flex-wrap:wrap; }
+  .tab{ padding:9px 16px; font-size:14px; color:var(--ink2); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tab:hover{ color:var(--ink); }
+  .tab.on{ color:var(--red); border-bottom-color:var(--red); font-weight:600; }
+  .tabpane{ display:none; }
+  .tabpane.on{ display:block; }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:1100px){ .grid2,.grid3{ grid-template-columns:1fr; } }
+
+  .bar{ height:6px; background:#F2F3F5; border-radius:3px; overflow:hidden; min-width:70px; }
+  .bar i{ display:block; height:100%; background:var(--red); border-radius:3px; }
+
+  .muted{ color:var(--ink3); font-size:12px; }
+  .mono{ font-family:Consolas,Monaco,monospace; font-size:12.5px; }
+  tr.grp td{ background:#FAFBFC; font-size:12px; color:var(--ink3); font-weight:500; padding:7px 12px; letter-spacing:.5px; }
+  .empty{ padding:28px 0; text-align:center; color:var(--ink3); font-size:13px; }
+  .linkish{ color:var(--red); cursor:pointer; }
+</style>
+</head>
+<body data-page-node-id="mQtAsg4WQ3A8vGexRgFAcZ">
+
+<div class="demo-flag" data-page-node-id="EaLUBBdY28CEOIJC7TNj5G">
+  <strong data-page-node-id="v4cB1EHlQDpnrL8qNvqUES">原型 v3 · 非生产环境</strong>　｜　本版改动：客户档案加「当前客户」切换器（下拉 + 上/下一户），客户池「查看」与各处客户名可直达；切换后全页数据随之变化
+</div>
+
+<div class="app" data-page-node-id="dOA28A3B9Z2veymUSOOy8B">
+
+  <aside class="sidebar" data-page-node-id="GHnQ8XfqQ2dwhCLaKhEkuS">
+    <div class="brand" data-page-node-id="rbekY0tRU0Jh0tk90rP2FE">
+      <h1 data-page-node-id="JAgijLtKLHJuwYeKXjpYHq">工银<span data-page-node-id="H0ElyzslrmFzqoNhuHQxkz">牧融</span></h1>
+      <p data-page-node-id="HYoS2Lt8X4o6pWDZRdXl5J">高原畜牧活体资产授信与贷后风控</p>
+    </div>
+    <nav class="nav" data-page-node-id="fhroSz3l6krSAD8ryVssWU">
+      <div class="nav-group-t" data-page-node-id="FGxDe4W4HTggJF2YNBHGom">获客与授信</div>
+      <div class="nav-item active" data-page="dashboard" data-page-node-id="UN1SYVmR102yEqyU9BGP7O">工作台 <span class="cnt" data-page-node-id="g73nxGNryiW1ARL6RcEssm">7</span></div>
+      <div class="nav-item" data-page="pool" data-page-node-id="7MqBxxTlfZ1uQ2AH87DOKA">客户池 <span class="cnt" data-page-node-id="r5WavWLa4JidV9QSWTOhnu">128</span></div>
+      <div class="nav-item" data-page="profile" data-page-node-id="DeuruUEJKYJXE5bVWODqBf">客户档案</div>
+
+      <div class="nav-group-t" data-page-node-id="9lnIlwSxoABRcDGULQZdOt">资产与风控</div>
+      <div class="nav-item" data-page="ledger" data-page-node-id="mE4g6OBdWHhFgXXhmo9FCv">活体资产台账 <span class="cnt" data-page-node-id="bLxCIbW5qe6W5hVx8cMIR1">3</span></div>
+      <div class="nav-item" data-page="postloan" data-page-node-id="8ZqC8vycagDBl6COLRTW6C">贷后待办 <span class="cnt" data-page-node-id="EYOYCvvMIIwDWwHHiH0PAr">7</span></div>
+      <div class="nav-item" data-page="region" data-page-node-id="ozfmvHiUv82thwCl6jqEgf">区域与集中度</div>
+
+      <div class="nav-group-t" data-page-node-id="2u11SqwN9xIUqGcVX0UJum">协同</div>
+      <div class="nav-item" data-page="insurance" data-page-node-id="cDyZWRFX8FizK72ePvcfyb">保险协同 <span class="cnt" data-page-node-id="pLv1FCAQXiGhsLHHBaoBDs">4</span></div>
+    </nav>
+  </aside>
+
+  <div class="main" data-page-node-id="ZrT3oB50MY4pzGBj0NJ65W">
+    <div class="topbar" data-page-node-id="7c1B2OygXWszmmmuiA7Hgl">
+      <div class="crumb" id="crumb" data-page-node-id="84fzUGjUNCfu3iTOCJjGfV">工作台</div>
+      <div class="user" data-page-node-id="udRh6VgsWXrkmhotc2SBGt">客户经理 · 那曲市牧区客户经理 2 组</div>
+    </div>
+
+    <div class="content" data-page-node-id="oNhxzxLf88ZNiA5NE41taE">
+
+      <!-- ========== 1. 工作台 ========== -->
+      <section class="page on" id="page-dashboard" data-page-node-id="GKIhif7baGV5cRmP3EzXCI">
+        <div class="verdict" data-page-node-id="upjV8mlgJfhaV6P5HLGm37">
+          <div class="v-main" data-page-node-id="fuFQ0Nj4JvoOtmDwAx5BVl">
+            <div class="v-label" data-page-node-id="OPIg69Uz74xppVd13VVm12">今日待办</div>
+            <div class="v-big" data-page-node-id="gUTHlQMzLPgdMXtqxopQ6T">7 <em data-page-node-id="fpFVLYv3qpAR5LE8u7INkE">项</em> <span style="font-size:14px;color:var(--warn);font-weight:600" data-page-node-id="51Lnu6ewWdLaSfsSiloFDT">含 2 项高优先级</span></div>
+            <div class="v-note" data-page-node-id="fBPZ3ZasYOcBROQZJR7RSl">另有 12 户待拜访客户</div>
+          </div>
+          <div class="v-acts" data-page-node-id="U6wSX26R0QAHCcoQwerjGV">
+            <span class="btn btn-main" data-page-node-id="0JYuux9U6HGXMBBDupmqZG">处理待办</span>
+            <span class="btn" data-page-node-id="WaTBmkPPIFabvFto4lThI1">看待营销名单</span>
+          </div>
+        </div>
+
+        <div class="grid3" data-page-node-id="PLHHTvRLGojwJfryXxz8At">
+          <div class="card" style="margin:0" data-page-node-id="QsSHwqZNDApdloQZFBT93d">
+            <div class="kpi" data-page-node-id="W2cG8dKV74q2unxI9HgHo6"><div class="k-l" data-page-node-id="gdYhUTWFjFlZAfgqy6NdPx">管辖客户</div><div class="k-v" data-page-node-id="laxqRBkiRVFlQXN2LtJUMC">128 <small data-page-node-id="G7cS4ayPGcgsaTo0PGfdOL">户</small></div></div>
+            <div class="muted" style="margin-top:6px" data-page-node-id="2TV01sbbMOOMkyM7bGV3Zq">可授信 84 · 待补资料 31 · 已放款 43</div>
+          </div>
+          <div class="card" style="margin:0" data-page-node-id="TmALOwA0cmrcsqS7AUtBBe">
+            <div class="kpi" data-page-node-id="6u4zg6ZvoiPV6A8AWMTgx9"><div class="k-l" data-page-node-id="mCAeHzTNvAsyEgAK4lIsa1">绿色信贷余额</div><div class="k-v" data-page-node-id="mhQ0HRoVIW8A8W2ly7fXRh">2,860 <small data-page-node-id="Uuafg4yCDTDcraM6tH39Ff">万元</small></div></div>
+            <div class="muted" style="margin-top:6px" data-page-node-id="TIW4fJksBG4CSJdjcBATJJ">户均 66.5 万 · 平均利率 4.21%</div>
+          </div>
+          <div class="card" style="margin:0" data-page-node-id="VqB3erO4rmDl6wnzvfPNHz">
+            <div class="kpi" data-page-node-id="qGBLYFucRtSvkM0GaPvxtn"><div class="k-l" data-page-node-id="teCp7OrNCfEuYTkrUmuiu8">风险分层</div><div class="k-v" data-page-node-id="9hoYsT8WXL1p6oD6xlZ9WR">低 96 <small data-page-node-id="7HbEdrUb8Wl80BXOKgKTgG">/</small> 中 27 <small data-page-node-id="JbQGuABOg0iNl5HDAis8Jn">/</small> 高 5</div></div>
+            <div class="muted" style="margin-top:6px" data-page-node-id="FBDYNtJ4macchKL5wfrIYU">高风险 5 户已进入核查队列</div>
+          </div>
+        </div>
+
+        <div class="card" data-page-node-id="rSG2qIh0PRfU5JFlekJDqn">
+          <div class="card-h" data-page-node-id="ErHS1bg0LxbHnJ4xjZbxTT"><h2 data-page-node-id="NyZfwqVUuBel5Bg6TpzO77">今日待办</h2><span class="hint" data-page-node-id="3ElBP1FUL2JgvSxuX6yu80">按优先级排序 · 点客户名进入档案</span></div>
+          <table data-page-node-id="oVyLLHaL6FEbdWuQZ5CaR5">
+            <thead data-page-node-id="HUSn2lX62G8nOI5z24noYb"><tr data-page-node-id="as5AVU5TJLCfpWBUBFagJd"><th data-page-node-id="C2pyYRrj7iDahNx8IDfLKw">优先级</th><th data-page-node-id="L3v9MhmwFGejDj6JGGjvMz">客户</th><th data-page-node-id="nrLKqC2Nx0rclgn58sEBsa">信号类型</th><th data-page-node-id="EmO60DIa95DuRu2rbLFvwM">触发依据</th><th data-page-node-id="GpXZehodjkPK5c94BwmM4I">时限</th><th class="r" data-page-node-id="w4QJcx7OiipiV9bsU7QP5X">操作</th></tr></thead>
+            <tbody data-page-node-id="KulrxH3LdB8TOItevF6puI">
+              <tr data-page-node-id="blIA28wsdZxFpOmDLVkPo6"><td data-page-node-id="4jrpn3TeIzOPE5TxksUGJj"><span class="badge b-danger" data-page-node-id="MNetVHAFdUyvAksdBb3eG9">高</span></td><td class="linkish" data-cust="a" data-page-node-id="OXnb1k02oEZMXGN5UE7qgT">班戈县绿色牧业合作社</td><td data-page-node-id="LbnVLmflgq4aEiYgSyMuNd">经营类</td><td data-page-node-id="27NjUICBWN0QtWxudTIzla">出栏 40 头，90 天无对应回款</td><td class="muted" data-page-node-id="CmjwbPBwPzM0AHhGOtkUXX">10-08</td><td class="r" data-page-node-id="g4fulBcVxQKafgYBrkrM4d"><span class="btn btn-sm btn-ghost" data-page-node-id="ibdNLqwikTsGgxRnrIGpgX">处置</span></td></tr>
+              <tr data-page-node-id="j5RlVeGP4PbT7rWAJbBsYw"><td data-page-node-id="kkjttHmNCNVosofwU1LcVg"><span class="badge b-danger" data-page-node-id="Yewwp1XGGVxCj8tg1Xmflq">高</span></td><td class="linkish" data-cust="b" data-page-node-id="dFTqmJiGCodXLgT4qbypfk">扎西家庭牧场</td><td data-page-node-id="tc1aqYtgvqbVEtpsgvk3w1">资产类</td><td data-page-node-id="OApeXHkwKE7DUtCLNRkgX2">盘库差异：账面 120 头 / 现场 96 头</td><td class="muted" data-page-node-id="CXpA2oK4se6SSRA4THKpTs">10-05</td><td class="r" data-page-node-id="GPpZvIfr868dnS0kc2LBDS"><span class="btn btn-sm btn-ghost" data-page-node-id="rO1ePv6dOjGe02B8B3mkr9">处置</span></td></tr>
+              <tr data-page-node-id="6QkNaCLowSxfFA12cEUq3J"><td data-page-node-id="yncIAALiGkQqeoKjjWlelE"><span class="badge b-warn" data-page-node-id="RZ9XUEVuDdxGn2L885HSyb">中</span></td><td data-page-node-id="z0kwGpgEF7I5vjXcQ1y3fc">德吉联合体</td><td data-page-node-id="XWAW071fDXlo0WiGE7uqOA">还款类</td><td data-page-node-id="Cl25AGn42VmfRu4M6TtZ7b">用信率 92%，接近额度上限</td><td class="muted" data-page-node-id="JFcpGvml4oxKxK5LdmunNV">10-12</td><td class="r" data-page-node-id="2DMIOfR29UGATd7TBX6Gc9"><span class="btn btn-sm btn-ghost" data-page-node-id="HheuiOvwCmHMcoqGYskMNA">处置</span></td></tr>
+              <tr data-page-node-id="eGnr5AfCFkFSwI7pnGVPKv"><td data-page-node-id="wWICGMOsv12TtYLjBpCDyg"><span class="badge b-warn" data-page-node-id="pWe0TOnfbFd4FZMLq1wCfY">中</span></td><td data-page-node-id="UKHK2ygwAiAIE1kd0KFrLC">央金牧场</td><td data-page-node-id="n6dPlY15Mg5s4QRzSCpgCH">经营类</td><td data-page-node-id="MDdYsN4fg6hefYKoOvmSj9">账户进账环比降 46%</td><td class="muted" data-page-node-id="Klc9F9CDxrLEux7I211BT9">10-15</td><td class="r" data-page-node-id="rrk5XOVDD8QZZ6ryuS75ij"><span class="btn btn-sm btn-ghost" data-page-node-id="OUvSIko64WNybCa7jHS4Ya">处置</span></td></tr>
+              <tr data-page-node-id="AeXFFeijdOZeEhkB0XCuVf"><td data-page-node-id="l6TjHmnhTdi3f92zBcJaWY"><span class="badge b-warn" data-page-node-id="bx1PIBAFBpRoCpZC16777p">中</span></td><td data-page-node-id="lImCSWd1rx1wrCxYwt2Koy">某某合作社（安多县）</td><td data-page-node-id="b9J2cum8vfcznjHKeXKBMv">环境类</td><td data-page-node-id="Ky1MDQgOXZB5BWWev9pgDG">该县暴雪预警等级达「高」</td><td class="muted" data-page-node-id="4ILfeFlBxJ3UTXcF3HdVxh">10-09</td><td class="r" data-page-node-id="I63SvXvowDKmqz6ETkYFMC"><span class="btn btn-sm btn-ghost" data-page-node-id="mzduhLHFszc8ibZxmBvcqJ">处置</span></td></tr>
+              <tr data-page-node-id="tJwQbtDfhlDWjijD0sEQGN"><td data-page-node-id="t50DVs3C3BYbcQzPDzirDX"><span class="badge b-info" data-page-node-id="qlaSmA8QwjekuXF9zQJZjF">低</span></td><td data-page-node-id="42dwHrHelcsJWfFKqjbHDc">谢通门供草合作社</td><td data-page-node-id="I34pY36gcgScT67imGSuS6">保险类</td><td data-page-node-id="Br3otXnd4YY0xTEMMMAQxt">保险覆盖率 58%（低于阈值）</td><td class="muted" data-page-node-id="82oV12sSKG1pA3GL36AjMK">10-20</td><td class="r" data-page-node-id="rFOuwjRRZyqqztECp27z9Y"><span class="btn btn-sm btn-ghost" data-page-node-id="jfQzxpemw03hqIQPGGe8vy">处置</span></td></tr>
+            </tbody>
+          </table>
+          <details class="fold" data-page-node-id="HmkGGkWBHgtVrpKEXez1uQ">
+            <summary data-page-node-id="sApAkVQ9RDdrPzUOKil947">触发阈值与排序规则</summary>
+            <div class="fold-body" data-page-node-id="uWR3dHcHnpbw96XFqwuYGn">
+              <h4 data-page-node-id="9LikVM5AYIPnAv6sTe3Ews">阈值来源</h4>
+              <ul data-page-node-id="zNtBArNe0mECoq2B1qvaI7">
+                <li data-page-node-id="2au39VN2Ygw27J8AH9sJcH">经营类：账户进账环比降幅超过本县同类客户历史波动率的 2 个标准差</li>
+                <li data-page-node-id="C6iGoI4wiTPNi6nwyQlThJ">资产类：盘库差异超过在栏数的 10%</li>
+                <li data-page-node-id="gWn3L4zrWK9HgOvr5KKb7i">还款类：用信率 ≥ 90% 或逾期 ≥ 1 期</li>
+                <li data-page-node-id="0CYBYSUsInGpVvB5FsgHaB">环境类：复用 <span class="mono" data-page-node-id="HyIRzSCRTspy7CKqIKo6jR">early_warning.py</span> 灾害等级，达「高」触发</li>
+              </ul>
+              <h4 data-page-node-id="lHdfJ3A8ATzKsnrFDbF2ZR">排序规则</h4>
+              <ul data-page-node-id="sl2qKXMh4NAuiFEjp41Frz">
+                <li data-page-node-id="BpcgLNlaSHEINpPAlpHCaw">高 = 差额无解释记录 或 逾期叠加；中 = 单信号命中；低 = 资料类提示</li>
+                <li data-page-node-id="AV0nbT3Pu1tMOmQWfqMAAW">排序只用规则等级，不使用模型分</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+
+        <div class="card" data-page-node-id="Bxf37gsY5R5Onsp2F0wXIq">
+          <div class="card-h" data-page-node-id="2WBcJAUa8Z2Iu72MI9i6aJ"><h2 data-page-node-id="ETEAZb9tnprugb8r6iVgDj">待营销名单 TOP 5</h2><span class="hint" data-page-node-id="3XikPKitviUoA3NcF9xxvl">按「可授信额度 × 资料完整度」排序</span></div>
+          <table data-page-node-id="EPb9zmgx3L3AFREvEKhx3W">
+            <thead data-page-node-id="tkHsCrErne8SheUtMaXvZD"><tr data-page-node-id="qvVhK1lIF4ID5ax2b0Tj4S"><th data-page-node-id="WHepEu1JJ91d62WLNAZEws">排名</th><th data-page-node-id="crpcNl8WdUSuZIXEnBHFlu">客户</th><th data-page-node-id="6YmiFgv6l0IbOJZ7cdskLF">所在县</th><th class="r" data-page-node-id="lPAVindZEXaw5ixc3qF6AE">预估可授信</th><th data-page-node-id="57OqniAAyha3WcK9B3fLbe">资料完整度</th><th data-page-node-id="doyYlrI8smafM38CYMOaE5">获客来源</th><th class="r" data-page-node-id="LL9qe6xGWLUKlsYReDFi9z">操作</th></tr></thead>
+            <tbody data-page-node-id="az17DqA3Z4cNUiwFFQqFdH">
+              <tr data-page-node-id="lwFIgm89n1x4etQsFHR44U"><td class="num" data-page-node-id="JgtZepCZXlWhr8QeiLa51m">1</td><td data-page-node-id="8LvNTN7UqLtNtHa6cicYwg">某某生态牧业合作社</td><td data-page-node-id="bFm4xpCG8QLeLWQK3RF3tZ">班戈县</td><td class="r num" data-page-node-id="xeIdCu5J4LMhtLWgHhz6Z7">90 万</td><td data-page-node-id="PMmvVq2XzRVEtqswNOqtnv"><div class="bar" data-page-node-id="Hpgx7G7UtH7hrOB5Z7IHAo"><i style="width:92%" data-page-node-id="y03njpZ47wiTaOLIrLbEOl"></i></div></td><td data-page-node-id="HsIYzLAFWCMcHDCxpfAGtL"><span class="badge b-info" data-page-node-id="QVOT2Y2LmvgUidDYOkBG1c">政府数据匹配</span></td><td class="r" data-page-node-id="IHxfC5mwaK478Z6uLAdYc8"><span class="btn btn-sm btn-ghost" data-page-node-id="Mm6eYWhGa5SF5QRXUhp9Vf">加入拜访</span></td></tr>
+              <tr data-page-node-id="Hv5RXPq3rk1oXVdeCW1vLb"><td class="num" data-page-node-id="C5Xk3QndHmgiZi9BCGudMb">2</td><td data-page-node-id="LHzUwirnj33PPSW2KWtcUj">某某家庭牧场</td><td data-page-node-id="RsmDtmDrzWYKnwZPB258KO">安多县</td><td class="r num" data-page-node-id="yTGQE4P4eNgztW27qeOxeH">34 万</td><td data-page-node-id="QwTIXlKKQpFNyYQ8K6KPxN"><div class="bar" data-page-node-id="Ecji51xeqCOyQNzlr97Kyc"><i style="width:74%" data-page-node-id="wrdBvR2ylamMwzXQlCm1Cu"></i></div></td><td data-page-node-id="bcChgKBqzYsBHtvMV6SUA7"><span class="badge b-info" data-page-node-id="IzBoNlQkZK2yt61VEhCZEY">产业链反推</span></td><td class="r" data-page-node-id="A57nzqDG0NFe83Rp3fWLy0"><span class="btn btn-sm btn-ghost" data-page-node-id="CZFbAbnfL1veovQHJDHJcQ">加入拜访</span></td></tr>
+              <tr data-page-node-id="Ieolv8wrzUcCni266AznDp"><td class="num" data-page-node-id="H9GbiFzhyGDnMYnESSQ8X1">3</td><td class="linkish" data-cust="c" data-page-node-id="fw8jNnWZ5WEEcOMSOzD0TN">次仁某某（牧户）</td><td data-page-node-id="ql2kP0Q6HlDJniT0SoGxP6">聂荣县</td><td class="r num" data-page-node-id="4UywDjZTMtV8P5GrqgkhqL">18 万</td><td data-page-node-id="wj4ez6VEfgF5IOPDum4IDy"><div class="bar" data-page-node-id="LOsSnHAU13hV3CBZNBYA3e"><i style="width:63%" data-page-node-id="hzUmCYViEG6OLup3AyP3nS"></i></div></td><td data-page-node-id="DpaTVVeRMLWNXwf3FruAXm"><span class="badge b-gray" data-page-node-id="SORLaWjLb9HiDYto4p5Qbv">自助测额度留资</span></td><td class="r" data-page-node-id="GlMomDfR4kuVfwsDmpYg4K"><span class="btn btn-sm btn-ghost" data-page-node-id="hKf5xv0U2FzVGNLAOAOOfQ">加入拜访</span></td></tr>
+              <tr data-page-node-id="oC4fRzeNxUOKqpOsVfYbGG"><td class="num" data-page-node-id="yVkpjlNwD8TZKPbEc6dQSF">4</td><td data-page-node-id="4TscBILWK0BIzL9wVsuXHu">某某牦牛养殖联合体</td><td data-page-node-id="j7Ua8GA8DANltevhX9cvos">申扎县</td><td class="r num" data-page-node-id="ZMDK10XwjaQJaBWNlXcTgy">26 万</td><td data-page-node-id="FHq1zxOt93dXHaEfW1QGGR"><div class="bar" data-page-node-id="s1nooi7S2HjCxpyruqhhUv"><i style="width:58%" data-page-node-id="JXbRYIx6Al2CjKwavO8Hx1"></i></div></td><td data-page-node-id="FiLjQ2hEEZPXqRRFkn8zS6"><span class="badge b-info" data-page-node-id="rCUEdRPCHK32ELiYXhv16D">产业链反推</span></td><td class="r" data-page-node-id="gdfnKPrjJRH0tnGgpeV1rR"><span class="btn btn-sm btn-ghost" data-page-node-id="tO1hvQ7OaRYzjNXw1IEZAl">加入拜访</span></td></tr>
+              <tr data-page-node-id="hLYG2LS92nrsWOmVFlxKaA"><td class="num" data-page-node-id="3GhrCArKQtFOvNyKPYEvuW">5</td><td data-page-node-id="F5XbX4AwqtUZCS1St3KvwI">某某牧业公司</td><td data-page-node-id="3g4R7ednaWbJjEbAvmIQcP">比如县</td><td class="r num" data-page-node-id="jklN5RJeoxWO1mImbA8zlS">41 万</td><td data-page-node-id="Q0Vwe7PWBGZgak3pranKK9"><div class="bar" data-page-node-id="fGaLEyhUSg6sJXhnhc5Dub"><i style="width:51%" data-page-node-id="GuCbWv48CAPUFsjRfBXIfM"></i></div></td><td data-page-node-id="fQMcfKSdSQYlK4levLYc6p"><span class="badge b-info" data-page-node-id="Wlf5wD1OvIOuGCQ8lqad7m">政府数据匹配</span></td><td class="r" data-page-node-id="CTTAa946huqmGahQOSRSeP"><span class="btn btn-sm btn-ghost" data-page-node-id="WRCtsnQywiYmEYLbMc1mK9">加入拜访</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========== 2. 客户池 ========== -->
+      <section class="page" id="page-pool" data-page-node-id="vXBFlPm5xBMmj9iaFABDYF">
+        <div class="verdict" data-page-node-id="VfqEf8I60fUgBVhTUWP2yt">
+          <div class="v-main" data-page-node-id="UfzzL24VlmiC7WNTHVkxZ2">
+            <div class="v-label" data-page-node-id="pjzcFZrX1wohBvR8wc1dCi">客户池</div>
+            <div class="v-big" data-page-node-id="YRMPfFNJ3mtuEsyDE4GKCx">128 <em data-page-node-id="k7EhtpJn8ecHrmxvPsbmo9">户</em></div>
+            <div class="v-note" data-page-node-id="HeEZnJUOWVtQGJEcCvQYmO">可授信 84 · 待补资料 31 · 已放款 43 · 高风险 5</div>
+          </div>
+          <div class="v-acts" data-page-node-id="0kt4CsA1T1BCZQoDUkkl3e">
+            <span class="btn btn-main" data-page-node-id="pKnnFaCm84itqh9pUcRZPr">新增客户</span>
+            <span class="btn" data-page-node-id="D4aDB9ytlxC7hHz3LIYvUE">导出名单</span>
+          </div>
+        </div>
+
+        <div class="card" data-page-node-id="v9BRcLZ6NeWqlr3ZDJrFTM">
+          <div class="card-h" data-page-node-id="eXkHzHnAVYKritFNQR8CHS"><h2 data-page-node-id="NJVoNSbQEJhCbun8aRiMC9">获客来源</h2><span class="hint" data-page-node-id="257zAtiBKjKBYHA1NJcGsl">三条入口</span></div>
+          <table data-page-node-id="BT2DtJpUnznmyWp80FyWDE">
+            <thead data-page-node-id="QIljJaiigBpxXMbUDbWKjq"><tr data-page-node-id="Dq6SGfj3hDArBKRpZBFNFi"><th data-page-node-id="t8W1nDQopNwHYvAYH2WXQJ">来源</th><th data-page-node-id="TSa3qYMyQSsXfO15HzRgcy">说明</th><th class="r" data-page-node-id="WnbM2ZjOxmvPBjpQSuSk30">户数</th></tr></thead>
+            <tbody data-page-node-id="QEUFV9P19Xf3QZyfAwpoQP">
+              <tr data-page-node-id="n9JEkDUMZJ3gtZalfY4qPT"><td data-page-node-id="ZYJqDTD4I5RGmXFzVcoABg"><span class="badge b-info" data-page-node-id="Gl6NKTTjJu8ixnybpkqXmN">政府数据匹配</span></td><td data-page-node-id="X0NKrmOFjPX0hp48Swl6m5">耳标 / 防疫 / 检疫票数据中出现、行内无授信记录的经营主体</td><td class="r num" data-page-node-id="dFREPOrFTSXf329EnYkeW6">34</td></tr>
+              <tr data-page-node-id="GhV2CJM6PTWsZOCqBjMbYd"><td data-page-node-id="3h6ZjmdCa72M7gRRB17CVr"><span class="badge b-info" data-page-node-id="I7MHBW4ACUCoI0Vag5couB">产业链反推</span></td><td data-page-node-id="LFqntbZsbUatYG1JqTz8i5">核心企业交易记录中的上游牧户</td><td class="r num" data-page-node-id="FoHb34TFh9Y05KMEXrvlLB">52</td></tr>
+              <tr data-page-node-id="9URI22bRzvagKI80THbTQk"><td data-page-node-id="Sme6pxn349CFTzdBBtR7Zo"><span class="badge b-gray" data-page-node-id="dzYEDjh0Vj900dNipw7bHg">自助测额度留资</span></td><td data-page-node-id="vExPyvrunDxxCgMWkFk3XM">H5 自助测算后留下联系方式</td><td class="r num" data-page-node-id="s4e6qic5zbRNaPGhKD86i3">18</td></tr>
+              <tr data-page-node-id="J01c6DbbOFBmFwqB2JTjxc"><td data-page-node-id="qHkIjHWnOy4tJBjwEbPHFB"><span class="badge b-gray" data-page-node-id="GPslqhEEWHK74hF15Q77aT">存量客户转介</span></td><td data-page-node-id="DfqxYThlObdWIhXDjqXi15">已授信客户推荐</td><td class="r num" data-page-node-id="RBM4FXR9hgPIRdQS5n69jb">24</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card" data-page-node-id="mc61Iw4dxeTSNIhDzOdMaI">
+          <div class="card-h" data-page-node-id="tWjPmwhrh2GOM4XgkIuxyh"><h2 data-page-node-id="8EBQr0nrF51lpbc1oiCAEm">客户列表</h2><span class="hint" data-page-node-id="5HI97YkkhMJzJZOyTbHvPN">共 128 户 · 点「查看」进入客户档案</span></div>
+          <table data-page-node-id="AGwvQA731EBTPzIXDCPM5B">
+            <thead data-page-node-id="F4eyw05dBynhQt4TW3QdNo"><tr data-page-node-id="zwdjQBHuhChL13gfBJpwRU">
+              <th data-page-node-id="9aNN8da4jPGoZbXIyog98S">客户名称</th><th data-page-node-id="GIdYhCNRg44C44AnAiQlqd">类型</th><th data-page-node-id="2irfYYC6zBA1XtvmCW9e5c">所在县</th><th class="r" data-page-node-id="tjbAdydGYSsAZY3QzYcrAc">存栏</th><th class="r" data-page-node-id="nJqFzDfkPzTv4PNsdn5CrH">草场(亩)</th>
+              <th data-page-node-id="vFv528KEfVSsd6tsIvCzwQ">准入阶段</th><th class="r" data-page-node-id="n7V5FG2t6ObqUJEbFeSYrr">可授信</th><th data-page-node-id="ARr69mzUt4rYBluphtTgHf">风险</th><th class="r" data-page-node-id="tGATHBMYMkSVKnEFyL2WHE">资料</th><th class="r" data-page-node-id="qKDhzdQeuGl95BkkuAY2Vd">操作</th>
+            </tr></thead>
+            <tbody data-page-node-id="7P485fYoskpfcX1sUlkoED">
+              <tr data-page-node-id="5zEovsyQnvF0GcEEFIQA8H">
+                <td data-page-node-id="L9cFX9VevTPEvhNZpx2CDk">班戈县绿色牧业合作社</td><td data-page-node-id="gPlrEPO5rVSLK2kmCvExDj">合作社</td><td data-page-node-id="bEDJNzFRRphxbyDsttqiyZ">班戈县</td>
+                <td class="r num" data-page-node-id="WqUhDmkN0vjWSUAvpVKjrC">980 牛 / 2600 羊</td><td class="r num" data-page-node-id="udcRbxFGHkhGYFXpfpL63q">42,000</td>
+                <td data-page-node-id="6fNIuT9vdHG9KVSNW2Z4Ip"><span class="badge b-ok" data-page-node-id="IIRAXJ5ZJX6Iy4WtHWHfxo">已放款</span></td>
+                <td class="r num" data-page-node-id="jllnFYCX4X9znm2ALLXn4L">90 万</td><td data-page-node-id="mXE2kum6LIcmAskS5aW9v2"><span class="badge b-warn" data-page-node-id="ks8Gha8ypd8U1iGb2AIFPx">中</span></td>
+                <td class="r" data-page-node-id="rHPRhlVzmuWrrAt7KzTUGc"><span class="badge b-warn" data-page-node-id="l136Afi9AcjtMW3dYxklrX">76%</span></td>
+                <td class="r" data-page-node-id="kYT66UXJWjKFTHjFI8HE9S"><span class="btn btn-sm btn-ghost" data-cust="a" data-page-node-id="IumjMdJSRjHe066vgWogUO">查看</span></td>
+              </tr>
+              <tr data-page-node-id="hvnayqq8x0ReadRuezaxYc">
+                <td data-page-node-id="6NIFThGaCz5NtYL8Dc1glY">扎西家庭牧场</td><td data-page-node-id="mC8ykrVBcCJ2SNF6PmZMzH">家庭牧场</td><td data-page-node-id="vBKrsvHpRRyMDvhEVMMXIP">安多县</td>
+                <td class="r num" data-page-node-id="jhWDxcuUIUihssnMfVrdvS">120 牛</td><td class="r num" data-page-node-id="AWVTLQpxMdgbQ16SMDBHj8">6,800</td>
+                <td data-page-node-id="jqo2ZwNrJhsPOLboBQMnBD"><span class="badge b-danger" data-page-node-id="3sdQD1yUjz11aedRSCeQCR">待核查</span></td>
+                <td class="r num" data-page-node-id="S4JFSAebBf1D00GfQrVBYJ">暂缓</td><td data-page-node-id="FtMKhAPD4qJfVslpNhEL2b"><span class="badge b-danger" data-page-node-id="hI1ulvfsOgzXQfos3QNJuE">高</span></td>
+                <td class="r" data-page-node-id="1h2LdmpgQqCC9DQNNizABw"><span class="badge b-danger" data-page-node-id="01bmXyjpkMh9B0DEMsN2rs">48%</span></td>
+                <td class="r" data-page-node-id="6oBWEAN3gdhtI3N9jgBsU5"><span class="btn btn-sm btn-ghost" data-cust="b" data-page-node-id="RJgjUHWhpAJMiuJByUgS1g">查看</span></td>
+              </tr>
+              <tr data-page-node-id="OOgu6LnnUncphVZ1rGB8A2">
+                <td data-page-node-id="dkBHebvJqDAnE5Wz16D1me">德吉联合体</td><td data-page-node-id="mhHwXc9cPXGroTO02RsNEN">合作社</td><td data-page-node-id="D4WNz30UH37ONm0ukEwjHM">聂荣县</td>
+                <td class="r num" data-page-node-id="TzySNl22he5gSz31PtuJ5n">640 牛 / 1200 羊</td><td class="r num" data-page-node-id="yGDr9wfNEZlZBvGUpwQQmO">28,000</td>
+                <td data-page-node-id="3EjC2p8v6YUjVxd74YJ3Mq"><span class="badge b-ok" data-page-node-id="M4tjGs7dnRie4WnWzO2ze7">已放款</span></td>
+                <td class="r num" data-page-node-id="qKZO5jdL9ywpHix3ACxt3D">62 万</td><td data-page-node-id="72GDQjNGkupteTps4bl1eo"><span class="badge b-warn" data-page-node-id="cFO4byyp8Xvr4239oIM6bx">中</span></td>
+                <td class="r" data-page-node-id="eQbaoAw7bmXIgJKyPbaiAQ"><span class="badge b-ok" data-page-node-id="yHbrfLKdSsrQg1KNfv1Q04">88%</span></td>
+                <td class="r" data-page-node-id="dmlOOVtAYxFYpT5doBarFW"><span class="btn btn-sm btn-ghost" data-page-node-id="CP9obajLZVpi8gr7tGrPMN">查看</span></td>
+              </tr>
+              <tr data-page-node-id="GspWRIMXnuTE3IbhC0rHNX">
+                <td data-page-node-id="NEfr9iPDvgRi9xsKLKZtJ3">央金牧场</td><td data-page-node-id="bKd3Dh6KrYh60huGm0WD0B">养殖大户</td><td data-page-node-id="i2kd585eisSW7klFcuQgXt">申扎县</td>
+                <td class="r num" data-page-node-id="K3jUB7JcXjntsNPxYA9nFa">310 牛</td><td class="r num" data-page-node-id="mrQ8CQtlYZjddHbZBJVApN">15,200</td>
+                <td data-page-node-id="4VmNvhQ9rBzJHpfRYeCfAB"><span class="badge b-ok" data-page-node-id="diT9xsfX1EYmBii3DPN5QV">已放款</span></td>
+                <td class="r num" data-page-node-id="hPGkPigHKlQB3FtI56GFJ7">34 万</td><td data-page-node-id="ODOfjdPJhdWVOZW71d5Krp"><span class="badge b-warn" data-page-node-id="sqT1k3t6jIv0bt4PzpWEZu">中</span></td>
+                <td class="r" data-page-node-id="qKPqrTFOqVjtgrebq7DUTR"><span class="badge b-warn" data-page-node-id="M3bsKQjlN72Ar4zCh1VT76">69%</span></td>
+                <td class="r" data-page-node-id="fA1QdVHKmGuUxiQYd9phOE"><span class="btn btn-sm btn-ghost" data-page-node-id="ke4MDwpzhP7FoaZUae4FIQ">查看</span></td>
+              </tr>
+              <tr data-page-node-id="szkty8oqIgm90WCNgVCygl">
+                <td data-page-node-id="iVwQbMuIjDUF94cpvZu6pE">次仁某某（牧户）</td><td data-page-node-id="y9oiIUuJRq0avUVawpIUZG">牧户</td><td data-page-node-id="SRXGqbJVEQX2HVAGGXe1Hd">聂荣县</td>
+                <td class="r num" data-page-node-id="RzBHEAmEUEqUJ4axHgNLg5">48 牛</td><td class="r num" data-page-node-id="KzO9CiBR0KGrlZv0CBa3AU">2,100</td>
+                <td data-page-node-id="UUVffUni4QspNlzuqukIxg"><span class="badge b-gray" data-page-node-id="pn7HuTlVo84i6eEH5tEQIB">待补资料</span></td>
+                <td class="r num" data-page-node-id="2HOoybVQDrXJ0nG1aO99pu">—</td><td data-page-node-id="6znWYRHZidqyi3BMr47U8Z"><span class="badge b-gray" data-page-node-id="pxirw6vrAIXAQnmTppgGYg">未测算</span></td>
+                <td class="r" data-page-node-id="YQCyktMEjHCEMQAY2iJruU"><span class="badge b-danger" data-page-node-id="ijrBARuDSAlFn3T2F8Z1Yw">31%</span></td>
+                <td class="r" data-page-node-id="aHrdUUyB6S3ubqS5yo0gAh"><span class="btn btn-sm btn-ghost" data-cust="c" data-page-node-id="4JK3dM9GIzIbwyk0EWA9XJ">查看</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========== 3. 客户档案 ========== -->
+      <section class="page" id="page-profile" data-page-node-id="Qh82k3Qa41j1pPvv1EIQn2">
+
+        <div class="custbar" data-page-node-id="ojog5j1hVPBB5PNPKGzUCD">
+          <span class="cb-tag" data-page-node-id="w7oKMPJNGyIsKHAIOcBDJG">当前客户</span>
+          <span class="cb-prev" id="cbPrev" data-page-node-id="aPidartDOEVscarDFCBEDH">‹</span>
+          <select id="custSelect" data-page-node-id="X71FDBXX1AZE8yrORmAItp"></select>
+          <span class="cb-next" id="cbNext" data-page-node-id="7dHOxQX2z6jj1pnuVDiOhW">›</span>
+          <span class="cb-meta" id="cbMeta" data-page-node-id="Mdxak4obyndIcplNRmcyc3"></span>
+        </div>
+
+        <div class="verdict tone-ok" id="verdict" data-page-node-id="1IESv07TqKg3FeP07UqxvG">
+          <div class="v-main" data-page-node-id="oM8nAIBCCynaE0R22LXyub">
+            <div class="v-label" id="vLabel" data-page-node-id="ru5h46yCATB8oTx9FmwO0L"></div>
+            <div class="v-big" id="vBig" data-page-node-id="5QaY1zSb6WYTM3IDFqNSNA"></div>
+            <div class="v-note" id="vNote" data-page-node-id="19tVhJQEZo5i5Gk0xIzx0K"></div>
+          </div>
+          <div class="v-acts" data-page-node-id="v38iLr3x7It7GDY7oczE0B">
+            <span class="btn btn-main" id="vAct1" data-page-node-id="T4fPocALXcEt8GFT2YXVJB">提交测算</span>
+            <span class="btn" data-page-node-id="n5mmqrrTyI3f3QdGU480gj">发起核查</span>
+            <span class="btn" data-page-node-id="c9hTqnQyKp4lqfPi9EYE3n">冻结额度</span>
+          </div>
+        </div>
+
+        <div class="tabs" data-page-node-id="ktrY17gJ5C1NBLt6Rso5RS">
+          <div class="tab on" data-tab="ov" data-page-node-id="pDltty9luE1R0hM3KRe1MJ">概览</div>
+          <div class="tab" data-tab="doc" data-page-node-id="QRyeFXLKIvFO1bMM3ax4ro">资料</div>
+          <div class="tab" data-tab="asset" data-page-node-id="FFXSCVEpIOdbMfzD0YV64e">资产</div>
+          <div class="tab" data-tab="credit" data-page-node-id="p9EC7bet3IbSCdEYCsGDXL">授信</div>
+          <div class="tab" data-tab="pl" data-page-node-id="lcC3NAsZrPDdEQ8TFbClI2">贷后</div>
+          <div class="tab" data-tab="ev" data-page-node-id="knbDHDDALFt9VCYZO4uBjS">依据</div>
+        </div>
+
+        <!-- 概览 -->
+        <div class="tabpane on" id="tab-ov" data-page-node-id="9GsSeH8gSd73SaduFwMjx0">
+          <div class="card" data-page-node-id="cceQEUWyWyGoTMh5Pv8Z86"><div class="kpis" id="ovKpis" data-page-node-id="kdCnAc3yAWF8cS54wKINGm"></div></div>
+          <div class="grid2" data-page-node-id="BH4miKPDAMXuGhoh16rTJp">
+            <div class="card" style="margin:0" data-page-node-id="nKIxVxWr5AofDlWPI32FiR">
+              <div class="card-h" data-page-node-id="Yr4T8GwnUX7KcETOhtm4O6"><h2 data-page-node-id="j5lfhxua5T3kNrpgrBBemy">四条证据状态</h2></div>
+              <table data-page-node-id="P5N1b81byTWNLKotIHzgdZ"><tbody id="ovEvidence" data-page-node-id="DYkd8DeMbzinL1rYwtymgV"></tbody></table>
+            </div>
+            <div class="card" style="margin:0" data-page-node-id="yznYh5yAs4qPEzO1miVDqv">
+              <div class="card-h" data-page-node-id="F3qmIU7vjEi5SiQWCSOtLq"><h2 data-page-node-id="IybGSOg1GZFUZRmps5Xaqe">待补事项</h2><span class="hint" data-page-node-id="t5mkYx7sAbB5pBLk8vedud">点「资料」Tab 逐项补录</span></div>
+              <table data-page-node-id="sCIq1v1gNk9vDrQOm4R7P1"><tbody id="ovTodos" data-page-node-id="9BTdfrWQ6omJwCpZaP0gdG"></tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 资料（一户一档） -->
+        <div class="tabpane" id="tab-doc" data-page-node-id="ob7FGhLvnrHV4xjniScDZA">
+          <div class="card" data-page-node-id="fpPcY9eWWvqzFBKSKrTAKk">
+            <div class="card-h" data-page-node-id="Gv0rr7ih1h2hmhktvEQH0A"><h2 data-page-node-id="xT14F2UekIEnbhXWjItqqf">资料完整度</h2><span class="hint" id="docHint" data-page-node-id="aDSkb05vrNjs3Q8WL0DUNZ"></span></div>
+            <div class="kpis" id="docKpis" data-page-node-id="aMUwiVLBfIggbKt7OqylPs"></div>
+          </div>
+          <div class="card" data-page-node-id="RWLwBkWnLrvTArBmpHtO3A">
+            <div class="card-h" data-page-node-id="Hajj2w0TqBSFDvb2SR0IXZ"><h2 data-page-node-id="WKMLTUMY2jgfP70WVYPTKf">资料明细</h2><span class="hint" data-page-node-id="h321Ogdl4eqhDfN8FWTyNu">逐项检查与补录</span></div>
+            <table data-page-node-id="RTslqkyUUZpHHCVgKY10zt">
+              <thead data-page-node-id="AmxjcBN3FzMAZ7AQYw2Q9I"><tr data-page-node-id="fSdmeXwvpg3TZAqJhkIvXE"><th style="width:150px" data-page-node-id="tlyVNNpImP2RHRvqUvnDpX">资料项</th><th style="width:80px" data-page-node-id="qtN9CvClahNh3Fl2MouwKS">状态</th><th data-page-node-id="wcXOJJjREFfutLtAJsTCq0">填写内容</th><th style="width:130px" data-page-node-id="ziJVFDRbImgmI8OSCGRdSu">来源</th><th style="width:100px" data-page-node-id="loBVnPk2FsQ6EJKC98o6YK">更新</th><th class="r" style="width:130px" data-page-node-id="vdBUDsHWPiVwRcG90235dg">操作</th></tr></thead>
+              <tbody id="docTable" data-page-node-id="tGerD39A3G5EDkB9f8RtXz"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 资产 -->
+        <div class="tabpane" id="tab-asset" data-page-node-id="CajlVhSarA4RWe0jkC6wNX">
+          <div class="card" data-page-node-id="j3d2IlJFdyvbAJUuNGgAEr">
+            <div class="card-h" data-page-node-id="ClwnOPMXq98Vn23IFSpX0P"><h2 data-page-node-id="ACWoG8dlXkSBT3jqu4lg4G">活体资产进出存</h2><span class="hint" data-page-node-id="gXcvFi3oXEtQh4VvI88p5X">台账主键 = 耳标号</span></div>
+            <div class="kpis" style="margin-bottom:14px" id="assetKpis" data-page-node-id="4M29C0rd8aaGP21t5z0QZd"></div>
+            <table data-page-node-id="sr0z5lNaGw4P1r12skokRv">
+              <thead data-page-node-id="TxTBikSx4jFwEvwqupu1jM"><tr data-page-node-id="DoXCOzR8DKzOoNWvNexKyI"><th data-page-node-id="nlsHiBXIyn5fnNqLSunW8Q">日期</th><th data-page-node-id="GF0EsdTKXbkv0KhFh0Kh8x">方向</th><th data-page-node-id="LRm6VvIo42QymhdrD9SGqL">原因</th><th class="r" data-page-node-id="5dzPgXpFH3gG78EdfxpSlf">头数</th><th data-page-node-id="vAlmAUM65OiqAozlEHA0Wi">凭证</th><th data-page-node-id="HkuhKcxvzhYgplxSJtZ2KI">是否有对价</th><th class="r" data-page-node-id="FVKrVObMhHb8H0tcmbGNeO">操作</th></tr></thead>
+              <tbody id="assetTable" data-page-node-id="S0mqbA6s8KqBxtJeYhHAtR"></tbody>
+            </table>
+          </div>
+          <div class="card" data-page-node-id="lUXf4Sn9FDGiThvs4euWXV">
+            <div class="card-h" data-page-node-id="pTCKsAgkmN5XX9SQyagdFA"><h2 data-page-node-id="LncMxqBe1AC8IXwZtS1PY2">耳标清单（示例）</h2><span class="hint" id="tagHint" data-page-node-id="xRm6NoYAtdRhqDGo0U3lVD"></span></div>
+            <table data-page-node-id="L3psmATwKqh1T143tJ0Tju">
+              <thead data-page-node-id="SGXQPZtM37VZBewgOvxrAX"><tr data-page-node-id="jsIpkXxkMlGmH1tkZrG3sy"><th data-page-node-id="T9XlYbGVcBeTUmqEbABbtS">耳标号</th><th data-page-node-id="oSuLThwj0Yk6AFZF87P5zk">种类</th><th data-page-node-id="NyIZ3iuiRBRoAGcFficG8z">归属县</th><th data-page-node-id="8JsxmISqD7oLHufEVbMrV7">月龄</th><th data-page-node-id="KiqY982FHFs09yiV6IKyC0">状态</th><th data-page-node-id="CgRguA1o5rMhXn1yOGatcP">防疫</th><th data-page-node-id="pQVKgjCxjORlbs5Sc0F93L">承保</th></tr></thead>
+              <tbody id="tagTable" data-page-node-id="yMXAXw9QASMA36ekEf4tLA"></tbody>
+            </table>
+            <details class="fold" data-page-node-id="g4fp5TJZFo4f2WMDU7z4X1">
+              <summary data-page-node-id="aVLdY6L7VpgYhG8ZCG9Wfj">耳标核验依据</summary>
+              <div class="fold-body" data-page-node-id="LiH5rHXgH1RX9x2u4bzK2q">
+                <ul data-page-node-id="KIYiS3zOJ7uHcLace4fHzL">
+                  <li data-page-node-id="6635kUtYZL0g8brLh2VKFi">编码规则：15 位 = 种类代码（牛 2 / 羊 3 / 猪 1）+ 县级行政区域代码（6 位）+ 标识顺序号（8 位）</li>
+                  <li data-page-node-id="MMwztCdNTNCjzR2eMggPEo">验真渠道：农业农村部「牲畜耳标管理」APP 扫码 / 中国兽医网综合查询栏「畜禽标识查询」</li>
+                  <li data-page-node-id="veCbtbGRDD6f2w2xHhXN1m">一畜一标、编码唯一、不得重复使用、不得转让（《畜禽标识和养殖档案管理办法》第 7、17 条）</li>
+                  <li data-page-node-id="TkbTTzPB3fBcUJcTddIHxx">换标须记录新编码（第 12 条）；归属变更须买卖双方报告更新档案（第 23 条）</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- 授信 -->
+        <div class="tabpane" id="tab-credit" data-page-node-id="6WlRWaFhJll43vgpDBcgyG">
+          <div class="card" data-page-node-id="SdXw6cXJfqwdH15w4jXDU0">
+            <div class="card-h" data-page-node-id="gN3UI2OemVHDlVqQDjDs1r"><h2 data-page-node-id="py2X1xhDofeeqib89rxe3y">额度上限测算</h2><span class="hint" data-page-node-id="7ZlPNdXdIRsN49EWEZTdNe">需求与供给两侧取小</span></div>
+            <table data-page-node-id="vNa00CvgG1pJMZAH7jkEK2">
+              <thead data-page-node-id="4v0PsYjkjcM3RvukHAN8Ke"><tr data-page-node-id="Tg5GEztp1qcnVmflBSLFc5"><th data-page-node-id="GRHLsaoyCZeGiVT19cfUFA">口径</th><th data-page-node-id="YGx67mcrJEqZ45dvzD6I9w">算法</th><th class="r" data-page-node-id="d4oZiNeHcUNAIa9GH209KM">金额</th><th data-page-node-id="qsXvla4zPbMWjpdMrHEvZ4">判定</th></tr></thead>
+              <tbody id="limitTable" data-page-node-id="pSbcYoOMHfMwH4ejKeqfoy"></tbody>
+            </table>
+          </div>
+          <div class="grid2" data-page-node-id="7gQXLTkRVtlJGqAJQD3w9r">
+            <div class="card" style="margin:0" data-page-node-id="KHvOOgmYItgEm8AsP0u3bR">
+              <div class="card-h" data-page-node-id="tNZvBSCewvju87jhJ3VFvY"><h2 data-page-node-id="rFNiqNRywC0xEekMnX2mZW">抵押折扣分档</h2></div>
+              <table data-page-node-id="FDUvhOnVe1HHXwJ9ibtEYM">
+                <thead data-page-node-id="CXTrcsl2XY8T9FG87OzKbF"><tr data-page-node-id="6kl77eKRLSMxhh7a7SGXla"><th data-page-node-id="bfTmcIp2OqEuyn7A2IvLEo">耳标</th><th data-page-node-id="xSamKIpRqbcC8TyVHehnCV">保险</th><th class="r" data-page-node-id="npKHsWAIu7EEqycsIEedHK">折扣</th></tr></thead>
+                <tbody data-page-node-id="GP0ZmdFoOY8oqqW82F7IB9">
+                  <tr data-page-node-id="9dzoykHUp3gYjp60GED2Rc"><td data-page-node-id="rpRd9N72lvfpw2OwgH1uo4">有</td><td data-page-node-id="E2jbjVOwP7nVITUz2NaWBU">有</td><td class="r num" data-page-node-id="2v67RxnONZYYDx9WxWxfPp">70%</td></tr>
+                  <tr data-page-node-id="k4TVpyGKvFyfNS39DkuU6T"><td data-page-node-id="3a1uEa5duhzlVBPQ0dH725">有</td><td data-page-node-id="rbo4MoTsRI5JGMWfkoWwRn">无</td><td class="r num" data-page-node-id="bGqeEjE3D36Gl8JEdr7lKp">40%</td></tr>
+                  <tr data-page-node-id="SJwvZmQVmwCDST8ma24i2g"><td data-page-node-id="uOTKearnGKbUU0HduIvqwO">无</td><td data-page-node-id="GklWTEnnkUoNdswE5AxPDy">有</td><td class="r num" data-page-node-id="rVoEkLoeJ8TA7595b6ViLt">30%</td></tr>
+                  <tr data-page-node-id="XKBV7CWoI5WVSAZLl336Ip"><td data-page-node-id="al88FNl0AzA41xA86glE7u">无</td><td data-page-node-id="LsWtB4fDBHZalAZ2qtQAKP">无</td><td class="r num" data-page-node-id="fDdhDLF0hs9kHjA7gvAHRG">不计入</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card" style="margin:0" data-page-node-id="p9kO2hzL8KhkPrOtQbyn9o">
+              <div class="card-h" data-page-node-id="tOEPiIoYdHvxxNeG35n94O"><h2 data-page-node-id="lObrasOsVyZWHbmvlxD5rf">情景测算</h2></div>
+              <table data-page-node-id="R4lDoEBK4NKWTcZkv8V4OK">
+                <thead data-page-node-id="rWplh9u7NC0gKowt5Bx87i"><tr data-page-node-id="KpCoZfegQbxerW2xW56i39"><th data-page-node-id="10oH1XJkI36li5WaGXrJ5Q">情景</th><th class="r" data-page-node-id="AUwKeYjcajfZFcDNZKC9Pr">DSCR</th><th data-page-node-id="82NgWBRGDR90rQEuKJ0b62">结论</th></tr></thead>
+                <tbody id="scenarioTable" data-page-node-id="Z1hN4KeD49zpV8hxqAEB4G"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 贷后 -->
+        <div class="tabpane" id="tab-pl" data-page-node-id="QffpeTOgHxBQj7HIJygCRb">
+          <div class="card" data-page-node-id="8URHWwqCp3uZmFB7IPV9Yc">
+            <div class="card-h" data-page-node-id="0YcfL35AhVhkmRprKGXPVq"><h2 data-page-node-id="Jwy2jAbqwNdiK3lpvaaM4V">本客户风险信号</h2></div>
+            <table data-page-node-id="GtmGpRn0kk38nuIp6ixUDl">
+              <thead data-page-node-id="8e68qmosHGf6QfsFcGWiOF"><tr data-page-node-id="j7p7SDdHzgCB24IqHD2X2f"><th data-page-node-id="ZcJa8RSZqjNmqkGApfL6UF">时间</th><th data-page-node-id="2Sy1DxXksaPOppYMnyCm3a">信号类</th><th data-page-node-id="DV60fVfGNpfst56aWIgEPP">触发依据</th><th data-page-node-id="4EVHqBAeGsLDqdKsXvBzB2">等级</th><th data-page-node-id="rmfGl6aXyv9DeZc5dsPLR7">状态</th><th class="r" data-page-node-id="IewQS3E57GEMSuyfDcu2O9">操作</th></tr></thead>
+              <tbody id="signalTable" data-page-node-id="02DltUH39encFXFH7BmzwI"></tbody>
+            </table>
+          </div>
+          <div class="card" data-page-node-id="NOHuF8AqotibzDqoL8OJo0">
+            <div class="card-h" data-page-node-id="ELLxBI8wd3UyExlVwVcTCQ"><h2 data-page-node-id="B9tXKYngwLe5vuXC67zkSy">处置留痕</h2></div>
+            <table data-page-node-id="U1lwcYw6fEe79j5ZgWoqUy">
+              <thead data-page-node-id="cEdnE9lDpED0373gzH5y7s"><tr data-page-node-id="Fu7vey2t8JSpLCDEEAfR0m"><th data-page-node-id="TusWkoKA9WUSYFK6hU2Vrl">时间</th><th data-page-node-id="jF3GFJKXIIKEeBuLvZmpl6">动作</th><th data-page-node-id="tbjQfmNHjkZWj0FfynCY0i">经办</th><th data-page-node-id="4dncexXMhaYB7qQqYcg7dQ">结论</th><th data-page-node-id="os9ef1SZPxnSCCxfCTr8Ch">下一步</th></tr></thead>
+              <tbody id="traceTable" data-page-node-id="4l2aaILMSjDuwhvCLod6Td"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 依据 -->
+        <div class="tabpane" id="tab-ev" data-page-node-id="v9qYpwKKQo4Nr7j6rlFZfd">
+          <div class="card" data-page-node-id="TgYBi6jPefoGgI3ALUve8c">
+            <div class="card-h" data-page-node-id="3SFXi2KnXfPS5QPq6ncbDF"><h2 data-page-node-id="g7dYdQinOmuqGweu0s7uwd">数据来源与可信度</h2></div>
+            <table data-page-node-id="LVGsVJvyfI09HAtptVU1iv">
+              <thead data-page-node-id="cVG1UFYDo3uGgW3sbek0IP"><tr data-page-node-id="9fYTpAR9UzMrRhGEtXAwaM"><th data-page-node-id="DkyUsW5WDt0FoRP15iJ3cL">数据项</th><th data-page-node-id="vi5zA9hJOf4u1ZZB4L9UlZ">来源</th><th data-page-node-id="92CiA2k6j8Q6tHN8Dgac7f">可信度</th><th data-page-node-id="CzExSBPChYEEBmBTgBXa4c">最后更新</th><th data-page-node-id="7mviw6ZVwM4PxkhQGqprMF">缺失影响</th></tr></thead>
+              <tbody id="evTable" data-page-node-id="s23NIgfW7Zrs9Tdrn3ZZyl"></tbody>
+            </table>
+          </div>
+          <details class="fold" open data-page-node-id="WznFa0WVFKjgR4KjOaQEKb">
+            <summary data-page-node-id="dlNH8qMby2CVwCHmDhrbxa">阈值与参数的依据</summary>
+            <div class="fold-body" data-page-node-id="2E5PyQHpnGCWDCWxoqfMBo">
+              <h4 data-page-node-id="TtP7qSGNPRsZPw8xHhsUmb">能用真实数据标定的</h4>
+              <ul data-page-node-id="mrfltu6KxuEI54CMCNVv0S">
+                <li data-page-node-id="bjqz1v0Clve3YSxKDjYAds">触发阈值（存栏降幅、进账降幅、防疫覆盖率）——用本县同类客户历史波动率，超过 2 个标准差判定异常。数据源：3,120 行气象 + 2,392 行遥感 + 128 条来源事件。</li>
+              </ul>
+              <h4 data-page-node-id="03gxMeOQsGqNKNHdL5TaXZ">如实说明为经验起始值的</h4>
+              <ul data-page-node-id="z0N5EwFUasqWKmnI0JezUh">
+                <li data-page-node-id="Vf8dWYNNDsGioRukmW5oh4">抵押折扣 70% / 40% / 30% —— 量级依据是活体处置周期与折价，附 ±10% 敏感性分析</li>
+                <li data-page-node-id="BcMTJ7J6EsYVOvzvpn96gB">还款保障倍数 2.0 —— 依据涉农贷款通行风险覆盖水平</li>
+                <li data-page-node-id="m8JSMTcEYDetqo74U1vTbc">账期容忍期 90 天 —— 依据牧区销售回款周期，需按实际分布调整</li>
+              </ul>
+              <h4 data-page-node-id="0ixXbVEmau3s6yeOsCoW9d">能力边界</h4>
+              <ul data-page-node-id="ukrATXNcqOipu47zwLRAlw">
+                <li data-page-node-id="gAWmocmLs7lpKrAL6BXjKb">跨行资金不可见：资金流向监控仅在行内账户闭环内有效</li>
+                <li data-page-node-id="H2ResFSZnBbYAmbZVEzZtF">盘库差异不等于欺骗：耳标脱落、走失、寄养、代牧、数据延迟都会造成差异，定性由人工完成</li>
+                <li data-page-node-id="xEwvjUcgKI0Ngx1jceDgok">无票私下交易只能靠盘库发现</li>
+                <li data-page-node-id="ezUON4xouitJGhv4ZNbDdV">模型风险分只用于核查优先级，不进入金额计算</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ========== 4. 活体资产台账 ========== -->
+      <section class="page" id="page-ledger" data-page-node-id="Hj860MwHNVaNc0p59uT8a4">
+        <div class="verdict" data-page-node-id="sQkWkrY3NdVHhgYgqpyM8y">
+          <div class="v-main" data-page-node-id="TeIKMa39mbnAw6DHr3v5ub">
+            <div class="v-label" data-page-node-id="riCkezAzGH4G7I9iS3froH">抵押物总览</div>
+            <div class="v-big" data-page-node-id="CLDqDKdNGOSwNvyyNGdq4G">8,420 <em data-page-node-id="QymG2FizhIWA4xPStJizkS">头</em> <span style="font-size:14px;color:var(--warn);font-weight:600" data-page-node-id="BGYpx6DjtmbCGydTbbEDf2">账实差异 24 头</span></div>
+            <div class="v-note" data-page-node-id="kYEJiIMED0UePiLbUr19Gb">覆盖 43 户已放款客户 · 本季盘库完成 40/43 户</div>
+          </div>
+          <div class="v-acts" data-page-node-id="8lAUgDudQBXjK7JGMCQKgX">
+            <span class="btn btn-main" data-page-node-id="DtRHmA5IJ9XR0CGbt0K8DD">发起盘库</span>
+            <span class="btn" data-page-node-id="gBvosEzDTqsARaD2fJlyTb">登记处置</span>
+          </div>
+        </div>
+
+        <div class="card" data-page-node-id="CudV8QJicgUJOPzbffdQPN">
+          <div class="card-h" data-page-node-id="mw8oR6ABCqQLlLhja3066W"><h2 data-page-node-id="1hVUwtczthJlvutMW3s4V5">无票出栏占比（无对价出栏）</h2><span class="hint" data-page-node-id="KR3qyrwrM83EF3Xm8YGMCM">与同县同类客户对比</span></div>
+          <table data-page-node-id="EimTFka4c982qmRxjR8baM">
+            <thead data-page-node-id="XxQFO9BBjLMYOFiV0jKCDe"><tr data-page-node-id="lSDkUwljBrGw2OQzMiSx3y"><th data-page-node-id="QnCckfdWNqIzpBOICXl1uo">客户</th><th class="r" data-page-node-id="5h6K6v6drQeCKm47ejNnfN">出栏合计</th><th class="r" data-page-node-id="3axNCZ47mFlP0tRLX5JZHE">无凭证出栏</th><th data-page-node-id="eokZ60eRzQyO2oj63qbur0">占比</th><th class="r" data-page-node-id="kyL02LnrjLIItxoNdjwGeA">本县同类均值</th><th data-page-node-id="aKlKF1Q30zR8qmeTENC3gX">判定</th><th class="r" data-page-node-id="vmit4l69OYAPJHjIa6rUde">操作</th></tr></thead>
+            <tbody data-page-node-id="j0L3yFBh6ZFeO7YHsKOyXI">
+              <tr data-page-node-id="8jqTNGegDKSc1bfLfpHLoD"><td class="linkish" data-cust="b" data-page-node-id="2iyNSgEOG0WDFazFHuInd9">扎西家庭牧场</td><td class="r num" data-page-node-id="RXiNPboiAOlvoglAPpgaDF">96</td><td class="r num" data-page-node-id="y0SteKqGqu9mr5Nj0DwqDK">43</td><td data-page-node-id="IlFLdfpR2uC5BGxlXdH7Xd"><div class="bar" data-page-node-id="tzJD4XgOUH4vmqoJrabecd"><i style="width:45%;background:var(--danger)" data-page-node-id="enqCOSuGQox94V5KgxO0nX"></i></div> 45%</td><td class="r num" data-page-node-id="ISzvdlTBEl2Omq4ryDEiJk">3.2%</td><td data-page-node-id="pr7yQvzzOocJdfau9is1Ar"><span class="badge b-danger" data-page-node-id="wc6uNivPbLG78z2Usu6WiL">显著偏高</span></td><td class="r" data-page-node-id="holBCfuvp1c60EhV5xeBTe"><span class="btn btn-sm btn-ghost" data-page-node-id="ScImw9keRQgtjvSoQyQx7m">核查</span></td></tr>
+              <tr data-page-node-id="8DpTZVi7eXBxZFHGBeI3iZ"><td data-page-node-id="3uF3EkU97HPvWbp6YYzReb">某某牧户（安多县）</td><td class="r num" data-page-node-id="69Bi7hxeGAyA7XqfBMmWSv">52</td><td class="r num" data-page-node-id="C8L4ftzYSjWxOSvwz02p8t">11</td><td data-page-node-id="rnnfscsoAKbQl1NRwRSCwl"><div class="bar" data-page-node-id="38ojR2gBHbxhPCRiieHAK1"><i style="width:21%;background:var(--warn)" data-page-node-id="Mb6H6XzhW7HV1Fl5nJu5ms"></i></div> 21%</td><td class="r num" data-page-node-id="acq6a94QFXlAOqmWxkiTvx">3.2%</td><td data-page-node-id="LNaARwaUXUGi3a8iITG4db"><span class="badge b-warn" data-page-node-id="hTebNVMwfZEpvoFF0EgipS">偏高</span></td><td class="r" data-page-node-id="plYIlKMsJYZY4Z5FCzZPrn"><span class="btn btn-sm btn-ghost" data-page-node-id="86XvnQA6huFX1YMcT0eEY1">核查</span></td></tr>
+              <tr data-page-node-id="Twpi30En2vYrGufk9iHVYJ"><td data-page-node-id="71ehOdckUHDaNfIhnROPH1">央金牧场</td><td class="r num" data-page-node-id="7szKEtcvd8USjstYHprBUk">64</td><td class="r num" data-page-node-id="cIr8FT4uaOH3Cg3f5agD3J">6</td><td data-page-node-id="4DC5LpAHSSdvEm40G9Y78z"><div class="bar" data-page-node-id="Mdu3sh8lsY7uCM220T9Piv"><i style="width:9%" data-page-node-id="kdTvmqetHl3KgzHIDJGToL"></i></div> 9%</td><td class="r num" data-page-node-id="crU6eMoPCjJtkXDKkiux9g">3.2%</td><td data-page-node-id="dFbuTtYgpnEhUE9xGGTXIx"><span class="badge b-gray" data-page-node-id="EXuYzx7PyifWPrfnQMecDK">正常区间</span></td><td class="r" data-page-node-id="z8iJrlb3HqC216Krej7bsu"><span class="btn btn-sm" data-page-node-id="OaquglNUGfgge1e4qdBJST">查看</span></td></tr>
+              <tr data-page-node-id="evBMy9L0Bcq0QWc5KEFnyv"><td class="linkish" data-cust="a" data-page-node-id="Sw1Fl3SypkDc364ia6pqDX">班戈县绿色牧业合作社</td><td class="r num" data-page-node-id="JZAXZRiA9BGfUOLBn1oEvD">246</td><td class="r num" data-page-node-id="dcjIWGWGnwRNULQT8p0c8i">17</td><td data-page-node-id="RshqmnMoeDOtCbR63wFutF"><div class="bar" data-page-node-id="c4O0bCHi3l2QGzncHpOfbg"><i style="width:7%" data-page-node-id="4kIdQMNb8oQv1lLuuzm4Br"></i></div> 7%</td><td class="r num" data-page-node-id="RdzryLewveKP8x6p1FKyFc">3.2%</td><td data-page-node-id="MJ8Wkzpxkqm9tkeVDkYOXZ"><span class="badge b-gray" data-page-node-id="4AOqGnkyZTgEC6hDbWAOU5">正常区间</span></td><td class="r" data-page-node-id="S8m3LEPPUXA2jjgEcetRzP"><span class="btn btn-sm" data-page-node-id="AqmXaGLIxFW3gawmBXmBOZ">查看</span></td></tr>
+              <tr data-page-node-id="uaSNFjH1JWURJuiI8fV16I"><td data-page-node-id="4hqxfP4guD4qGzzUAcmqbL">德吉联合体</td><td class="r num" data-page-node-id="91lqnMJZvepJHJHRzqVA94">188</td><td class="r num" data-page-node-id="kz7AB7jf8Mj6Na1GqMV0Hj">5</td><td data-page-node-id="2XToG4KvAcl19HhlYduPQ8"><div class="bar" data-page-node-id="Nr1FV3CI6y0uxEONduAaLD"><i style="width:3%" data-page-node-id="ggXVpuIbvHWQ1wSIZDCpQz"></i></div> 3%</td><td class="r num" data-page-node-id="CYM5g6PuKiF8bJr1kPRng0">3.2%</td><td data-page-node-id="DGA8t7dAzWAUiEXqrOa0ms"><span class="badge b-ok" data-page-node-id="fezUowQZCzf0RAIxEDLwG6">规范</span></td><td class="r" data-page-node-id="1O4tljOGXziZb9aktgcDjm"><span class="btn btn-sm" data-page-node-id="Q37kmoqEd7bnLCwgqP58vP">查看</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card" data-page-node-id="XI1LvFT11yxAUVVY1bmT7N">
+          <div class="card-h" data-page-node-id="eK0abatt4FBhgQx69hAW1u"><h2 data-page-node-id="X4gVyqYrK7klh4DpHz3dek">盘库任务</h2></div>
+          <table data-page-node-id="RN31slvcTTCvVZrqifMzby">
+            <thead data-page-node-id="Wd8oYAqqkXQAscRFtbEpJx"><tr data-page-node-id="HXJKILaJYOMkXcJFwA6wEB"><th data-page-node-id="6POghugbC3UgApZ0oaWbsK">客户</th><th data-page-node-id="HsF0a6HixWJoVbZMeGsT7P">计划日期</th><th class="r" data-page-node-id="gjPsXlfdGDfS4xe6Ch0vhJ">账面在栏</th><th class="r" data-page-node-id="4xAFq2PtxIXVp05AC3FOAO">现场核到</th><th class="r" data-page-node-id="E1UCQFgCSGQV4RQDnvAylI">差异</th><th data-page-node-id="YN4q9DSeHqE9dmpxlUNFfd">状态</th><th class="r" data-page-node-id="LbveT3mIW5LvOBAHA23WRz">操作</th></tr></thead>
+            <tbody data-page-node-id="txXDKHjJBL1DkVIzoPow2V">
+              <tr data-page-node-id="vemwT559mBnWwYOlJFPHzo"><td class="linkish" data-cust="b" data-page-node-id="1AiTzUZ5j1gwNdbKN6Pht8">扎西家庭牧场</td><td class="muted" data-page-node-id="eO5Ix69jKQo9Sxm6fpyOZE">2026-09-28</td><td class="r num" data-page-node-id="qvBIWpxyzrb9pd4D7PvqFv">120</td><td class="r num" data-page-node-id="1TYm78HsCzWccHMVVwjfPA">96</td><td class="r num" style="color:var(--danger)" data-page-node-id="jy34YzrWuoq12zTQiSClte">−24</td><td data-page-node-id="zzNbm950urQnLkHpRSI0gE"><span class="badge b-warn" data-page-node-id="pkfOXErDxLKp1TFaIJRGrk">待定性</span></td><td class="r" data-page-node-id="cVzG4kc5WJWkTqauLB61Ad"><span class="btn btn-sm btn-ghost" data-page-node-id="7Bb6BnrA05IYrExHOBuq5k">登记原因</span></td></tr>
+              <tr data-page-node-id="65ii8yFTt4vfQKO1JMKVdJ"><td data-page-node-id="Ns0AStcJnDIpyN94pzDXnb">央金牧场</td><td class="muted" data-page-node-id="DHtFmg64ol3ikuwLtDoELT">2026-10-05</td><td class="r num" data-page-node-id="ZGB17coo8Qw0kUc51LSMUB">310</td><td class="r num" data-page-node-id="cGDY45kOeJ0ib5M0ApdY3w">—</td><td class="r num" data-page-node-id="MUc0Pv2tHyN3ZuFC9ouNpH">—</td><td data-page-node-id="0XmEoJnNUPSq2zwXWG22Jz"><span class="badge b-info" data-page-node-id="ecHGHzLaebsqy1FFk0WI7P">待执行</span></td><td class="r" data-page-node-id="b5OtGUUZpVDgxgk9mjSAXN"><span class="btn btn-sm" data-page-node-id="PYZUTtAKlrETvteWyYh9Gk">派单</span></td></tr>
+              <tr data-page-node-id="dySP7kDA85DPKl7WqfvPc8"><td data-page-node-id="szsj78DE3dkdXtGoUyZOkW">某某生态牧业合作社</td><td class="muted" data-page-node-id="eKfDxpLAWyoJz2q9WJXO89">2026-09-15</td><td class="r num" data-page-node-id="KRWvTUcQoaJmRo5QCzN3o2">762</td><td class="r num" data-page-node-id="XQ9qdWf8HI9vCjq52pFfGK">762</td><td class="r num" data-page-node-id="h4oB875F8mdCtsFdOA83Rn">0</td><td data-page-node-id="UUvxsr4f6Vhw4tPjxIKOHe"><span class="badge b-ok" data-page-node-id="xyBKJ2lAg0IXZUQWBAJCJG">相符</span></td><td class="r" data-page-node-id="KV5ss0esPjEedo8UnB40Xr"><span class="btn btn-sm" data-page-node-id="E0B26jjPrLOLoFnHirMFsS">查看</span></td></tr>
+            </tbody>
+          </table>
+          <details class="fold" data-page-node-id="sI3UjO5p1HhI0orbVxJ6Lx">
+            <summary data-page-node-id="3HnCQLkEpwQ5iB6xF22QG9">盘库的定位与差异定性口径</summary>
+            <div class="fold-body" data-page-node-id="UIxYIaEHtGP1XZGjKA4QQL">
+              <h4 data-page-node-id="PifIFtaw9V7ZNeOdoakZVe">盘库验的是「数量对不对」，验不了「钱还没还」</h4>
+              <ul data-page-node-id="XrAU8S4NFuc6SqS7ubbQ5w">
+                <li data-page-node-id="tarWF7kbNzMCTjai7NaF44">卖了牛没还款，属「有票出栏」——账面立刻可见，不需要盘库</li>
+                <li data-page-node-id="cnARn1izWK54luzWJZIqIS">私下卖牛属「无票出栏」——客户不会注销耳标，账面完全看不出，只能靠盘库</li>
+              </ul>
+              <h4 data-page-node-id="juH2qSzA5C3dmiTFx9XYpe">差异的可能原因（定性由人工完成）</h4>
+              <ul data-page-node-id="y3Ghn2lwyH3dM7lC7DGcWJ">
+                <li data-page-node-id="nU49jfAORBQ4UAWMHDAcJr">真欺骗：私下卖牛、虚增存栏</li>
+                <li data-page-node-id="XZYK0G83fPORAtJVaBzSWV">非欺骗：耳标脱落未补挂、牛走失在山里、寄养代牧、补挂新标未更新档案、系统同步延迟、盘库本身漏扫</li>
+              </ul>
+              <h4 data-page-node-id="Z4Pcf97nAxaTcw2vSixSYx">盘库的两个附加价值</h4>
+              <ul data-page-node-id="p5JB9g0lBOWVvCyi3E2C4l">
+                <li data-page-node-id="swmUBP0heNkaRzpAWmw60h"><b data-page-node-id="hutxvvIIVSDVIJ2rSTrLHz">威慑</b>：客户知道会来数牛，就不敢私下卖</li>
+                <li data-page-node-id="429q9xM0hNvGeSzs3FRJy8"><b data-page-node-id="0eKTl5PNBLO9YBGQzw2DaQ">校准预警规则</b>：盘库结果是唯一的真值来源，用来调阈值</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ========== 5. 贷后待办 ========== -->
+      <section class="page" id="page-postloan" data-page-node-id="pHhCKuNOrLBtFQSS1Iz1Cd">
+        <div class="verdict" data-page-node-id="gE7grmNDUbeSZdSYphsbwG">
+          <div class="v-main" data-page-node-id="NtE30IgejutCPckODXyvBx">
+            <div class="v-label" data-page-node-id="qD4TcK7B19BLf74FHCtPiF">贷后待办</div>
+            <div class="v-big" data-page-node-id="rXYi6a0BvzQB5iEG2vScDY">7 <em data-page-node-id="t3t4QaRk7ASUHPEVPYa8UN">项</em></div>
+            <div class="v-note" data-page-node-id="HMBuZ5xRIQWFVfpGZB0yti">高 2 · 中 4 · 低 1　｜　超期 0 项</div>
+          </div>
+          <div class="v-acts" data-page-node-id="6HdGnIFtpRnifVEqb8QRZu">
+            <span class="btn btn-main" data-page-node-id="kguHcf16IQ3mNtj18GFxl5">批量处置</span>
+            <span class="btn" data-page-node-id="mlZta3dPzQ3aBhl8kpKZcP">转派</span>
+          </div>
+        </div>
+
+        <div class="card" data-page-node-id="iysYAjOAeA2LS0bc9nBEBK">
+          <div class="card-h" data-page-node-id="MhS7YyDCmX1PwVnrLQeycX"><h2 data-page-node-id="SZNFKUH3X60qT9mjex4EwN">任务队列</h2><span class="hint" data-page-node-id="pACKNErhRy1h16TFuHh5ed">五类信号 · 点客户名进入档案</span></div>
+          <table data-page-node-id="Xs0EZEzu1P9guNe6eH3ied">
+            <thead data-page-node-id="DP1p7tiQPFU69sHmIIXDHE"><tr data-page-node-id="V48LQnNkXWw6JH4e6nBGPC"><th data-page-node-id="M0MRhCCr0BgpchcofmTt8M">任务号</th><th data-page-node-id="Hx5vbZouWZ7em2nlZYInPv">客户</th><th data-page-node-id="1IFZwfnZCz5y0hMzcJZRq3">信号类</th><th data-page-node-id="Nshy8l9ZzlVOeEdfvo6Fhg">触发依据</th><th data-page-node-id="LraU9CjsjocLKI7FI0vDo6">责任人</th><th data-page-node-id="ga0chMDw6P3aEnR8PEdJFY">时限</th><th data-page-node-id="9QJ3rgRSA4bBE4NZJTInWX">状态</th><th class="r" data-page-node-id="Log8Md7l31TRxHBRlBMKqf">操作</th></tr></thead>
+            <tbody data-page-node-id="9iLAKIgPUZ5jRGS03FDVTt">
+              <tr data-page-node-id="fvKHH7HMEaUicDtmSJyUPb"><td class="mono" data-page-node-id="bKHS2o2jAeb4Bf3IyfO89c">WF-2026-041</td><td class="linkish" data-cust="a" data-page-node-id="rnuXcHPdulGeFTIsuVhxg2">班戈县绿色牧业合作社</td><td data-page-node-id="llzcoO4uE7UUxVCTtLvPuG"><span class="badge b-info" data-page-node-id="NbguN1tAxgKAL9PcprmTmN">经营类</span></td><td data-page-node-id="xzRfXWtQR4Pjn4GpTILABE">出栏 40 头 · 90 天无回款</td><td class="muted" data-page-node-id="zMmTpt2063Fq2ZGyCQUVKX">客户经理 2 组</td><td class="muted" data-page-node-id="1DIanG1Balo5asPjPaYEMZ">10-08</td><td data-page-node-id="CrLSjdPDXEnhGzGdFQo39N"><span class="badge b-warn" data-page-node-id="MSVTDKSFGpHxtoZ9hrJCpz">待处理</span></td><td class="r" data-page-node-id="zIohNxyj7XOCT5c4KtNnMF"><span class="btn btn-sm btn-ghost" data-page-node-id="9xKTqhKnixHwk2sGydH5km">处置</span></td></tr>
+              <tr data-page-node-id="Mv1ikHPJJh4OVcejhKebZa"><td class="mono" data-page-node-id="KNkX3HoyP9JWuDIMi800cl">WF-2026-040</td><td class="linkish" data-cust="b" data-page-node-id="j2SnMX7fjM0zqN7VCBp63C">扎西家庭牧场</td><td data-page-node-id="Z8DbL9NW8200mmUVxF4erf"><span class="badge b-info" data-page-node-id="b43ROShlM9EkaBvAMIWIFF">资产类</span></td><td data-page-node-id="tTMX4B7I1bQeL3jmyVnXBH">盘库差异 −24 头</td><td class="muted" data-page-node-id="PaBMlqIVscrX2mPriveuuT">客户经理 1 组</td><td class="muted" data-page-node-id="osvrccAe8Q9V8QIM6Jn7Oo">10-05</td><td data-page-node-id="CgAtQKkJljP1DxNeWdS8JV"><span class="badge b-warn" data-page-node-id="rHPzDCtfuurMbvdB1g5C4w">处理中</span></td><td class="r" data-page-node-id="HzKGFxcmQQHdV0gDAIiaU0"><span class="btn btn-sm btn-ghost" data-page-node-id="oOEP63RKO33C8e1FxfH9lZ">处置</span></td></tr>
+              <tr data-page-node-id="l9HwW6rENCy1t0A11nMKW2"><td class="mono" data-page-node-id="QvH4lXUa4WHsT4pH6FckXp">WF-2026-039</td><td data-page-node-id="0Ra6K3b8iWF4xpZky4LpUJ">德吉联合体</td><td data-page-node-id="0inA8edjCgqg5eqvBHoKl4"><span class="badge b-info" data-page-node-id="omZcF2lEyzNaDHpD5I4K4z">还款类</span></td><td data-page-node-id="zYgOetGoubbKoeyKVCA9YP">用信率 92% ≥ 90%</td><td class="muted" data-page-node-id="8dmsOlCA67e3D7kzOWrlLy">客户经理 2 组</td><td class="muted" data-page-node-id="GPiaJC1lCnGkaFa1MtSwlZ">10-12</td><td data-page-node-id="MQRHNH78KQxhYqyAaGMpGC"><span class="badge b-warn" data-page-node-id="PYn0XHMPiEwOOS3xcFjcfW">待处理</span></td><td class="r" data-page-node-id="SSXDBsf7w2uCdaVCIusBWG"><span class="btn btn-sm btn-ghost" data-page-node-id="LEGDfCr5tpJUUqxwzoTiVM">处置</span></td></tr>
+              <tr data-page-node-id="9bJuw9wFTB0GPDFYm8VrDV"><td class="mono" data-page-node-id="K8mrjI1n4Ssm7XGKghdqZA">WF-2026-038</td><td data-page-node-id="mNFE67XEsBgCZEM0adTrb6">央金牧场</td><td data-page-node-id="WmGhfiVIP0hbEabcf8FqVl"><span class="badge b-info" data-page-node-id="SLfC5MNjWO9PmAhJJ05zah">经营类</span></td><td data-page-node-id="mggvJualhGMmItDa6aFZdb">账户进账环比 −46%</td><td class="muted" data-page-node-id="pGgFvKvsCfzSSjABhsw2BX">客户经理 3 组</td><td class="muted" data-page-node-id="Q7mSK1xiECQCNrbuQY9Kwf">10-15</td><td data-page-node-id="0czXzkLxCJC7CO4fu8C7v2"><span class="badge b-warn" data-page-node-id="BxBm5GPBTEKg1SmEnsxYrv">待处理</span></td><td class="r" data-page-node-id="gd3PuavAqTDwJDAo5bFKVT"><span class="btn btn-sm btn-ghost" data-page-node-id="cstTMc8kTXJ6lOAUZ4dpTl">处置</span></td></tr>
+              <tr data-page-node-id="eN7A885A2lpl3xGpsItTW4"><td class="mono" data-page-node-id="SZBa8cl3S1AfdNS5joDDAu">WF-2026-037</td><td data-page-node-id="SByKB0ioG1OFoEnW6lEcjT">某某合作社（安多县）</td><td data-page-node-id="GWG3uTI1lFtIO9thy5FGO4"><span class="badge b-info" data-page-node-id="QDZW27Xzt2t483dyT40Noz">环境类</span></td><td data-page-node-id="mmLNfLpI3y4IwVohCodF37">该县暴雪预警等级「高」</td><td class="muted" data-page-node-id="Gxpr55AFoJYvgAmgUpnd3k">客户经理 1 组</td><td class="muted" data-page-node-id="ac71QHaGps3ae24AgIwtjT">10-09</td><td data-page-node-id="KiAiYlactGGYl1uOIoKGqf"><span class="badge b-warn" data-page-node-id="pECatdrv5vhrQcIiym6sq2">待处理</span></td><td class="r" data-page-node-id="0vuNuIWhH4MlGHZZGBVHu0"><span class="btn btn-sm btn-ghost" data-page-node-id="Y3xEtBZ05GXLAEZX0ferm5">处置</span></td></tr>
+              <tr data-page-node-id="thEN90AX7xJPZsp7zlT4U9"><td class="mono" data-page-node-id="oH6IXnAWuHKEfUo5fWELJL">WF-2026-036</td><td data-page-node-id="GpWw3SGJlDlWkTRW6Ax7Dl">谢通门供草合作社</td><td data-page-node-id="CThzPnYoalt21L6u2fWtU4"><span class="badge b-info" data-page-node-id="immxUOeFWfaIorPeGY6Qqo">保险类</span></td><td data-page-node-id="cza5pD7omirv4lFsCWCZD4">保险覆盖率 58% 低于阈值</td><td class="muted" data-page-node-id="uDzYyUt1mUijcg09CDdGRz">客户经理 4 组</td><td class="muted" data-page-node-id="CqIQT3qHq9ZC7UFFUBGkHS">10-20</td><td data-page-node-id="sRedYUENmmMK83Wv1ynzwy"><span class="badge b-warn" data-page-node-id="wqRxtqgRd1MDbhui704jnU">待处理</span></td><td class="r" data-page-node-id="bg7zGZJVjGeKE7TAocie6B"><span class="btn btn-sm btn-ghost" data-page-node-id="yMP2FZp7VLpE1GBCwopeEd">处置</span></td></tr>
+              <tr data-page-node-id="farfYJGrTxUTybseZrfQc9"><td class="mono" data-page-node-id="M67X80xuPGSIdlby9phHGq">WF-2026-035</td><td data-page-node-id="Pj7yMnfIC9fgxys4RcBDq8">某某牧业公司（比如县）</td><td data-page-node-id="lAbjJDEgNH3Y4agYnaqkmQ"><span class="badge b-info" data-page-node-id="nosXGCXRgJUxKj8uB4npUA">健康类</span></td><td data-page-node-id="ubCCXmObpd25IqnIxHOAeC">防疫覆盖率 91% → 74%</td><td class="muted" data-page-node-id="hWOKd3ylVgGR5CAHS2FLmH">客户经理 3 组</td><td class="muted" data-page-node-id="kXHKUcX69f80xRj05vokA0">10-25</td><td data-page-node-id="PSUGsOs5NCSRVDrYkbx0XW"><span class="badge b-warn" data-page-node-id="t9AjTAWUPDVeXLfDLwhh8S">待处理</span></td><td class="r" data-page-node-id="V3kZdKF882KWSGDHtlqizB"><span class="btn btn-sm btn-ghost" data-page-node-id="shiczNLpzJdli2WiokpofG">处置</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card" data-page-node-id="MwXRJ9anh22D6BK31BgL9y">
+          <div class="card-h" data-page-node-id="tjAz5EYBqsZtVInoj1pNvt"><h2 data-page-node-id="8yJ4OdmHOmRfkFtRAs6SRl">处置动作</h2></div>
+          <table data-page-node-id="yFw54GIPFSPZ8mwElRftjA">
+            <thead data-page-node-id="eLSaZCe34iMnrPqaUXuuqE"><tr data-page-node-id="1FJDbVJUbkM3cK57NVvbM7"><th data-page-node-id="DSK2DDWSz2kJUpiKDnOiAU">动作</th><th data-page-node-id="U10nZF0ggPk7DEpAoQLkYj">适用情形</th></tr></thead>
+            <tbody data-page-node-id="EQAoErQnsj8E97om2X34DU">
+              <tr data-page-node-id="mTXSs754MjtD0jaP4KpQwr"><td data-page-node-id="1RsgxbyyIToPK3OEmtI0kf">现场核查</td><td class="muted" data-page-node-id="OYtAVbyBwqY9NuLbWtvJK8">盘库差异、资产类异常</td></tr>
+              <tr data-page-node-id="FlnBq7UWBjnzqGNZKVhYDu"><td data-page-node-id="uSBoiTuHfjHaExosgcwAgq">补充材料</td><td class="muted" data-page-node-id="PEhW83oHAmoCM16hwy2jJX">凭证缺失、资料不足</td></tr>
+              <tr data-page-node-id="0T3575cIOounR4BIF2Xjrh"><td data-page-node-id="aG4FlBa5jm1iOND9IQrRKh">追加保险</td><td class="muted" data-page-node-id="YBve9QuNmQBQTE26msTaVG">保险覆盖不足、健康类信号</td></tr>
+              <tr data-page-node-id="5GuVu1IQ8X1iLTAaF8laog"><td data-page-node-id="3tia8wKPjHi60z2SA1L6kD">压缩授信 / 冻结新增</td><td class="muted" data-page-node-id="wPc7dJXfE6wXbiPma7d1U5">经营类持续恶化</td></tr>
+              <tr data-page-node-id="WAoBhgQCAaf0dgEyxfDRvg"><td data-page-node-id="mNWSLq0e9o1RrPOgZrqGoh">提前收回</td><td class="muted" data-page-node-id="mZXXNwo50X8ZsTHuUSimLP">无对价出栏、确认挪用</td></tr>
+              <tr data-page-node-id="vi0dYlOwsCaweMuqenmj1J"><td data-page-node-id="uxoznxW2IO54KxizKOyMDF">启动保险理赔</td><td class="muted" data-page-node-id="kH56Sg2oxSOBnMpmXUjLKE">死亡有报备与保单</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========== 6. 区域与集中度 ========== -->
+      <section class="page" id="page-region" data-page-node-id="A8NR9MuFQYT3gUteuBzgOT">
+        <div class="verdict" data-page-node-id="BRhNcZxBeXrMh26bQPhF9Z">
+          <div class="v-main" data-page-node-id="kv7r7pfr2n3EZzpEy9mgNK">
+            <div class="v-label" data-page-node-id="LKOEqEMLfRUcAWBtADDgHd">区域与集中度</div>
+            <div class="v-big" data-page-node-id="bfLBrKuvDmABF3Gecct2hO">26 <em data-page-node-id="edM54gOURXzabN5MGurlUv">县</em></div>
+            <div class="v-note" data-page-node-id="Gd3PkndXWdGAFZdsybpLqp">按耳标归属县统计</div>
+          </div>
+          <div class="v-acts" data-page-node-id="pGwDdgaPsl42Nm73tz6MaP"><span class="btn" data-page-node-id="J5YL76n77AVwQo49retRoR">导出</span></div>
+        </div>
+
+        <div class="card" data-page-node-id="iBHEV1TFmDCPwGU25Ietvp">
+          <div class="card-h" data-page-node-id="UNQrBWQdqEUuK50C8iAL4o"><h2 data-page-node-id="mAV1F77gTOjxmitlWIRIng">集中度与额度池</h2><span class="hint" data-page-node-id="gRxhOvbQ2CeDS6g9fGljFb">放款前校验</span></div>
+          <table data-page-node-id="5vixMC1MCc8oWsTTZiXZqF">
+            <thead data-page-node-id="ZbvmpNCVNu4kujydJKzYUf"><tr data-page-node-id="fEQfhhV9r1YBvqfgTrl9Bp"><th data-page-node-id="uoh3xezV0NLlOX16qoTDTy">县</th><th class="r" data-page-node-id="r2mIrQh7KM1DLC9Qpq8OoA">已投放</th><th class="r" data-page-node-id="U4daa0YsZcWkxfxBlCp2d3">额度池</th><th class="r" data-page-node-id="sA3WO9r0CfcwunvRRRCer9">占用率</th><th class="r" data-page-node-id="zOVYjbuYXWzB7tOraJc4Hz">耳标归属头数</th><th data-page-node-id="QCir9G113ZzxizUqxRbLdb">环境风险</th><th data-page-node-id="iPqr6f9bONOUz1qYcKkfDy">集中度</th></tr></thead>
+            <tbody data-page-node-id="OPYK2LcQClcMW0C3kAFTJT">
+              <tr data-page-node-id="7umwNNtsHidGb1QnfxOYS2"><td data-page-node-id="HhPekstGwTuS2UxNvOdMdf">班戈县</td><td class="r num" data-page-node-id="VtWW6JjmhP26sKF1p3p80x">860 万</td><td class="r num" data-page-node-id="weEgKizsU0PGpkmAZZnCPa">1,500 万</td><td class="r num" data-page-node-id="MCKVuSnrw34SXRAiJ9Ks2p">57%</td><td class="r num" data-page-node-id="gXoW69fk9WMgvIjvWKfRzG">3,580</td><td data-page-node-id="7bMF5WPpWF3COpgjfKQcNH"><span class="badge b-warn" data-page-node-id="zGvlwf5rU2TaOMNHO68hIj">中</span></td><td data-page-node-id="G8ozM63Zp3AF6fw6oIp7B2"><span class="badge b-ok" data-page-node-id="CIaEjgY8312XEeZ6N6Z49F">正常</span></td></tr>
+              <tr data-page-node-id="0DAWJAWHcE0SQWyWGXToIk"><td data-page-node-id="YlEJGtBRyrtEOLYpV0lzNg">安多县</td><td class="r num" data-page-node-id="Pidik2kBiA72wPt0cCuPck">1,240 万</td><td class="r num" data-page-node-id="rHq9Hl0y66mnv5ydBetlDG">1,500 万</td><td class="r num" data-page-node-id="B16HwxvZnJ9V5EH6pp2aFw">83%</td><td class="r num" data-page-node-id="ziyG1lrhnNYFSojnUJG0R9">4,120</td><td data-page-node-id="2lUsWK8wIZuzwa4wSPpt0L"><span class="badge b-danger" data-page-node-id="DwkJ6AEG1DaPskcRL0zTix">高</span></td><td data-page-node-id="CNn0AdY4iB8U3Bv371yFvC"><span class="badge b-warn" data-page-node-id="8poXDZU1BlSLClFeQww2Hp">区域收紧</span></td></tr>
+              <tr data-page-node-id="urviOsV22CXIH29zjFg4b5"><td data-page-node-id="53qubyYkV2qee9pKXvPUyA">聂荣县</td><td class="r num" data-page-node-id="8pPOdek0pi3EM1iFA5u7PH">620 万</td><td class="r num" data-page-node-id="xHnilgJMShFlDrFqdbNmQV">1,200 万</td><td class="r num" data-page-node-id="63b49QkZO5Cs00oJoIookF">52%</td><td class="r num" data-page-node-id="heBSTlHjhJPfK1YMsDtZ8F">2,860</td><td data-page-node-id="cWtiFbdOs65PhQTvHa5Kri"><span class="badge b-warn" data-page-node-id="EBBxzO8XEAXOCG7XhrH80y">中</span></td><td data-page-node-id="YJANAkxwjt43FLQA4Wpw32"><span class="badge b-ok" data-page-node-id="dxbtRD62p12GqwRHDChSCF">正常</span></td></tr>
+              <tr data-page-node-id="h0ctqUmAdyvxKLHdoSv1zL"><td data-page-node-id="XFCddhtowRZSHFaEKEu2ME">申扎县</td><td class="r num" data-page-node-id="4qQwjURFHEH8oyTuh6tpC5">410 万</td><td class="r num" data-page-node-id="aSmYSz5mVUbKLwuYDKiBAC">900 万</td><td class="r num" data-page-node-id="t01OHRbFIQvPnokdzUhwRI">46%</td><td class="r num" data-page-node-id="toBxEDIJ1KquqwVdncKzeE">1,940</td><td data-page-node-id="moGv5TEKYAkEmGoR6JA7FZ"><span class="badge b-ok" data-page-node-id="GX6XhJXnMFGhnxL5ayFHKx">低</span></td><td data-page-node-id="XqJIN1m9HXnn4CUhaMgur2"><span class="badge b-ok" data-page-node-id="kLDsMsAgfm1NiHQhyy5nky">正常</span></td></tr>
+              <tr data-page-node-id="sJn5YEbLjfBey8gYApWSdO"><td data-page-node-id="tqWSCZvs4KdWOqPiOwakdB">比如县</td><td class="r num" data-page-node-id="jrkarCd4iLAbkSitj2exah">180 万</td><td class="r num" data-page-node-id="9dOs69zkl6cImJ0WBnyqdY">900 万</td><td class="r num" data-page-node-id="IdtsdbaSRgYq1bPGAxxFun">20%</td><td class="r num" data-page-node-id="xGxor969EMV5thFnE8HvGt">760</td><td data-page-node-id="BGxBQ7GoMcy8q4gg4AMLwO"><span class="badge b-ok" data-page-node-id="FmugFLC8u268AxSxDUNSLH">低</span></td><td data-page-node-id="ADedxyd04PRsDI3nF1bujj"><span class="badge b-ok" data-page-node-id="4cSimOiSZ2oq8zYD1TamUr">可投放</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid2" data-page-node-id="pzYDpWmWZKk2RCoHFlnSF2">
+          <div class="card" style="margin:0" data-page-node-id="r6TdMd9X8oxTZPWwQIGK5n">
+            <div class="card-h" data-page-node-id="RK9wR8CTlzVEO0ND3tSTZc"><h2 data-page-node-id="A899n5Y5aY12tBXmfvmpuT">县域环境风险</h2></div>
+            <table data-page-node-id="XUFA7L2lpKSLYj2T2NFLPw">
+              <thead data-page-node-id="n4dmbofIUCzwf39cinwLJT"><tr data-page-node-id="zg9pAFecPrxKehyBdB9OY0"><th data-page-node-id="TQDQ4EyXxia6R5EzPm2Zuk">县</th><th data-page-node-id="IuCbDsRebORComQL6kisJa">灾害</th><th data-page-node-id="2QrUJxxMwG7wNf5z7ucsfx">退化</th><th class="r" data-page-node-id="CA7qOXJ47ZkvCIbktITzAU">综合分</th></tr></thead>
+              <tbody data-page-node-id="NuxnZpOvgs3yv6kpRCMF4p">
+                <tr data-page-node-id="hsqJG2zHuM7FIrTFeXmnrL"><td data-page-node-id="WqAJN7GrpvCy1mXQtQHoSm">安多县</td><td data-page-node-id="nlXIVFR08FFoFsiOiFzvg3"><span class="badge b-danger" data-page-node-id="OflfyXC5zT29RhzDDaTW6O">暴雪 高</span></td><td data-page-node-id="jch82VtXKOyzrAK627Fpgy"><span class="badge b-warn" data-page-node-id="mnXBf8en7DtP4h2miccGD6">轻度</span></td><td class="r num" data-page-node-id="FjFrA99i8MSb6j2lGMCzAi">72</td></tr>
+                <tr data-page-node-id="tZ2pYBkixQyGunuNh7F16H"><td data-page-node-id="qii5NLhDwMu9pHCN6PJG35">班戈县</td><td data-page-node-id="aBw9kQ9EeDj8hTrpPvFY2o"><span class="badge b-warn" data-page-node-id="SA1DRW7VGe8GLEhhYmhqpA">寒潮 中</span></td><td data-page-node-id="JZF0Guc0Z2QsUDh1OTHpBT"><span class="badge b-ok" data-page-node-id="meaETYeFwqdJOCuJi007aM">基本稳定</span></td><td class="r num" data-page-node-id="7kkR9NNFwb3L3UwpMzKxvr">58</td></tr>
+                <tr data-page-node-id="yGzeHV0O6v9THdLKWZCP2H"><td data-page-node-id="epZvrRERlRFUxPcc6d5CYJ">聂荣县</td><td data-page-node-id="1iLVJNRDPuFqDhXiByOqC2"><span class="badge b-warn" data-page-node-id="y5mnC4bA05Vi4PvEPRTiGy">干旱 中</span></td><td data-page-node-id="XBS2maVVdXnv9XUbmU5QoY"><span class="badge b-warn" data-page-node-id="vCE0joa7SlKyKH18uo8dEn">轻度</span></td><td class="r num" data-page-node-id="yJE4x4Tv3hlsEsB66ps2YC">61</td></tr>
+                <tr data-page-node-id="T3IRMNyquFNtv0lxHeAGG2"><td data-page-node-id="vdWe1UFDvokd9cLojE9UWO">申扎县</td><td data-page-node-id="xuuqyc3NRTfDMlh0LJT1Sx"><span class="badge b-ok" data-page-node-id="99SGi9XedLrqLxz807VJpr">低</span></td><td data-page-node-id="6U7VXDysbItnKAJjLHtzWq"><span class="badge b-ok" data-page-node-id="LgSYp1AE2WYnNwNESG45TQ">基本稳定</span></td><td class="r num" data-page-node-id="AAJ4ZWC6jMbMUVtp1AB9q9">43</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card" style="margin:0" data-page-node-id="MGAUi1EAZjtYMVHrBxUiUK">
+            <div class="card-h" data-page-node-id="fPWkW6qMhgONlxKyApDIFx"><h2 data-page-node-id="30BZYVEsmRcLr9kVQHe7Rr">归属县异常排查</h2></div>
+            <table data-page-node-id="UwGfnzyVfhzdroKj7lzmg3">
+              <thead data-page-node-id="QceDyw9AAbHnl3TkZw8cBc"><tr data-page-node-id="NVCHOW3iWSLULF4AkXyeSu"><th data-page-node-id="DjK4CUdjVNn440uOL7sHGA">客户</th><th data-page-node-id="EP8CI4rvN3HbgPDBqQpGar">申报所在县</th><th data-page-node-id="jmLrO6Ky5tup9G357j7YWj">耳标归属县</th><th data-page-node-id="Fc9aFKRnATdg6SMZcVLRJp">判定</th><th class="r" data-page-node-id="zSqDESCf1xEV4rnYgTf0R8">操作</th></tr></thead>
+              <tbody data-page-node-id="SlLMkEwzXTl19N5QeW07LX">
+                <tr data-page-node-id="ClU9OVcOgAkzoujMrNqGBo"><td data-page-node-id="LerUn3VODm8bhHPEevpjCf">某某牧户</td><td data-page-node-id="RXEaQHyGoHO1VZL8dwU4xk">安多县</td><td data-page-node-id="BjsvblRDSz9mRua8p8xd8s">聂荣县</td><td data-page-node-id="KdrEgq1CFg2CUG2HVBV7Hm"><span class="badge b-warn" data-page-node-id="ObwWRgy88akmVPFxTkJoqf">核查线索</span></td><td class="r" data-page-node-id="EoCjKTTSeJlbDu8aALYXnl"><span class="btn btn-sm btn-ghost" data-page-node-id="XFsoTqEGCiZh7rx4XRAC1A">核查</span></td></tr>
+                <tr data-page-node-id="uKKLuynjLFQuFir5nVV13q"><td data-page-node-id="PeJYEzR94xl8uPuQJagylR">某某合作社</td><td data-page-node-id="CovV8kkFJG5VzWtGqEV3V0">班戈县</td><td data-page-node-id="CxiKzQFzCyeqFc1WyEpdKx">班戈县</td><td data-page-node-id="bg2ACdCHd4YcqIEPtOJbQu"><span class="badge b-ok" data-page-node-id="TFjHaThS5DOBVl6TAkmtSW">一致</span></td><td class="r" data-page-node-id="eD5I85ioWWL89xOZHWtES3"><span class="btn btn-sm" data-page-node-id="eOTwgDzLdsBAvgz5qNjkyy">查看</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 7. 保险协同 ========== -->
+      <section class="page" id="page-insurance" data-page-node-id="D0d8OQaVzjql4Fn34uhhsr">
+        <div class="verdict" data-page-node-id="FoODtRnWb6xfa9ZEivnX63">
+          <div class="v-main" data-page-node-id="9HFHf78nmhjeMjnagXaivn">
+            <div class="v-label" data-page-node-id="guD7Fw1Frv517htsxsVEKi">保险协同</div>
+            <div class="v-big" data-page-node-id="7RdzdSkKB6jdFIoIH8HJlL">待核验 4 <em data-page-node-id="HLCDgZOoXEVhoAP7uOj5Og">单</em> <span style="font-size:14px;color:var(--warn);font-weight:600" data-page-node-id="GAnWNvWOaPb984OYk2WDel">未覆盖 12 户</span></div>
+            <div class="v-note" data-page-node-id="UtEDxdAd5AOGOlS7EmhpQB">核验通过后计入抵押折扣</div>
+          </div>
+          <div class="v-acts" data-page-node-id="37KmZHIjWEWanN6mmchYjQ">
+            <span class="btn btn-main" data-page-node-id="hVD6AAwlBQCC1lXocwqA1Y">核验保单</span>
+            <span class="btn" data-page-node-id="RebTriswskX8AGHa6HSNZF">催办投保</span>
+          </div>
+        </div>
+
+        <div class="card" data-page-node-id="V88KF6B9XCUYqFvBSFmTqR">
+          <div class="card-h" data-page-node-id="vtEVv2sNomkzky2i4pz3cD"><h2 data-page-node-id="xZNI8lRtA4r1Yb0j3SQhRJ">保单核验队列</h2></div>
+          <table data-page-node-id="dtmZmH8BZpcGWkwcfZd3Z0">
+            <thead data-page-node-id="tpMOkEDB1LnZ3u75gipT8d"><tr data-page-node-id="tv5De7ft84DMLdFbR8XuNs"><th data-page-node-id="MuMUFlldkvHgRD2caEo3Au">客户</th><th data-page-node-id="0lIWTT0Z3xY9Rk5kbY5Wps">保单号</th><th data-page-node-id="RBA8nRXcuJ0BUVrKwsDN9c">险种</th><th class="r" data-page-node-id="aY6Ekeg57ndRMQ9o2FFuCC">承保头数</th><th class="r" data-page-node-id="9uC7MAvKEYSGRbkhzZf89e">保额</th><th data-page-node-id="Qw2PnA1YTr3EeAfRd4X6K7">责任范围</th><th data-page-node-id="xL4euFsIm8aap6ubShUMAO">状态</th><th class="r" data-page-node-id="CCuElH8xKRI9v59spBgJb8">操作</th></tr></thead>
+            <tbody data-page-node-id="cCnRk7x3vPIbaEeBREB7A4">
+              <tr data-page-node-id="YxA46BTWdW2VtDC6gQsvGZ"><td class="linkish" data-cust="a" data-page-node-id="JeTSvB4f6B1GD4AH48FsSw">班戈县绿色牧业合作社</td><td class="mono" data-page-node-id="H3Ti2IFylqOdod2oQKqP1K">PICC-2026-0…</td><td data-page-node-id="pJsEOFGrnwbdm9BtTAE5Bc">牦牛养殖险</td><td class="r num" data-page-node-id="j0dM8tghw2aqXfLmQQHy55">2,180</td><td class="r num" data-page-node-id="RHEQFDGOFYQ5A7JnevkBvi">1,744 万</td><td data-page-node-id="iAsHn3V8IaOAyWbNwcr13R"><span class="badge b-ok" data-page-node-id="r96FLJtUQJDZ8ZvXRlVDVE">已核</span></td><td data-page-node-id="3oZcHsh1XCYbWGs89lpSXp"><span class="badge b-ok" data-page-node-id="CJjED0xGurwPc6PddSGblW">有效</span></td><td class="r" data-page-node-id="egDMjX9dKIEtHnWEkVEbNb"><span class="btn btn-sm" data-page-node-id="yjgXiJwo5ql7ztaDL2KZ9B">查看</span></td></tr>
+              <tr data-page-node-id="owgu6YEGMLQKkIBMixx5jP"><td data-page-node-id="ctKP55Xj4sYCf87gq8oDss">德吉联合体</td><td class="mono" data-page-node-id="atCbHVqzFdTI1QkNVAF9Ej">PICC-2026-0…</td><td data-page-node-id="XyTH8q1BjivVhe24su4gq4">牦牛养殖险</td><td class="r num" data-page-node-id="7aqDdEjDpRJFXaDZNZ87H9">640</td><td class="r num" data-page-node-id="HXHTpP5WzScTCM25RrE2hx">512 万</td><td data-page-node-id="KIIH7pLZVhYR7v9wTyqcGO"><span class="badge b-warn" data-page-node-id="lxCo6wTvFhEc59iEzsKAhG">待核</span></td><td data-page-node-id="EZSgd9yyMmTk6nVyDCvhoh"><span class="badge b-warn" data-page-node-id="nUmP7BiFB11PJEYfSJkRZ7">待核验</span></td><td class="r" data-page-node-id="7bFcR6rBXhYkVlYgKl4tD3"><span class="btn btn-sm btn-ghost" data-page-node-id="69FqkET5ZfcZKoaTISebG6">核验</span></td></tr>
+              <tr data-page-node-id="XHbCL8c3AzbqVikLTflJQi"><td data-page-node-id="f0JoSCuQSEX6VRWBvaT0Cv">央金牧场</td><td class="mono" data-page-node-id="DNMwDB5l5FxyK413h2aayZ">—</td><td data-page-node-id="daOIVpkSGev5cMl3ZYkt1g">—</td><td class="r num" data-page-node-id="QcN6cf3oAg57RSIdD9Hf9d">—</td><td class="r num" data-page-node-id="YrueLUAKVtcTClJ0HTiHEV">—</td><td data-page-node-id="KXH11h7nMqfLhfXOHfgXld"><span class="badge b-danger" data-page-node-id="cPp6iBOdVyJD2Pof147tpS">缺失</span></td><td data-page-node-id="cNgcCACeEreB9vvPgMvhjs"><span class="badge b-danger" data-page-node-id="F6piZypp58Nf9atKZv5AM0">未覆盖</span></td><td class="r" data-page-node-id="IwzR363SrJ8r0rwQyXmjEd"><span class="btn btn-sm btn-ghost" data-page-node-id="iKm1gP1yV75dB0skE85hUp">催办</span></td></tr>
+              <tr data-page-node-id="b6Awo2FDOiH05KdwT1IyUC"><td class="linkish" data-cust="b" data-page-node-id="vCbjG0lyCZn9aBLUo1gjSS">扎西家庭牧场</td><td class="mono" data-page-node-id="tieoyy5wFQpT5ztlxNUR7y">PICC-2026-0…</td><td data-page-node-id="SeRyE3QjBzomenR46yywUX">牦牛养殖险</td><td class="r num" data-page-node-id="VrkZaJUuunV1mJqtGg4xXP">96</td><td class="r num" data-page-node-id="1dMKYZ0aN6MsaDRehtKV6E">76.8 万</td><td data-page-node-id="RNynoH2m3BYcjq7e9Zwm9c"><span class="badge b-warn" data-page-node-id="6yhwROzeASyWNmWmSs5yuC">待核</span></td><td data-page-node-id="FlRSb7PmGXzVWbaDFaj5AU"><span class="badge b-warn" data-page-node-id="wXTN7ANcuZPkIag34mVTTK">待核验</span></td><td class="r" data-page-node-id="npXfkD8C7hDbmCApEiSfVg"><span class="btn btn-sm btn-ghost" data-page-node-id="TdIfGfsJ0oAM5CbtuCErGc">核验</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid2" data-page-node-id="jyoQvk320dlZSmHzCbXiI7">
+          <div class="card" style="margin:0" data-page-node-id="M1RKpHRQVNB62a9R99aPPu">
+            <div class="card-h" data-page-node-id="VGHzxpH0rFzcmOWYgLhc17"><h2 data-page-node-id="4jYICOLFpWjUZxAj31dLEr">理赔联动</h2></div>
+            <table data-page-node-id="RRPButqZe22ZEsNXCUzwRu">
+              <thead data-page-node-id="cYgq2druJZdk2UOveqSYYm"><tr data-page-node-id="OgseHeAPRztU1xFhp1e4lR"><th data-page-node-id="GZZsd3oATU8ejiaIz6DuVu">客户</th><th data-page-node-id="A0pLwSm5pJ1Wh8RGYZDRIV">出险</th><th class="r" data-page-node-id="aDrcrmCw6N3P6EfFoPQcuT">赔付</th><th data-page-node-id="grDlyG3KMrXHjkH3zVLUzH">资金动向</th></tr></thead>
+              <tbody data-page-node-id="EF9iyas5kyEHswsOHRhWe4">
+                <tr data-page-node-id="ftE36qDXW55YVFrW5hEdCB"><td data-page-node-id="0H0o72oohiM9HPsOQHGpHx">某某合作社</td><td class="muted" data-page-node-id="mtfG0Y9ZtRSL7tbft6YFDg">2026-02 雪灾</td><td class="r num" data-page-node-id="JVqmreTNDCF7UAaFz4HwLq">42.6 万</td><td data-page-node-id="LWxaVxUH33gjXnTQhDGKpT"><span class="badge b-ok" data-page-node-id="L4T8GEPPWtXF78U7eVPPdz">已偿还贷款本息</span></td></tr>
+                <tr data-page-node-id="ZwEXUURFZnGq3ws1bCT6C1"><td data-page-node-id="1H1uNfS65CPXYaF9g5sohu">某某牧户</td><td class="muted" data-page-node-id="5oCyXD8s9B4zMRaP5KOCLH">2026-04 疫病</td><td class="r num" data-page-node-id="9yCnQ89jS0n4bPdBoj82Bg">8.4 万</td><td data-page-node-id="ynvF8tALe3dlNgEpFNfjR5"><span class="badge b-warn" data-page-node-id="BcBracC7vYGiRRZ7S2RqqW">到账未用于还款</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card" style="margin:0" data-page-node-id="QOJqiUEbOyVjxBOcCmeJXX">
+            <div class="card-h" data-page-node-id="B1Dqx0Ki3yuab4i9YnTlTC"><h2 data-page-node-id="8yiRjOl8Oo0uLqLFcZcZcB">保险对抵押折扣的影响</h2></div>
+            <table data-page-node-id="poVpkbhQwCLJRJQKICntXe">
+              <thead data-page-node-id="9E596yDKsHJTIu2Utxuzyu"><tr data-page-node-id="7M8GKwjN4aSQ1FAP8amBtx"><th data-page-node-id="PxjK7eVWx9kxZVzfqMKRFH">耳标</th><th data-page-node-id="GTLW5NVkdBR5UAJdy5HI1k">保险</th><th class="r" data-page-node-id="RM5cl5EZLgGumumpjizr3W">抵押折扣</th></tr></thead>
+              <tbody data-page-node-id="Ht8UjUb8hQgqD8wEtk3uMT">
+                <tr data-page-node-id="ZJEfYlkLGbVhtRzhoWtE3S"><td data-page-node-id="FyokM5rIPzuXD3qWUkYT2H">有</td><td data-page-node-id="HaOIqkRxlNAeKYI352E0NW">有</td><td class="r num" data-page-node-id="Gb4sjjhYj8QlWnAaRc3zw6">70%</td></tr>
+                <tr data-page-node-id="GlczPL8E75DXEZBtKmJO9q"><td data-page-node-id="8qyXry6jGkDEN1tzj8texi">有</td><td data-page-node-id="erSziXTFi3pgkCQLoyg8Cu">无</td><td class="r num" data-page-node-id="kCxy4DrOUbuMYqzQvoqsP4">40%</td></tr>
+                <tr data-page-node-id="8ShAgRD88ZrFeWa0IUR55X"><td data-page-node-id="5tGDQGd2HICV94v16nRrRS">无</td><td data-page-node-id="X7tVrcQQ4trWqY4lqqG9lk">有</td><td class="r num" data-page-node-id="ytZbe51VTPDvY9zT1drnpY">30%</td></tr>
+                <tr data-page-node-id="Y3u3BPXkcuyIVLwIcEwd9X"><td data-page-node-id="r878zJKsgwkHERZVT8QlAe">无</td><td data-page-node-id="GEajmIUMDFO6vo0woc1FUH">无</td><td class="r num" data-page-node-id="AKXkPtJQXoahK5cNcejcV7">不计入</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   客户数据（演示口径）
+   ============================================================ */
+const CUSTOMERS = [
+  {
+    id:'a', name:'班戈县绿色牧业合作社', type:'合作社', region:'班戈县',
+    stage:'已放款', risk:'中', docPct:76,
+    verdict:{ tone:'ok', label:'准入结论', big:'可贷 <em>·</em> 建议 <em>90</em> 万元',
+      note:'风险等级 <b style="color:#D9822B">中</b> ｜ 最终瓶颈：<b>必要饲草采购资金缺口</b>', act:'提交测算' },
+    kpis:[['建议授信额度','90 <small>万元</small>'],['标准雪灾 DSCR','1.24'],['在栏耳标','3,580 <small>头</small>'],['保险覆盖率','61%'],['资料完整度','76%']],
+    evidence:[['资产（耳标台账）','ok','已获取','3,580 头'],['防疫记录','ok','已获取','覆盖率 87%'],['经营（检疫票 / 流水）','warn','部分','仅近 12 个月'],['还款记录','ok','已获取','行内'],['保险合同','danger','缺失','抵押按无保险档']],
+    todos:[['P0','danger','保险合同与责任范围'],['P1','warn','开票记录（近 12 个月）'],['P1','warn','草场权属证明'],['P2','gray','动产融资统一登记']],
+    doc:{ pct:76, filled:19, missing:6, pending:3, groups:[
+      ['主体资料',[
+        ['主体名称','ok','已填','班戈县绿色牧业合作社','行内','2026-03-12','查看'],
+        ['统一社会信用代码','ok','已填','9154 **** **** 3921','行内','2026-03-12','查看'],
+        ['法定代表人','ok','已填','已脱敏','行内','2026-03-12','查看'],
+        ['合作社章程','ok','已填','已上传（附件 1 份）','客户提供','2026-03-12','查看'],
+        ['草场承包合同','warn','待核验','42,000 亩 · 2029-12 到期','客户提供','2026-08-02','核验'],
+        ['草场权属证明','danger','缺失','—','—','—','补录']
+      ]],
+      ['资产资料',[
+        ['耳标台账','ok','已填','3,580 头（牛 980 / 羊 2,600）','畜牧局','2026-09-20','查看'],
+        ['耳标覆盖率','ok','已填','100%（3,580 / 3,580）','派生','2026-09-20','查看'],
+        ['存栏确认','ok','已填','3,580 头 · 最近盘库 2026-09-15 相符','畜牧局 + 盘库','2026-09-15','查看'],
+        ['活体估值','ok','已填','1,720 万元（市价 × 头数）','派生','2026-09-20','查看']
+      ]],
+      ['防疫资料',[
+        ['防疫记录','ok','已填','覆盖率 87% · 最近接种 2026-09-10','兽医站','2026-09-15','查看'],
+        ['检疫合格证明','warn','部分','近 12 个月 6 笔，合计 218 头','动监机构','2026-09-21','补录'],
+        ['疫病记录','ok','已填','无','兽医站','2026-09-15','查看']
+      ]],
+      ['经营资料',[
+        ['银行流水','ok','已填','近 24 个月 · 年均进账 386 万','行内','实时','查看'],
+        ['开票记录','danger','缺失','—','—','—','补录'],
+        ['销售合同','warn','部分','2 份（2026-03 / 2026-06）','客户提供','2026-06-10','补录']
+      ]],
+      ['保险资料',[
+        ['保单','warn','部分','承保 2,180 / 3,580 头 · 覆盖率 61%','保险公司','2026-08-30','核验'],
+        ['责任范围','danger','缺失','—','—','—','核验'],
+        ['理赔记录','ok','已填','无','保险公司','2026-08-30','查看']
+      ]],
+      ['授信资料',[
+        ['授信额度','ok','已填','271 万（已用 166 万 / 可用 105 万）','行内','实时','查看'],
+        ['还款计划','ok','已填','2027-10 / 2027-12 各还 50%','行内','实时','查看'],
+        ['担保方式','ok','已填','活体抵押 + 保证','行内','2026-03-12','查看'],
+        ['动产融资登记','danger','缺失','—','—','—','登记']
+      ]]
+    ]},
+    asset:{ kpis:[['期初在栏','3,640'],['本期进','+186','ok'],['本期出','−246','danger'],['期末在栏','3,580']],
+      hint:'共 3,580 条',
+      rows:[
+        ['09-18','进','ok','出生登记','62','耳标新增','—','—','查看'],
+        ['09-12','出','danger','销售','40','<span class="mono">检疫票 No.31012…</span>','有','ok','核回款'],
+        ['09-05','出','danger','死亡','6','无害化处理记录','有','ok','查看'],
+        ['08-28','出','danger','自食 / 赠送','14','<span class="badge b-danger">无凭证</span>','无','danger','核查'],
+        ['08-20','出','danger','丢失','3','<span class="badge b-danger">无凭证</span>','无','danger','核查'],
+        ['08-15','进','ok','购入','124','<span class="mono">检疫票 + 过户登记</span>','—','—','查看']
+      ],
+      tags:[
+        ['2-540628-00012401','牦牛','班戈县','38','ok','在栏','ok','已免疫','ok','已承保'],
+        ['2-540628-00012402','牦牛','班戈县','42','ok','在栏','ok','已免疫','ok','已承保'],
+        ['2-540628-00012403','牦牛','班戈县','29','ok','在栏','warn','待补','gray','未承保'],
+        ['2-540628-00011988','牦牛','班戈县','51','gray','已注销','—','—','—','—']
+      ]},
+    credit:{ ok:true, rows:[
+        ['<b>需求侧</b> · 基准合格融资需求','必要饲草采购 125 万 − 自筹 35 万','<b>900,000</b>','danger','最终瓶颈'],
+        ['供给侧 · 标准雪灾偿债支持上限','雪灾可用现金 ÷ DSCR 阈值 − 现有还款 / 服务因子','988,717','warn','供给侧最小'],
+        ['供给侧 · 统一授信可用额度','2,710,000 − 1,660,000','1,050,000','gray','未触及'],
+        ['供给侧 · 产品上限','涉农产品参数','1,200,000','gray','未触及'],
+        ['供给侧 · 抵押上限','3,580 头 × 单价 × 40%（有耳标 / 无保险）','6,880,000','gray','未触及'],
+        ['__total__','唯一建议金额 = 向下取整到 1 万元','900,000','ok','可行']
+      ],
+      scenarios:[['基准','1.41','ok','可行'],['标准雪灾','1.24','ok','可行'],['复合极端','0.93','warn','脆弱性提示']] },
+    signals:[
+      ['09-12','经营类','出栏 40 头，至今无对应回款','danger','高','warn','待处理','处置'],
+      ['09-05','资产类','死亡 6 头（有无害化处理记录）','info','低','ok','已归档','查看'],
+      ['08-28','资产类','自食 / 赠送 / 丢失合计 17 头，高于本县同类均值','warn','中','warn','处理中','处置'],
+      ['07-20','保险类','保险覆盖率 61%，低于阈值','warn','中','warn','待处理','催办']
+    ],
+    traces:[['09-20 14:32','现场核查','客户经理 2 组','属正常销售，回款在途','10-08 前复核'],['09-06 10:15','电话核实','客户经理 2 组','死亡属实，已无害化处理','补充理赔材料']],
+    ev:[
+      ['耳标台账','畜牧局（省级标识数据库）','ok','官方数据','2026-09-20','—'],
+      ['防疫记录','兽医站免疫档案','ok','官方数据','2026-09-15','健康类信号降级'],
+      ['检疫合格证明','动物卫生监督机构','ok','官方数据','近 12 个月','销售额改用流水估算'],
+      ['银行流水','行内','ok','行内数据','实时','—'],
+      ['保险合同','保险公司','danger','缺失','—','抵押按「无保险」档，额度下降'],
+      ['草场承包合同','客户提供','warn','客户自报','2026-08-02','准入转「待补资料」']
+    ]
+  },
+
+  {
+    id:'b', name:'扎西家庭牧场', type:'家庭牧场', region:'安多县',
+    stage:'待核查', risk:'高', docPct:48,
+    verdict:{ tone:'danger', label:'准入结论', big:'暂缓放款 <em>·</em> 待核查',
+      note:'风险等级 <b style="color:#D93026">高</b> ｜ 前置条件：盘库差异 <b>24 头</b>未定性；无票出栏占比 <b>45%</b>', act:'提交核查' },
+    kpis:[['建议授信额度','暂缓'],['账面在栏 / 现场核到','120 / 96 <small>头</small>'],['无票出栏占比','45%'],['保险覆盖率','80%'],['资料完整度','48%']],
+    evidence:[['资产（耳标台账）','danger','盘库差异','账面 120 / 现场 96'],['防疫记录','ok','已获取','覆盖率 92%'],['经营（检疫票 / 流水）','danger','异常','无票出栏 43 头'],['还款记录','ok','已获取','逾期 0 期'],['保险合同','ok','已核验','96 头已承保']],
+    todos:[['P0','danger','盘库差异 24 头定性'],['P0','danger','无对价出栏 43 头说明'],['P1','warn','草场权属证明'],['P1','warn','开票记录']],
+    doc:{ pct:48, filled:13, missing:9, pending:4, groups:[
+      ['主体资料',[
+        ['主体名称','ok','已填','扎西家庭牧场','行内','2026-05-08','查看'],
+        ['经营者身份','ok','已填','已脱敏','行内','2026-05-08','查看'],
+        ['草场承包合同','ok','已填','6,800 亩 · 2031-06 到期','客户提供','2026-05-08','查看'],
+        ['草场权属证明','danger','缺失','—','—','—','补录'],
+        ['经营场所照片','ok','已填','已上传（4 张）','客户经理','2026-05-10','查看']
+      ]],
+      ['资产资料',[
+        ['耳标台账','warn','部分','账面 120 头 · 现场核到 96 头','畜牧局 + 盘库','2026-09-28','核查'],
+        ['耳标覆盖率','warn','部分','100%（按账面计）','派生','2026-09-20','查看'],
+        ['存栏确认','danger','异常','差异 −24 头，原因未定性','盘库','2026-09-28','定性'],
+        ['活体估值','warn','待重算','按现场 96 头重算中','派生','—','重算']
+      ]],
+      ['防疫资料',[
+        ['防疫记录','ok','已填','覆盖率 92% · 最近接种 2026-08-22','兽医站','2026-09-10','查看'],
+        ['检疫合格证明','warn','部分','近 12 个月 2 笔，合计 53 头','动监机构','2026-09-10','补录'],
+        ['疫病记录','ok','已填','无','兽医站','2026-09-10','查看']
+      ]],
+      ['经营资料',[
+        ['银行流水','ok','已填','近 18 个月 · 年均进账 62 万','行内','实时','查看'],
+        ['开票记录','danger','缺失','—','—','—','补录'],
+        ['销售合同','danger','缺失','—','—','—','补录']
+      ]],
+      ['保险资料',[
+        ['保单','ok','已填','承保 96 / 120 头 · 覆盖率 80%','保险公司','2026-07-15','查看'],
+        ['责任范围','warn','待核验','—','保险公司','2026-07-15','核验'],
+        ['理赔记录','ok','已填','无','保险公司','2026-07-15','查看']
+      ]],
+      ['授信资料',[
+        ['授信额度','ok','已填','30 万（已用 12 万 / 可用 18 万）','行内','实时','查看'],
+        ['还款计划','ok','已填','到期一次还本','行内','实时','查看'],
+        ['担保方式','ok','已填','活体抵押 + 保证','行内','2026-05-08','查看'],
+        ['动产融资登记','danger','缺失','—','—','—','登记']
+      ]]
+    ]},
+    asset:{ kpis:[['期初在栏','120'],['本期进','0'],['本期出','−48','danger'],['现场核到','96','danger']],
+      hint:'账面 120 条 · 差异 24 头待定性',
+      rows:[
+        ['09-20','出','danger','销售','30','<span class="mono">检疫票 No.32008…</span>','有','ok','核回款'],
+        ['08-30','出','danger','自食 / 赠送','22','<span class="badge b-danger">无凭证</span>','无','danger','核查'],
+        ['08-10','出','danger','丢失','6','<span class="badge b-danger">无凭证</span>','无','danger','核查'],
+        ['07-25','出','danger','销售','23','<span class="mono">检疫票 No.31887…</span>','有','ok','核回款'],
+        ['07-05','出','danger','自食 / 赠送','15','<span class="badge b-danger">无凭证</span>','无','danger','核查']
+      ],
+      tags:[
+        ['2-540624-00003311','牦牛','安多县','36','ok','在栏','ok','已免疫','ok','已承保'],
+        ['2-540624-00003312','牦牛','安多县','41','ok','在栏','ok','已免疫','ok','已承保'],
+        ['2-540624-00003313','牦牛','安多县','33','gray','已注销','—','—','—','—'],
+        ['2-540624-00003314','牦牛','安多县','28','warn','差异待核','ok','已免疫','gray','未承保']
+      ]},
+    credit:{ ok:false, reason:'前置条件未满足：盘库差异未定性、无票出栏占比 45%，不进入金额测算。' },
+    signals:[
+      ['09-28','资产类','盘库差异 24 头，现场核到 96 / 账面 120','danger','高','warn','待定性','登记原因'],
+      ['08-30','资产类','无对价出栏 43 头，占出栏 45%（本县同类均值 3.2%）','danger','高','warn','待处理','处置'],
+      ['08-22','健康类','防疫覆盖率 92%，正常','ok','低','ok','已归档','查看']
+    ],
+    traces:[['09-28 16:40','现场盘库','客户经理 1 组','账面 120 头，现场核到 96 头','差异原因待登记']],
+    ev:[
+      ['耳标台账','畜牧局（省级标识数据库）','warn','官方数据','2026-09-20','账面与现场存在差异'],
+      ['防疫记录','兽医站免疫档案','ok','官方数据','2026-09-10','—'],
+      ['检疫合格证明','动物卫生监督机构','warn','部分','近 12 个月 2 笔','销售额改用流水估算'],
+      ['银行流水','行内','ok','行内数据','实时','—'],
+      ['保险合同','保险公司','warn','机构数据','2026-07-15','责任范围待核验'],
+      ['草场承包合同','客户提供','ok','客户自报','2026-05-08','—']
+    ]
+  },
+
+  {
+    id:'c', name:'次仁某某（牧户）', type:'牧户', region:'聂荣县',
+    stage:'待补资料', risk:'未测算', docPct:31,
+    verdict:{ tone:'warn', label:'准入结论', big:'待补资料 <em>·</em> 未测算',
+      note:'资料完整度 <b style="color:#D93026">31%</b> ｜ 缺耳标登记、草场权属、防疫记录等关键资料', act:'发起补录' },
+    kpis:[['建议授信额度','未测算'],['存栏（自报）','48 <small>头</small>'],['耳标覆盖率','0%'],['草场面积（自报）','2,100 <small>亩</small>'],['资料完整度','31%']],
+    evidence:[['资产（耳标台账）','danger','缺失','无耳标登记'],['防疫记录','danger','缺失','兽医站无记录'],['经营（检疫票 / 流水）','warn','部分','仅 6 个月流水'],['还款记录','ok','已获取','无贷款记录'],['保险合同','danger','缺失','未覆盖']],
+    todos:[['P0','danger','牲畜耳标登记'],['P0','danger','草场承包合同与权属证明'],['P0','danger','防疫记录（兽医站补开）'],['P1','warn','保险合同']],
+    doc:{ pct:31, filled:9, missing:16, pending:3, groups:[
+      ['主体资料',[
+        ['主体名称','ok','已填','次仁某某（牧户）','自助填写','2026-09-18','查看'],
+        ['经营者身份','warn','待核验','已脱敏','自助填写','2026-09-18','核验'],
+        ['草场承包合同','danger','缺失','—','—','—','补录'],
+        ['草场权属证明','danger','缺失','—','—','—','补录'],
+        ['联系电话','ok','已填','已脱敏','自助填写','2026-09-18','查看']
+      ]],
+      ['资产资料',[
+        ['耳标台账','danger','缺失','无耳标登记','—','—','建档'],
+        ['耳标覆盖率','danger','缺失','0%','派生','—','—'],
+        ['存栏确认','warn','自报','48 头（未核实）','自助填写','2026-09-18','核实'],
+        ['活体估值','danger','缺失','—','—','—','—']
+      ]],
+      ['防疫资料',[
+        ['防疫记录','danger','缺失','兽医站无记录','—','—','补录'],
+        ['检疫合格证明','danger','缺失','—','—','—','补录'],
+        ['疫病记录','danger','缺失','—','—','—','补录']
+      ]],
+      ['经营资料',[
+        ['银行流水','warn','部分','近 6 个月 · 月均进账 3.1 万','行内','实时','查看'],
+        ['开票记录','danger','缺失','—','—','—','补录'],
+        ['销售合同','danger','缺失','—','—','—','补录']
+      ]],
+      ['保险资料',[
+        ['保单','danger','缺失','—','—','—','催办'],
+        ['责任范围','danger','缺失','—','—','—','—'],
+        ['理赔记录','danger','缺失','—','—','—','—']
+      ]],
+      ['授信资料',[
+        ['授信额度','danger','缺失','行内无授信记录','—','—','—'],
+        ['还款计划','danger','缺失','—','—','—','—'],
+        ['担保方式','danger','缺失','—','—','—','—'],
+        ['动产融资登记','danger','缺失','—','—','—','—']
+      ]]
+    ]},
+    asset:{ kpis:[['期初在栏','—'],['本期进','—'],['本期出','—'],['耳标登记','0','danger']],
+      hint:'无耳标台账',
+      rows:[], tags:[] },
+    credit:{ ok:false, reason:'准入资料不足：无耳标登记、无草场权属、无防疫记录，不进入金额测算。' },
+    signals:[],
+    traces:[],
+    ev:[
+      ['耳标台账','—','danger','缺失','—','抵押上限不计入'],
+      ['防疫记录','—','danger','缺失','—','健康类信号不可用'],
+      ['存栏（自报）','客户自助填写','warn','客户自报','2026-09-18','需现场核实'],
+      ['银行流水','行内','ok','行内数据','实时','—'],
+      ['保险合同','—','danger','缺失','—','抵押按「无保险」档'],
+      ['草场承包合同','—','danger','缺失','—','准入转「待补资料」']
+    ]
+  }
+];
+
+/* ============================================================
+   渲染
+   ============================================================ */
+const bd = (cls, text) => (cls === '—' || text === '—') ? '—' : `<span class="badge b-${cls}">${text}</span>`;
+let curIdx = 0;
+
+function renderProfile(c){
+  const v = document.getElementById('verdict');
+  v.className = 'verdict tone-' + c.verdict.tone;
+  document.getElementById('vLabel').textContent = c.name + ' · ' + c.verdict.label;
+  document.getElementById('vBig').innerHTML = c.verdict.big;
+  document.getElementById('vNote').innerHTML = c.verdict.note;
+  document.getElementById('vAct1').textContent = c.verdict.act;
+
+  document.getElementById('cbMeta').innerHTML =
+    c.type + ' · ' + c.region + ' ｜ 准入阶段 <b>' + c.stage + '</b> ｜ 风险 <b>' + c.risk + '</b> ｜ 资料完整度 <b>' + c.docPct + '%</b>';
+
+  document.getElementById('ovKpis').innerHTML = c.kpis.map(function(k){
+    return '<div class="kpi"><div class="k-l">' + k[0] + '</div><div class="k-v">' + k[1] + '</div></div>';
+  }).join('');
+  document.getElementById('ovEvidence').innerHTML = c.evidence.map(function(e){
+    return '<tr><td>' + e[0] + '</td><td>' + bd(e[1],e[2]) + '</td><td class="muted">' + e[3] + '</td></tr>';
+  }).join('');
+  document.getElementById('ovTodos').innerHTML = c.todos.map(function(t){
+    return '<tr><td>' + bd(t[1],t[0]) + '</td><td>' + t[2] + '</td><td class="r"><span class="btn btn-sm btn-ghost">去补</span></td></tr>';
+  }).join('');
+
+  var d = c.doc;
+  document.getElementById('docHint').textContent =
+    '共 ' + (d.filled + d.missing + d.pending) + ' 项 · 已填 ' + d.filled + ' · 缺失 ' + d.missing + ' · 待核验 ' + d.pending;
+  var pk = d.pct >= 80 ? 'ok' : (d.pct >= 60 ? 'warn' : 'danger');
+  document.getElementById('docKpis').innerHTML =
+    '<div class="kpi"><div class="k-l">完整度</div><div class="k-v" style="color:var(--' + pk + ')">' + d.pct + '%</div></div>'
+    + '<div class="kpi"><div class="k-l">已填</div><div class="k-v" style="color:var(--ok)">' + d.filled + '</div></div>'
+    + '<div class="kpi"><div class="k-l">缺失</div><div class="k-v" style="color:var(--danger)">' + d.missing + '</div></div>'
+    + '<div class="kpi"><div class="k-l">待核验</div><div class="k-v" style="color:var(--warn)">' + d.pending + '</div></div>';
+  document.getElementById('docTable').innerHTML = d.groups.map(function(g){
+    var head = '<tr class="grp"><td colspan="6">' + g[0] + '</td></tr>';
+    var ins = g[1].map(function(r){
+      var isAct = ['核验','补录','登记','建档','催办','核实','定性','重算'].indexOf(r[6]) >= 0;
+      var cell = (r[6] === '—') ? '—' : '<span class="btn btn-sm' + (isAct ? ' btn-ghost' : '') + '">' + r[6] + '</span>';
+      return '<tr><td>' + r[0] + '</td><td>' + bd(r[1],r[2]) + '</td><td>' + r[3] + '</td>'
+        + '<td class="muted">' + r[4] + '</td><td class="muted">' + r[5] + '</td><td class="r">' + cell + '</td></tr>';
+    }).join('');
+    return head + ins;
+  }).join('');
+
+  var a = c.asset;
+  document.getElementById('assetKpis').innerHTML = a.kpis.map(function(k){
+    return '<div class="kpi"><div class="k-l">' + k[0] + '</div><div class="k-v"' + (k[2] ? ' style="color:var(--' + k[2] + ')"' : '') + '>' + k[1] + '</div></div>';
+  }).join('');
+  document.getElementById('assetTable').innerHTML = a.rows.length
+    ? a.rows.map(function(r){
+        return '<tr><td class="muted">' + r[0] + '</td><td>' + bd(r[2],r[1]) + '</td><td>' + r[3] + '</td><td class="r num">' + r[4] + '</td>'
+          + '<td>' + r[5] + '</td><td>' + bd(r[7],r[6]) + '</td><td class="r"><span class="btn btn-sm btn-ghost">' + r[8] + '</span></td></tr>';
+      }).join('')
+    : '<tr><td colspan="7"><div class="empty">该客户无耳标台账</div></td></tr>';
+  document.getElementById('tagHint').textContent = a.hint;
+  document.getElementById('tagTable').innerHTML = a.tags.length
+    ? a.tags.map(function(t){
+        return '<tr><td class="mono">' + t[0] + '</td><td>' + t[1] + '</td><td>' + t[2] + '</td><td class="num">' + t[3] + '</td>'
+          + '<td>' + bd(t[4],t[5]) + '</td><td>' + bd(t[6],t[7]) + '</td><td>' + bd(t[8],t[9]) + '</td></tr>';
+      }).join('')
+    : '<tr><td colspan="7"><div class="empty">该客户无耳标记录</div></td></tr>';
+
+  var cr = c.credit;
+  if (cr.ok) {
+    document.getElementById('limitTable').innerHTML = cr.rows.map(function(r){
+      if (r[0] === '__total__') {
+        return '<tr style="background:#FAFAFA"><td colspan="2"><b>唯一建议金额</b> = 向下取整到 1 万元</td><td class="r num"><b>' + r[2] + '</b></td><td>' + bd(r[3],r[4]) + '</td></tr>';
+      }
+      return '<tr><td>' + r[0] + '</td><td class="muted">' + r[1] + '</td><td class="r num">' + r[2] + '</td><td>' + bd(r[3],r[4]) + '</td></tr>';
+    }).join('');
+    document.getElementById('scenarioTable').innerHTML = cr.scenarios.map(function(s){
+      return '<tr><td>' + s[0] + '</td><td class="r num">' + s[1] + '</td><td>' + bd(s[2],s[3]) + '</td></tr>';
+    }).join('');
+  } else {
+    document.getElementById('limitTable').innerHTML = '<tr><td colspan="4"><div class="empty">' + cr.reason + '</div></td></tr>';
+    document.getElementById('scenarioTable').innerHTML = '<tr><td colspan="3"><div class="empty">未进入测算</div></td></tr>';
+  }
+
+  document.getElementById('signalTable').innerHTML = c.signals.length
+    ? c.signals.map(function(s){
+        return '<tr><td class="muted">' + s[0] + '</td><td>' + s[1] + '</td><td>' + s[2] + '</td>'
+          + '<td>' + bd(s[3],s[4]) + '</td><td>' + bd(s[5],s[6]) + '</td><td class="r"><span class="btn btn-sm btn-ghost">' + s[7] + '</span></td></tr>';
+      }).join('')
+    : '<tr><td colspan="6"><div class="empty">该客户未放款，暂无贷后信号</div></td></tr>';
+  document.getElementById('traceTable').innerHTML = c.traces.length
+    ? c.traces.map(function(t){
+        return '<tr><td class="muted">' + t[0] + '</td><td>' + t[1] + '</td><td class="muted">' + t[2] + '</td><td>' + t[3] + '</td><td>' + t[4] + '</td></tr>';
+      }).join('')
+    : '<tr><td colspan="5"><div class="empty">暂无处置记录</div></td></tr>';
+
+  document.getElementById('evTable').innerHTML = c.ev.map(function(e){
+    return '<tr><td>' + e[0] + '</td><td>' + e[1] + '</td><td>' + bd(e[2],e[3]) + '</td><td class="muted">' + e[4] + '</td><td>' + e[5] + '</td></tr>';
+  }).join('');
+}
+
+/* 导航 */
+var titles = { dashboard:'工作台', pool:'客户池', profile:'客户档案', ledger:'活体资产台账',
+  postloan:'贷后待办', region:'区域与集中度', insurance:'保险协同' };
+function nav(p){
+  document.querySelectorAll('.nav-item').forEach(function(x){ x.classList.toggle('active', x.dataset.page === p); });
+  document.querySelectorAll('.page').forEach(function(x){ x.classList.remove('on'); });
+  var t = document.getElementById('page-' + p);
+  if (t) t.classList.add('on');
+  document.getElementById('crumb').textContent = titles[p] || '';
+  window.scrollTo(0,0);
+}
+
+/* 客户切换 */
+var sel = document.getElementById('custSelect');
+sel.innerHTML = CUSTOMERS.map(function(c, i){ return '<option value="' + i + '">' + c.name + '</option>'; }).join('');
+function setCust(i, go){
+  curIdx = (i + CUSTOMERS.length) % CUSTOMERS.length;
+  sel.value = String(curIdx);
+  renderProfile(CUSTOMERS[curIdx]);
+  if (go) nav('profile');
+}
+sel.addEventListener('change', function(){ setCust(parseInt(sel.value, 10), false); });
+document.getElementById('cbPrev').addEventListener('click', function(){ setCust(curIdx - 1, false); });
+document.getElementById('cbNext').addEventListener('click', function(){ setCust(curIdx + 1, false); });
+
+/* 侧栏 */
+document.querySelectorAll('.nav-item').forEach(function(el){
+  el.addEventListener('click', function(){ nav(el.dataset.page); });
+});
+
+/* 点客户名 / 查看 → 进该客户档案 */
+document.querySelectorAll('[data-cust]').forEach(function(el){
+  el.addEventListener('click', function(e){
+    e.stopPropagation();
+    for (var i = 0; i < CUSTOMERS.length; i++) {
+      if (CUSTOMERS[i].id === el.dataset.cust) { setCust(i, true); return; }
+    }
+  });
+});
+
+/* Tab */
+document.querySelectorAll('.tab').forEach(function(el){
+  el.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
+    el.classList.add('on');
+    document.querySelectorAll('.tabpane').forEach(function(x){ x.classList.remove('on'); });
+    var t = document.getElementById('tab-' + el.dataset.tab);
+    if (t) t.classList.add('on');
+  });
+});
+
+/* 初始化 */
+renderProfile(CUSTOMERS[0]);
+</script>
+</body>
+</html>

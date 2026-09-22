@@ -596,10 +596,8 @@ const app = createApp({
       navMore: [
         { page: "insurance-portfolio", name: "资产/保险资料核验" },
         { page: "livelihood", name: "边疆民生与治理协同" },
-        { href: "/overview.html", name: "平台概览" },
-        { href: "/modules.html", name: "业务模块" },
-        { href: "/module.html", name: "模块详情" },
         { href: "/roadmap.html", name: "实施路线" },
+        // 2026-09-23：平台概览 / 业务模块 / 模块详情 三个壳页已下线（方案 A2-A4）
       ],
 
       // Hero
@@ -2509,10 +2507,6 @@ const app = createApp({
 
     goNextModule() {
       this.selectedModule = this.nextModule;
-    },
-
-    moduleHref(code) {
-      return `/module.html?code=${encodeURIComponent(code || "eco-monitor")}`;
     },
 
     onScroll() {

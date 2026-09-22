@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工银牧融 · 银行工作台</title>
+<link rel="stylesheet" href="./bank.css">
+</head>
+<body>
+<div class="app" id="app" v-cloak>
+
+  <!-- ================= 左侧边栏（3 组 7 项） ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>工银<span>牧融</span></h1>
+      <p>高原畜牧活体资产授信与贷后风控</p>
+    </div>
+    <nav class="nav">
+      <template v-for="g in navGroups" :key="g.title">
+        <div class="nav-group-t">{{ g.title }}</div>
+        <div class="nav-item" v-for="it in g.items" :key="it.page"
+             :class="{ active: page === it.page }" @click="nav(it.page)">
+          <span>{{ it.name }}</span>
+          <span class="cnt" v-if="badge(it.page)">{{ badge(it.page) }}</span>
+        </div>
+      </template>
+    </nav>
+    <div class="nav-foot">
+      <a href="/">返回旧版界面</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumb">{{ crumb }}</div>
+      <div class="user">客户经理 · 那曲市牧区客户经理 2 组</div>
+    </div>
+
+    <div class="content">
+
+      <!-- ===================== 1. 工作台 ===================== -->
+      <section class="page" :class="{ on: page === 'dashboard' }">
+        <div class="verdict" :class="'tone-' + (ov.todo_high ? 'warn' : 'ok')">
+          <div class="v-main">
+            <div class="v-label">今日待办</div>
+            <div class="v-big">
+              {{ ov.todo_total || 0 }} <em>项</em>
+              <span style="font-size:14px;color:var(--warn);font-weight:600" v-if="ov.todo_high">
+                含 {{ ov.todo_high }} 项高优先级
+              </span>
+            </div>
+            <div class="v-note">管辖客户 {{ ov.customers_total || 0 }} 户</div>
+          </div>
+          <div class="v-acts">
+            <span class="btn btn-main" @click="nav('postloan')">处理待办</span>
+            <span class="btn" @click="nav('pool')">看待营销名单</span>
+          </div>
+        </div>
+
+        <div class="grid3">
+          <div class="card" style="margin:0">
+            <div class="kpi"><div class="k-l">绿色信贷余额</div>
+              <div class="k-v">{{ ov.green_deployed_wan || 0 }} <small>万元</small></div></div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="kpi"><div class="k-l">抵押物在栏</div>
+              <div class="k-v">{{ ov.ledger_book_head || 0 }} <small>头</small></div></div>
+            <div class="muted" style="margin-top:6px">平均无票出栏 {{ ov.ledger_avg_unpriced || 0 }}%</div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="kpi"><div class="k-l">保险待核验</div>
+              <div class="k-v">{{ ov.insurance_pending || 0 }} <small>户</small></div></div>
+            <div class="muted" style="margin-top:6px">未覆盖 {{ ov.insurance_uncovered || 0 }} 户</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>今日待办</h2><span class="hint">按优先级排序 · 点客户名进入档案</span></div>
+          <div class="tw">
+            <table>
+              <thead><tr><th>优先级</th><th>客户</th><th>信号类型</th><th>触发依据</th><th>时限</th><th class="r">操作</th></tr></thead>
+              <tbody>
+                <tr v-for="(t, i) in (post.queue || []).slice(0, 8)" :key="i">
+                  <td><span class="badge" :class="levelCls(t.level)">{{ t.level }}</span></td>
+                  <td class="linkish" @click="openCustomer(t.subject_name)">{{ t.subject_name }}</td>
+                  <td>{{ t.signal_class }}</td>
+                  <td>{{ t.trigger }}</td>
+                  <td class="muted">{{ t.due_date || '—' }}</td>
+                  <td class="r"><span class="btn btn-sm btn-ghost" @click="openCustomer(t.subject_name)">处置</span></td>
+                </tr>
+                <tr v-if="!(post.queue || []).length"><td colspan="6"><div class="empty">暂无待办</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <details class="fold">
+            <summary>触发阈值与信号分类</summary>
+            <div class="fold-body">
+              <h4>信号分类</h4>
+              <ul><li>资产类 / 健康类 / 经营类 / 环境类 / 还款类 / 保险类</li></ul>
+              <h4>阈值来源</h4>
+              <ul>
+                <li>触发类阈值（存栏降幅、进账降幅、防疫覆盖率）用本县同类客户历史波动率标定，超过 2 个标准差判异常；数据源为现有的气象、遥感与来源事件数据。</li>
+                <li>还款类：逾期 1 期按「中」、≥2 期按「高」（贴近五级分类惯例）；用信率 ≥ 90% 触发。</li>
+                <li>资产类：无对价出栏占比 ≥ 40% 触发。</li>
+                <li>核定类参数（抵押折扣率、还款保障倍数）为经验起始值，附 ±10% 敏感性分析。</li>
+              </ul>
+              <h4>如实说明</h4>
+              <ul>
+                <li>标注 <code>derived</code> 的信号来自派生层，非真实工行业务数据。</li>
+                <li>队列按规则等级排序，模型分不参与排序。</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>待营销名单 TOP 5</h2><span class="hint">按「可授信额度 × 资料完整度」排序</span></div>
+          <div class="tw">
+            <table>
+              <thead><tr><th>排名</th><th>客户</th><th>所在县</th><th class="r">可算额度</th><th>资料完整度</th><th>获客来源</th><th class="r">操作</th></tr></thead>
+              <tbody>
+                <tr v-for="(c, i) in (ov.top_prospects || [])" :key="c.subject_name">
+                  <td class="num">{{ i + 1 }}</td>
+                  <td class="linkish" @click="openCustomer(c.subject_name)">{{ c.subject_name }}</td>
+                  <td>{{ c.region_name }}</td>
+                  <td class="r num">{{ wan(c.amount_yuan) }}</td>
+                  <td><div class="bar"><i :style="{ width: (c.completeness || 0) + '%' }"></i></div></td>
+                  <td><span class="badge b-info">{{ c.source }}</span></td>
+                  <td class="r"><span class="btn btn-sm btn-ghost" @click="openCustomer(c.subject_name)">看档案</span></td>
+                </tr>
+                <tr v-if="!(ov.top_prospects || []).length"><td colspan="7"><div class="empty">暂无待营销客户</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 2. 客户池 ===================== -->
+      <section class="page" :class="{ on: page === 'pool' }">
+        <div class="verdict">
+          <div class="v-main">
+            <div class="v-label">客户池</div>
+            <div class="v-big">{{ pool.total || 0 }} <em>户</em></div>
+            <div class="v-note">
+              可测算 {{ countBy('可测算') }} · 待核查 {{ countBy('待核查') }} · 待补资料 {{ countBy('待补资料') }}
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>获客来源</h2><span class="hint">按真实关联关系判定</span></div>
+          <div class="tw">
+            <table>
+              <thead><tr><th>来源</th><th>判定依据</th><th class="r">户数</th></tr></thead>
+              <tbody>
+                <tr v-for="s in pool.sources || []" :key="s.source">
+                  <td><span class="badge b-info">{{ s.source }}</span></td>
+                  <td class="muted">{{ sourceHint(s.source) }}</td>
+                  <td class="r num">{{ s.count }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>客户列表</h2><span class="hint">共 {{ pool.total || 0 }} 户 · 点「查看」进入客户档案</span></div>
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th>客户名称</th><th>类型</th><th>所在县</th><th class="r">存栏</th>
+                <th class="r">草场(亩)</th><th>准入结论</th><th class="r">可算额度</th>
+                <th class="r">资料</th><th class="r">操作</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="c in pool.customers || []" :key="c.subject_name">
+                  <td class="linkish" @click="openCustomer(c.subject_name)">{{ c.subject_name }}</td>
+                  <td>{{ c.subject_type }}</td>
+                  <td>{{ c.region_name }}</td>
+                  <td class="r num">{{ c.book_head }}</td>
+                  <td class="r num">{{ c.grassland_mu }}</td>
+                  <td><span class="badge" :class="'b-' + c.conclusion_tone">{{ c.conclusion_status }}</span></td>
+                  <td class="r num">{{ c.amount_yuan ? wan(c.amount_yuan) : '—' }}</td>
+                  <td class="r"><span class="badge" :class="pctCls(c.completeness)">{{ c.completeness }}%</span></td>
+                  <td class="r"><span class="btn btn-sm btn-ghost" @click="openCustomer(c.subject_name)">查看</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <details class="fold">
+            <summary>数据来源与口径</summary>
+            <div class="fold-body">
+              <ul>
+                <li>主体与授信字段来自 <code>data_store/business_subjects.json</code> 与 <code>finance_credit.json</code>；源文件里已标注 <code>is_sample</code> 的原样透传，不冒充真实工行业务数据。</li>
+                <li>「存栏」= 牛 + 羊头数之和；「可算额度」按现有授信额度换算，<b>不是</b>完整定额模型的输出。</li>
+                <li>「资料完整度」= ( 已填 + 待核验 × 0.5 ) ÷ 28，按一户一档模板计算。</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ===================== 3. 客户档案 ===================== -->
+      <section class="page" :class="{ on: page === 'profile' }">
+        <div class="custbar">
+          <span class="cb-tag">当前客户</span>
+          <span class="cb-nav" @click="stepCustomer(-1)">‹</span>
+          <select v-model="currentName" @change="loadProfile()">
+            <option v-for="c in pool.customers || []" :key="c.subject_name" :value="c.subject_name">
+              {{ c.subject_name }}
+            </option>
+          </select>
+          <span class="cb-nav" @click="stepCustomer(1)">›</span>
+          <span class="cb-meta" v-if="profile.subject_name">
+            {{ profile.subject.subject_type }} · {{ profile.subject.region_name }}
+            ｜ 准入阶段 <b>{{ profile.subject.admission_stage || '—' }}</b>
+            ｜ 资料完整度 <b>{{ profile.documents_summary.completeness }}%</b>
+          </span>
+        </div>
+
+        <div class="verdict" :class="'tone-' + (profile.conclusion ? profile.conclusion.tone : 'ok')">
+          <div class="v-main">
+            <div class="v-label">{{ profile.subject_name }} · 准入结论</div>
+            <div class="v-big" v-if="profile.conclusion">
+              {{ profile.conclusion.headline }}
+              <em v-if="profile.conclusion.amount_yuan">· 建议 {{ wan(profile.conclusion.amount_yuan) }}</em>
+            </div>
+            <div class="v-note" v-if="profile.conclusion">{{ profile.conclusion.note }}</div>
+          </div>
+          <div class="v-acts">
+            <span class="btn btn-main" v-if="profile.conclusion">{{ profile.conclusion.action }}</span>
+            <span class="btn" @click="nav('ledger')">看台账</span>
+            <span class="btn" @click="nav('postloan')">看贷后</span>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab" v-for="t in tabs" :key="t.key" :class="{ on: tab === t.key }" @click="tab = t.key">
+            {{ t.name }}
+          </div>
+        </div>
+
+        <!-- 概览 -->
+        <template v-if="tab === 'ov'">
+          <div class="card">
+            <div class="kpis">
+              <div class="kpi"><div class="k-l">准入结论</div><div class="k-v" style="font-size:18px">{{ profile.conclusion ? profile.conclusion.status : '—' }}</div></div>
+              <div class="kpi"><div class="k-l">账面在栏</div><div class="k-v">{{ profile.ledger ? profile.ledger.book_head : 0 }} <small>头</small></div></div>
+              <div class="kpi"><div class="k-l">耳标登记</div><div class="k-v">{{ profile.ledger ? profile.ledger.tag_head : 0 }} <small>头</small></div></div>
+              <div class="kpi"><div class="k-l">无票出栏占比</div><div class="k-v">{{ profile.ledger ? profile.ledger.unpriced_ratio : 0 }}%</div></div>
+              <div class="kpi"><div class="k-l">资料完整度</div><div class="k-v">{{ profile.documents_summary ? profile.documents_summary.completeness : 0 }}%</div></div>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="card" style="margin:0">
+              <div class="card-h"><h2>四条证据状态</h2></div>
+              <div class="tw">
+                <table><tbody>
+                  <tr v-for="e in profile.evidence || []" :key="e.label">
+                    <td>{{ e.label }}</td>
+                    <td><span class="badge" :class="evidenceCls(e.status)">{{ e.status }}</span></td>
+                    <td class="muted">{{ e.detail }}</td>
+                  </tr>
+                </tbody></table>
+              </div>
+            </div>
+            <div class="card" style="margin:0">
+              <div class="card-h"><h2>待补事项</h2><span class="hint">点「资料」Tab 逐项补录</span></div>
+              <div class="tw">
+                <table><tbody>
+                  <tr v-for="t in profile.todos || []" :key="t.label">
+                    <td><span class="badge" :class="'b-' + t.tone">{{ t.priority }}</span></td>
+                    <td>{{ t.label }}</td>
+                    <td class="r"><span class="btn btn-sm btn-ghost" @click="tab = 'doc'">去补</span></td>
+                  </tr>
+                  <tr v-if="!(profile.todos || []).length"><td colspan="3"><div class="empty">无待补事项</div></td></tr>
+                </tbody></table>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- 资料（一户一档） -->
+        <template v-if="tab === 'doc'">
+          <div class="card">
+            <div class="card-h">
+              <h2>资料完整度</h2>
+              <span class="hint" v-if="docs.summary">
+                共 {{ docs.summary.total }} 项 · 已填 {{ docs.summary.filled }} · 缺失 {{ docs.summary.missing }} · 待核验 {{ docs.summary.pending }}
+              </span>
+            </div>
+            <div class="kpis" v-if="docs.summary">
+              <div class="kpi"><div class="k-l">完整度</div><div class="k-v" :style="{color:'var(--' + pctCls(docs.summary.completeness) + ')'}">{{ docs.summary.completeness }}%</div></div>
+              <div class="kpi"><div class="k-l">已填</div><div class="k-v" style="color:var(--ok)">{{ docs.summary.filled }}</div></div>
+              <div class="kpi"><div class="k-l">缺失</div><div class="k-v" style="color:var(--danger)">{{ docs.summary.missing }}</div></div>
+              <div class="kpi"><div class="k-l">待核验</div><div class="k-v" style="color:var(--warn)">{{ docs.summary.pending }}</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h2>资料明细</h2><span class="hint">逐项检查与补录</span></div>
+            <div class="tw">
+              <table>
+                <thead><tr>
+                  <th style="width:170px">资料项</th><th style="width:80px">状态</th>
+                  <th>填写内容</th><th style="width:130px">来源</th>
+                  <th style="width:90px">可判定</th><th class="r" style="width:100px">操作</th>
+                </tr></thead>
+                <tbody>
+                  <template v-for="g in docs.groups || []" :key="g">
+                    <tr class="grp"><td colspan="6">{{ g }}</td></tr>
+                    <tr v-for="it in docItemsIn(g)" :key="it.key">
+                      <td>{{ it.label }}</td>
+                      <td><span class="badge" :class="docCls(it.status)">{{ it.status }}</span></td>
+                      <td>{{ it.value === null || it.value === undefined || it.value === '' ? '—' : it.value }}</td>
+                      <td class="muted">{{ it.source }}</td>
+                      <td class="muted">{{ it.judgeable ? '源数据' : '需人工' }}</td>
+                      <td class="r">
+                        <span v-if="it.status === '缺失'" class="btn btn-sm btn-ghost">补录</span>
+                        <span v-else-if="it.status === '待核验'" class="btn btn-sm btn-ghost">核验</span>
+                        <span v-else class="btn btn-sm">查看</span>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+            <details class="fold">
+              <summary>资料口径说明</summary>
+              <div class="fold-body">
+                <ul>
+                  <li><b>可判定 = 源数据</b>：该项能由 data_store 的已有字段直接判定（如主体名称、存栏、授信额度）。</li>
+                  <li><b>可判定 = 需人工</b>：源数据没有对应字段，目前按演示口径生成；接入真实资料后应改为按实际归档状态判定。</li>
+                  <li>「已提供（演示）」是演示填写标记，<b>不是</b>真实归档资料。</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </template>
+
+        <!-- 资产 -->
+        <template v-if="tab === 'asset'">
+          <div class="card">
+            <div class="card-h"><h2>活体资产台账</h2><span class="hint">台账主键 = 耳标号</span></div>
+            <div class="kpis" v-if="profile.ledger">
+              <div class="kpi"><div class="k-l">账面在栏</div><div class="k-v">{{ profile.ledger.book_head }}</div></div>
+              <div class="kpi"><div class="k-l">耳标登记</div><div class="k-v">{{ profile.ledger.tag_head }}</div></div>
+              <div class="kpi"><div class="k-l">出栏合计</div><div class="k-v">{{ profile.ledger.out_total }}</div></div>
+              <div class="kpi"><div class="k-l">有票出栏</div><div class="k-v" style="color:var(--ok)">{{ profile.ledger.out_ticketed }}</div></div>
+              <div class="kpi"><div class="k-l">无票出栏</div><div class="k-v" :style="{color: profile.ledger.out_unpriced ? 'var(--danger)' : 'var(--ink3)'}">{{ profile.ledger.out_unpriced }}</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h2>出栏构成</h2><span class="hint">有对价 = 正常经营；无对价 = 抵押物无偿流失</span></div>
+            <div class="tw">
+              <table>
+                <thead><tr><th>类型</th><th>含义</th><th class="r">头数</th><th>是否有对价</th></tr></thead>
+                <tbody>
+                  <tr><td>销售</td><td class="muted">有《动物检疫合格证明》</td>
+                    <td class="r num">{{ profile.ledger ? profile.ledger.out_ticketed : 0 }}</td>
+                    <td><span class="badge b-ok">有</span></td></tr>
+                  <tr><td>自食 / 赠送 / 丢失</td><td class="muted">无凭证</td>
+                    <td class="r num">{{ profile.ledger ? profile.ledger.out_unpriced : 0 }}</td>
+                    <td><span class="badge b-danger">无</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <details class="fold">
+              <summary>台账口径与「无票出栏」的定位</summary>
+              <div class="fold-body">
+                <h4>台账要素</h4>
+                <ul>
+                  <li>进：出生登记、购入、耳标新增</li>
+                  <li>出：销售（检疫票）、死亡（无害化处理记录）、自食 / 赠送 / 丢失（报备）——每笔都要有原因登记与凭证</li>
+                  <li>存：在栏耳标数 = 累计进 − 累计出</li>
+                  <li>核对：现场盘库，耳标与牲畜一一对上</li>
+                </ul>
+                <h4>有价出 vs 无偿出</h4>
+                <ul>
+                  <li>销售（有回款）、死亡（有理赔）→ 有对价，正常经营</li>
+                  <li>自食、赠送、丢失 → <b>无对价，抵押物在无偿流失</b></li>
+                </ul>
+                <h4>如实说明</h4>
+                <ul>
+                  <li>台账为<b>演示口径派生</b>，非真实工行业务数据；耳标登记条数取自百巴村真实登记资料。</li>
+                  <li>无票出栏只产生<b>核查线索</b>，不判定欺骗 —— 差异原因包括耳标脱落、走失、寄养代牧、数据延迟等，定性由人工完成。</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </template>
+
+        <!-- 授信 -->
+        <template v-if="tab === 'credit'">
+          <div class="card">
+            <div class="card-h"><h2>授信要素</h2><span class="hint">来自行内授信记录</span></div>
+            <div class="tw">
+              <table>
+                <tbody>
+                  <tr><td style="width:160px">授信额度</td><td class="num">{{ fmtWan(profile.finance.credit_line) }}</td></tr>
+                  <tr><td>已用额度</td><td class="num">{{ fmtWan(profile.finance.used_credit) }}</td></tr>
+                  <tr><td>利率 / 期限</td><td class="num">{{ profile.finance.interest_rate || '—' }} / {{ profile.finance.term_months || '—' }} 个月</td></tr>
+                  <tr><td>还款状态</td>
+                    <td><span class="badge" :class="profile.finance.overdue_times ? 'b-danger' : 'b-ok'">
+                      {{ profile.finance.repayment_status || '—' }}</span>
+                      <span class="muted" style="margin-left:8px">逾期 {{ profile.finance.overdue_times || 0 }} 次</span></td></tr>
+                  <tr><td>贷款用途</td><td>{{ profile.subject.loan_use || '—' }}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="card" style="margin:0">
+              <div class="card-h"><h2>抵押折扣分档</h2></div>
+              <div class="tw">
+                <table>
+                  <thead><tr><th>耳标</th><th>保险</th><th class="r">抵押折扣</th></tr></thead>
+                  <tbody>
+                    <tr><td>有</td><td>有</td><td class="r num">70%</td></tr>
+                    <tr><td>有</td><td>无</td><td class="r num">40%</td></tr>
+                    <tr><td>无</td><td>有</td><td class="r num">30%</td></tr>
+                    <tr><td>无</td><td>无</td><td class="r num">不计入</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card" style="margin:0">
+              <div class="card-h"><h2>额度测算入口</h2></div>
+              <div class="v-note" style="margin:0 0 12px">
+                本次演示只展示现有授信要素；完整定额需调用授信测算接口（<span class="mono">/api/credit-decision/evaluate</span>），
+                其唯一建议金额为需求侧与供给侧取小的纯计算链结果。
+              </div>
+              <span class="btn btn-main">去测算</span>
+            </div>
+          </div>
+          <div class="card">
+            <details class="fold" open>
+              <summary>额度链口径（需求侧 vs 供给侧）</summary>
+              <div class="fold-body">
+                <h4>供给侧上限（取最小）</h4>
+                <ul>
+                  <li>标准雪灾偿债支持上限</li>
+                  <li>统一授信可用额度</li>
+                  <li>产品上限</li>
+                  <li><b>活体抵押上限</b> —— 按耳标/保险四档折扣计算；<b>数据缺失时标「不适用」不计入</b>，不得按 0 处理</li>
+                </ul>
+                <h4>需求侧</h4>
+                <ul><li>基准合格融资需求（必要饲草采购 − 自筹）</li></ul>
+                <h4>最终瓶颈（两级）</h4>
+                <ul>
+                  <li>需求侧 ≤ 供给侧 → 最终瓶颈是<b>饲草采购资金缺口</b>，不是偿债能力不足</li>
+                  <li>供给侧 &lt; 需求侧 → 最终瓶颈是供给侧里最小的那一项</li>
+                </ul>
+                <h4>能力边界</h4>
+                <ul>
+                  <li>抵押折扣率为经验起始值（量级依据：活体处置周期与折价），附 ±10% 敏感性分析</li>
+                  <li>保险须先核验合同与责任范围，未核验时按未投保档处理</li>
+                  <li>模型风险分只用于核查优先级，<b>不进入金额计算</b></li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </template>
+
+        <!-- 贷后 -->
+        <template v-if="tab === 'pl'">
+          <div class="card">
+            <div class="card-h"><h2>本客户风险信号</h2></div>
+            <div class="tw">
+              <table>
+                <thead><tr><th>信号类</th><th>触发依据</th><th>等级</th><th>状态</th><th>来源</th><th class="r">操作</th></tr></thead>
+                <tbody>
+                  <tr v-for="(s, i) in profile.signals || []" :key="i">
+                    <td>{{ s.signal_class }}</td>
+                    <td>{{ s.trigger }}</td>
+                    <td><span class="badge" :class="levelCls(s.level)">{{ s.level }}</span></td>
+                    <td><span class="badge b-warn">{{ s.status }}</span></td>
+                    <td class="muted">{{ s.source === 'real_field' ? '源数据' : '派生' }}</td>
+                    <td class="r"><span class="btn btn-sm btn-ghost">处置</span></td>
+                  </tr>
+                  <tr v-if="!(profile.signals || []).length"><td colspan="6"><div class="empty">暂无贷后信号</div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h2>关联任务</h2></div>
+            <div class="tw">
+              <table>
+                <thead><tr><th>任务号</th><th>触发类型</th><th>责任人</th><th>时限</th><th>状态</th><th>下一步</th></tr></thead>
+                <tbody>
+                  <tr v-for="t in profile.tasks || []" :key="t.task_id">
+                    <td class="mono">{{ t.task_id }}</td>
+                    <td>{{ t.trigger_type }}</td>
+                    <td class="muted">{{ t.assigned_to }}</td>
+                    <td class="muted">{{ t.due_date }}</td>
+                    <td><span class="badge b-warn">{{ t.task_status }}</span></td>
+                    <td>{{ t.next_action }}</td>
+                  </tr>
+                  <tr v-if="!(profile.tasks || []).length"><td colspan="6"><div class="empty">暂无关联任务</div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+
+        <!-- 依据 -->
+        <template v-if="tab === 'ev'">
+          <div class="card">
+            <div class="card-h"><h2>数据来源与可信度</h2></div>
+            <div class="tw">
+              <table>
+                <thead><tr><th>数据项</th><th>来源</th><th>可信度标注</th><th>说明</th></tr></thead>
+                <tbody>
+                  <tr><td>主体与授信</td><td>行内 / data_store</td>
+                    <td><span class="badge" :class="profile.source && profile.source.is_sample ? 'b-warn' : 'b-gray'">
+                      {{ profile.source && profile.source.is_sample ? '样例数据' : '来源待核' }}</span></td>
+                    <td>{{ (profile.source && profile.source.sample_note) || '—' }}</td></tr>
+                  <tr><td>耳标登记</td><td>百巴村登记资料</td><td><span class="badge b-warn">待核验</span></td>
+                    <td>登记关系可陈述；保险合同、保额、理赔未核验</td></tr>
+                  <tr><td>活体台账 / 出栏构成</td><td>派生层</td><td><span class="badge b-warn">派生</span></td>
+                    <td>演示口径派生，非真实工行业务数据</td></tr>
+                  <tr><td>贷后信号</td><td>行内字段 + 派生层</td><td><span class="badge b-info">混合</span></td>
+                    <td>信号行已逐条标注「源数据 / 派生」</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <details class="fold" open>
+              <summary>阈值、参数与能力边界</summary>
+              <div class="fold-body">
+                <h4>能用真实数据标定的</h4>
+                <ul><li>触发阈值用本县同类客户历史波动率，超过 2 个标准差判异常</li></ul>
+                <h4>如实说明为经验起始值的</h4>
+                <ul>
+                  <li>抵押折扣 70% / 40% / 30%</li>
+                  <li>还款保障倍数 2.0</li>
+                  <li>账期容忍期 90 天</li>
+                </ul>
+                <h4>能力边界</h4>
+                <ul>
+                  <li>跨行资金不可见：资金流向监控仅在行内账户闭环内有效</li>
+                  <li>盘库差异不等于欺骗，定性由人工完成</li>
+                  <li>无票私下交易只能靠盘库发现</li>
+                  <li>模型风险分只用于核查优先级，不进入金额计算</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </template>
+      </section>
+
+      <!-- ===================== 4. 活体资产台账 ===================== -->
+      <section class="page" :class="{ on: page === 'ledger' }">
+        <div class="verdict">
+          <div class="v-main">
+            <div class="v-label">抵押物总览</div>
+            <div class="v-big">{{ led.total_book_head || 0 }} <em>头</em>
+              <span style="font-size:14px;color:var(--ink3);font-weight:600">
+                耳标登记 {{ led.total_tag_head || 0 }} 头
+              </span>
+            </div>
+            <div class="v-note">覆盖 {{ led.customers || 0 }} 户有授信客户 · 平均无票出栏 {{ led.avg_unpriced_ratio || 0 }}%</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>无票出栏占比排行</h2><span class="hint">无对价出栏占比越高，抵押物无偿流失风险越大</span></div>
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th>客户</th><th>所在县</th><th class="r">账面在栏</th><th class="r">耳标登记</th>
+                <th class="r">出栏合计</th><th class="r">无票出栏</th><th>占比</th><th class="r">操作</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="r in (led.ranked || []).slice(0, 15)" :key="r.subject_name">
+                  <td class="linkish" @click="openCustomer(r.subject_name)">{{ r.subject_name }}</td>
+                  <td>{{ r.region_name }}</td>
+                  <td class="r num">{{ r.book_head }}</td>
+                  <td class="r num">{{ r.tag_head }}</td>
+                  <td class="r num">{{ r.out_total }}</td>
+                  <td class="r num">{{ r.out_unpriced }}</td>
+                  <td>
+                    <div class="bar"><i :style="{ width: r.unpriced_ratio + '%', background: ratioColor(r.unpriced_ratio) }"></i></div>
+                    <span class="muted">{{ r.unpriced_ratio }}%</span>
+                  </td>
+                  <td class="r"><span class="btn btn-sm btn-ghost" @click="openCustomer(r.subject_name)">核查</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>按县分布</h2><span class="hint">耳标归属县近似用主体所在县</span></div>
+          <div class="tw">
+            <table>
+              <thead><tr><th>县</th><th class="r">有授信户数</th><th class="r">抵押物头数</th></tr></thead>
+              <tbody>
+                <tr v-for="r in led.by_region || []" :key="r.region_name">
+                  <td>{{ r.region_name }}</td>
+                  <td class="r num">{{ r.customers }}</td>
+                  <td class="r num">{{ r.head }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <details class="fold">
+            <summary>台账口径与盘库定位</summary>
+            <div class="fold-body">
+              <h4>为什么需要盘库</h4>
+              <ul>
+                <li>有票出栏（销售）走检疫票数据专线，账面即可见，<b>不需要盘库</b>。</li>
+                <li>无票出栏（私下交易、自食、赠送）不会注销耳标，账面完全看不出，<b>只能靠盘库发现</b>。</li>
+                <li>盘库另有威慑作用：客户知道会来数牛，就不敢私下卖。</li>
+                <li>盘库结果是唯一的真值来源，用于校准预警规则阈值。</li>
+              </ul>
+              <h4>如实说明</h4>
+              <ul>
+                <li>台账与出栏构成为演示口径派生，非真实工行业务数据。</li>
+                <li>「无票出栏占比」与同县同类客户对比才有意义；绝对值高不等于欺骗。</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ===================== 5. 贷后待办 ===================== -->
+      <section class="page" :class="{ on: page === 'postloan' }">
+        <div class="verdict" :class="'tone-' + ((post.by_level || {}).高 ? 'danger' : 'ok')">
+          <div class="v-main">
+            <div class="v-label">贷后待办</div>
+            <div class="v-big">{{ post.total || 0 }} <em>项</em></div>
+            <div class="v-note">
+              高 {{ (post.by_level || {}).高 || 0 }} · 中 {{ (post.by_level || {}).中 || 0 }} · 低 {{ (post.by_level || {}).低 || 0 }}
+            </div>
+          </div>
+          <div class="v-acts">
+            <span class="btn btn-main">批量处置</span>
+            <span class="btn">转派</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>任务队列</h2><span class="hint">按优先级排序 · 点客户名进入档案</span></div>
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th>任务号</th><th>客户</th><th>信号类</th><th>触发依据</th>
+                <th>责任人</th><th>时限</th><th>状态</th><th>来源</th><th class="r">操作</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(t, i) in (post.queue || []).slice(0, 50)" :key="i">
+                  <td class="mono">{{ t.task_id || '—' }}</td>
+                  <td class="linkish" @click="openCustomer(t.subject_name)">{{ t.subject_name }}</td>
+                  <td><span class="badge b-info">{{ t.signal_class }}</span></td>
+                  <td>{{ t.trigger }}</td>
+                  <td class="muted">{{ t.assigned_to || '—' }}</td>
+                  <td class="muted">{{ t.due_date || '—' }}</td>
+                  <td><span class="badge" :class="levelCls(t.level)">{{ t.level }}</span></td>
+                  <td class="muted">{{ t.source === 'real_field' ? '源数据' : '派生' }}</td>
+                  <td class="r"><span class="btn btn-sm btn-ghost" @click="openCustomer(t.subject_name)">处置</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>处置动作</h2></div>
+          <div class="tw">
+            <table>
+              <thead><tr><th>动作</th><th>适用情形</th></tr></thead>
+              <tbody>
+                <tr><td>现场核查</td><td class="muted">盘库差异、资产类异常</td></tr>
+                <tr><td>补充材料</td><td class="muted">凭证缺失、资料不足</td></tr>
+                <tr><td>追加保险</td><td class="muted">保险覆盖不足、健康类信号</td></tr>
+                <tr><td>压缩授信 / 冻结新增</td><td class="muted">经营类持续恶化</td></tr>
+                <tr><td>提前收回</td><td class="muted">无对价出栏、确认挪用</td></tr>
+                <tr><td>启动保险理赔</td><td class="muted">死亡有报备与保单</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <details class="fold">
+            <summary>队列构成与数据来源</summary>
+            <div class="fold-body">
+              <ul>
+                <li><b>源数据</b>行来自 <code>post_loan_workflow.json</code>（真实任务表结构）与 <code>finance_credit.json</code> 的逾期 / 用信率字段。</li>
+                <li><b>派生</b>行由无对价出栏占比、保险覆盖率等规则生成，为演示口径。</li>
+                <li>逾期 1 期按「中」、≥2 期按「高」；用信率 ≥ 90% 触发；无对价出栏占比 ≥ 40% 触发。</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ===================== 6. 区域与集中度 ===================== -->
+      <section class="page" :class="{ on: page === 'region' }">
+        <div class="verdict">
+          <div class="v-main">
+            <div class="v-label">区域与集中度</div>
+            <div class="v-big">{{ reg.total_regions || 0 }} <em>县</em></div>
+            <div class="v-note">按县统计投放与额度池占用</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>集中度与额度池</h2><span class="hint">占用率高的县应做区域收紧</span></div>
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th>县</th><th class="r">有授信户数</th><th class="r">已投放</th>
+                <th class="r">额度池</th><th class="r">占用率</th><th class="r">抵押物头数</th><th>集中度</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="r in reg.rows || []" :key="r.region_name">
+                  <td>{{ r.region_name }}</td>
+                  <td class="r num">{{ r.customers }}</td>
+                  <td class="r num">{{ r.deployed_wan }} 万</td>
+                  <td class="r num">{{ r.pool_wan }} 万</td>
+                  <td class="r num">{{ r.usage_pct }}%</td>
+                  <td class="r num">{{ r.book_head }}</td>
+                  <td>
+                    <span class="badge" :class="r.usage_pct >= 85 ? 'b-warn' : 'b-ok'">
+                      {{ r.usage_pct >= 85 ? '区域收紧' : '正常' }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <details class="fold">
+            <summary>区域口径说明</summary>
+            <div class="fold-body">
+              <ul>
+                <li>{{ reg.note }}</li>
+                <li>额度池按已投放 ÷ 0.6 反推并设 900 万下限，为演示口径；真实系统应由分行额度政策下发。</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ===================== 7. 保险协同 ===================== -->
+      <section class="page" :class="{ on: page === 'insurance' }">
+        <div class="verdict" :class="'tone-' + (ins.pending_count ? 'warn' : 'ok')">
+          <div class="v-main">
+            <div class="v-label">保险协同</div>
+            <div class="v-big">待核验 {{ ins.pending_count || 0 }} <em>户</em>
+              <span style="font-size:14px;color:var(--warn);font-weight:600">未覆盖 {{ ins.uncovered_count || 0 }} 户</span>
+            </div>
+            <div class="v-note">核验通过后按「已投保」档计入抵押折扣</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h2>保单核验队列</h2></div>
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th>客户</th><th>所在县</th><th class="r">存栏</th><th class="r">承保头数</th>
+                <th class="r">覆盖率</th><th>责任范围</th><th>状态</th><th class="r">操作</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="r in (ins.queue || []).slice(0, 30)" :key="r.subject_name">
+                  <td class="linkish" @click="openCustomer(r.subject_name)">{{ r.subject_name }}</td>
+                  <td>{{ r.region_name }}</td>
+                  <td class="r num">{{ r.book_head }}</td>
+                  <td class="r num">{{ r.insured_head }}</td>
+                  <td class="r num">{{ r.coverage }}%</td>
+                  <td><span class="badge" :class="r.liability_verified ? 'b-ok' : 'b-warn'">
+                    {{ r.liability_verified ? '已核' : '待核' }}</span></td>
+                  <td><span class="badge" :class="r.status === '已核验' ? 'b-ok' : 'b-warn'">{{ r.status }}</span></td>
+                  <td class="r"><span class="btn btn-sm btn-ghost">核验</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="card" style="margin:0">
+            <div class="card-h"><h2>理赔记录</h2><span class="hint">未结 {{ ins.unsettled_claims || 0 }} 笔</span></div>
+            <div class="tw">
+              <table>
+                <thead><tr><th>客户</th><th>出险月</th><th class="r">赔付</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr v-for="c in ins.claims || []" :key="c.claim_id">
+                    <td>{{ c.subject_name }}</td>
+                    <td class="muted">{{ c.event_month }}</td>
+                    <td class="r num">{{ c.claim_amount }}</td>
+                    <td><span class="badge b-gray">{{ c.claim_status }}</span></td>
+                  </tr>
+                  <tr v-if="!(ins.claims || []).length"><td colspan="4"><div class="empty">暂无理赔记录</div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="card-h"><h2>抵押折扣分档</h2></div>
+            <div class="tw">
+              <table>
+                <thead><tr><th>耳标</th><th>保险</th><th class="r">抵押折扣</th></tr></thead>
+                <tbody>
+                  <tr v-for="t in ins.discount_tiers || []" :key="t.ear_tag + t.insured">
+                    <td>{{ t.ear_tag }}</td><td>{{ t.insured }}</td>
+                    <td class="r num">{{ t.discount ? (t.discount * 100) + '%' : '不计入' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <details class="fold">
+              <summary>保险与抵押的关系</summary>
+              <div class="fold-body">
+                <ul>
+                  <li>保险<b>不做乘系数、不单列增信额度</b>，只决定抵押折扣档位。</li>
+                  <li>投保档 70%、未投保档 40% —— 逻辑是：牛死了只有保险赔，没保险的牛抵押价值本来就不成立。</li>
+                  <li>保险合同与责任范围<b>未核验前，不得按已投保档计入</b>。</li>
+                  <li>理赔款优先偿还贷款本息（活体抵押试点的通行安排）。</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script src="./vendor/vue.global.prod.js"></script>
+<script src="./bank.js"></script>
+</body>
+</html>

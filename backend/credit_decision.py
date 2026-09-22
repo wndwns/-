@@ -378,8 +378,118 @@ def _benchmark_qualified_demand(case: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# 活体抵押折扣分档（方案 D8，起始值）
+# 量级依据：活体处置有折价、有周期，处置折扣本质是"这头牛死了有没有保险赔"；
+# 非监管规定，随市场行情与实际处置数据标定后可调。
+_PLEDGE_DISCOUNT: dict[str, Decimal] = {
+    "tag_insured": Decimal("0.70"),      # 有耳标 + 有保险（已核验）
+    "tag_uninsured": Decimal("0.40"),    # 有耳标 + 无保险
+    "untag_insured": Decimal("0.30"),    # 无耳标 + 有保险
+    "untag_uninsured": Decimal("0"),     # 都无 -> 不计入抵押
+}
+
+
+def _live_stock_pledge_limit(case: dict[str, Any]) -> dict[str, Any]:
+    """按「耳标 × 保险」分档计算活体资产抵押上限（方案 D7/D8）。
+
+    输入来自 case["pledge"]：
+      {
+        "insurance_verified": bool,          # 保单是否已核验合同与责任范围
+        "items": [
+          {"species": "牦牛", "head": 980, "unit_price_yuan": 8000,
+           "ear_tagged": 980, "insured": 0},  # 数量均为「有 / 已投保的头数」
+          ...
+        ]
+      }
+
+    分档（起始值，见 _PLEDGE_DISCOUNT）：
+      有耳标 + 有保险 70% / 有耳标 + 无保险 40% / 无耳标 + 有保险 30% / 都无 不计入
+
+    两条硬规则：
+      1. 保险未核验时，投保档不计入（不知道哪头牛真的保了，不能按已投保认抵押）；
+      2. 数据缺失时 applicable=False 并排除出 min 比较——**不得按 0 处理**，
+         否则抵押上限会立刻成为瓶颈，把所有客户的额度压到 0。
+    """
+    pledge = case.get("pledge") or {}
+    if not isinstance(pledge, dict):
+        return {
+            "applicable": False,
+            "insurance_verified": False,
+            "buckets": {},
+            "discounts": {k: float(v) for k, v in _PLEDGE_DISCOUNT.items()},
+            "limit_yuan": Decimal("0"),
+            "items": [],
+            "note": "case 未提供 pledge 段，抵押上限不适用（不参与 min 比较）",
+        }
+
+    insurance_verified = bool(pledge.get("insurance_verified", False))
+    raw_items = pledge.get("items") or []
+
+    buckets = {
+        "tag_insured": Decimal("0"),
+        "tag_uninsured": Decimal("0"),
+        "untag_insured": Decimal("0"),
+        "untag_uninsured": Decimal("0"),
+    }
+    limit = Decimal("0")
+    detail: list[dict[str, Any]] = []
+
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        head = _dec(item.get("head"), "0")
+        if head <= 0:
+            continue
+        price = _dec(item.get("unit_price_yuan"), "0")
+        tagged = min(_dec(item.get("ear_tagged"), "0"), head)
+        # 未核验保险 -> 投保数按 0 计
+        insured = min(_dec(item.get("insured"), "0"), head) if insurance_verified else Decimal("0")
+
+        tag_insured = min(tagged, insured)
+        tag_uninsured = tagged - tag_insured
+        untag_insured = max(Decimal("0"), insured - tag_insured)
+        untag_uninsured = max(
+            Decimal("0"), head - tag_insured - tag_uninsured - untag_insured
+        )
+
+        item_value = Decimal("0")
+        for key, count in (
+            ("tag_insured", tag_insured),
+            ("tag_uninsured", tag_uninsured),
+            ("untag_insured", untag_insured),
+            ("untag_uninsured", untag_uninsured),
+        ):
+            buckets[key] += count
+            item_value += count * price * _PLEDGE_DISCOUNT[key]
+
+        limit += item_value
+        detail.append({
+            "species": item.get("species", ""),
+            "head": float(head),
+            "unit_price_yuan": float(price),
+            "ear_tagged": float(tagged),
+            "insured": float(insured),
+            "recognized_yuan": float(item_value),
+        })
+
+    return {
+        "applicable": limit > 0,
+        "insurance_verified": insurance_verified,
+        "buckets": {k: float(v) for k, v in buckets.items()},
+        "discounts": {k: float(v) for k, v in _PLEDGE_DISCOUNT.items()},
+        "limit_yuan": limit,
+        "items": detail,
+    }
+
+
 def _affordable_limits(case: dict[str, Any]) -> dict[str, Any]:
-    """标准雪灾偿债支持上限 + 其他授信约束（统一授信可用、产品上限、增信支持）。"""
+    """标准雪灾偿债支持上限 + 其他授信约束（统一授信可用、产品上限、活体抵押上限）。
+
+    活体抵押上限自 2026-09-23 起由 _live_stock_pledge_limit() 按耳标/保险分档计算
+    （方案 D7：推翻原先的 limits.no_live_stock_collateral）；数据缺失时标为不适用、
+    不参与 min 比较。返回的 "bottleneck" 仅为**供给侧**瓶颈，最终瓶颈见
+    evaluate_credit_case() 返回的顶层 "bottleneck"（需求侧 vs 供给侧两级）。
+    """
     snow_plan = _monthly_plan(case, "snow")
     available_cash = Decimal("0")
     non_forage = case.get("monthly_non_forage_net_cash_yuan") or case["operating"].get("monthly_net_cash_yuan") or []
@@ -413,17 +523,13 @@ def _affordable_limits(case: dict[str, Any]) -> dict[str, Any]:
     credit_available = max(Decimal("0"), unified_total - used)
     product_cap = _dec(case["credit"].get("product_cap_yuan"), "0")
 
-    collateral_support = case["credit"].get("collateral_support_yuan")
-    collateral_applicable = isinstance(collateral_support, (int, float)) or (
-        isinstance(collateral_support, str) and collateral_support.strip().lower() not in ("", "n/a", "na", "none", "不适用")
-    )
-    collateral_value = _dec(collateral_support, "0") if collateral_applicable else None
+    pledge = _live_stock_pledge_limit(case)
 
     candidates = [snow_support, credit_available, product_cap]
     labels = ["标准雪灾偿债支持上限", "统一授信可用额度", "样例产品上限"]
-    if collateral_value is not None:
-        candidates.append(collateral_value)
-        labels.append("保证/抵质押支持上限")
+    if pledge["applicable"]:
+        candidates.append(pledge["limit_yuan"])
+        labels.append("活体抵押上限")
     affordable = min(candidates)
     bottleneck = labels[candidates.index(affordable)]
 
@@ -433,8 +539,10 @@ def _affordable_limits(case: dict[str, Any]) -> dict[str, Any]:
         "dscr_threshold": dscr_threshold,
         "credit_available_yuan": credit_available,
         "product_cap_yuan": product_cap,
-        "collateral_support_yuan": collateral_support,
-        "collateral_applicable": collateral_applicable,
+        # 兼容保留：旧字段原名（现由活体抵押计算取代，不再直接参与 min）
+        "collateral_support_yuan": case["credit"].get("collateral_support_yuan"),
+        "collateral_applicable": pledge["applicable"],
+        "pledge": pledge,
         "affordable_limit_yuan": affordable,
         "bottleneck": bottleneck,
     }
@@ -497,6 +605,22 @@ def evaluate_credit_case(case: dict[str, Any], inputs: dict[str, Any] | None = N
     limits = _affordable_limits(ctx)
     min_external = qualified["min_external_financing_yuan"]
     affordable = limits["affordable_limit_yuan"]
+
+    # 最终瓶颈（两级，方案 D9）：需求侧与供给侧各算一遍，谁小谁卡住金额。
+    # 旧版只报供给侧四约束里最小的是谁，会把"卡在饲草资金需求"误报成"卡在偿债能力"。
+    demand_side = qualified["qualified_demand_yuan"]
+    supply_side = affordable
+    if demand_side <= supply_side:
+        final_key, final_label = "qualified_demand", "基准合格融资需求（饲草采购资金缺口）"
+    else:
+        final_key, final_label = "affordable_limit", limits["bottleneck"]
+    bottleneck = {
+        "final": final_key,
+        "final_label": final_label,
+        "supply_side": limits["bottleneck"],
+        "demand_side_yuan": float(demand_side),
+        "supply_side_yuan": float(supply_side),
+    }
 
     # 唯一金额：先精确比较，最后向下取整到 1 万元
     pre_round = min(qualified["qualified_demand_yuan"], affordable)
@@ -567,6 +691,7 @@ def evaluate_credit_case(case: dict[str, Any], inputs: dict[str, Any] | None = N
         "gap_yuan": gap,
         "qualified_demand": qualified,
         "limits": limits,
+        "bottleneck": bottleneck,
         "snow_cashflow": {
             "min_cash_yuan": snow_cf["min_cash_yuan"],
             "min_cash_month": snow_cf["min_cash_month"],

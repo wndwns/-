@@ -132,12 +132,12 @@ def _is_admin_protected(path: str, method: str) -> bool:
 ADMIN_PAGES = {
     "",
     "index.html",
-    "overview.html",
-    "modules.html",
-    "module.html",
+    # 2026-09-23：overview.html / modules.html / module.html 三个纯宣传壳页已下线
+    # （见《银行视角改造方案探讨》A2-A4），文件移至 _原型/_removed/ 可回退。
     "data.html",
     "roadmap.html",
     "admin.html",
+    "bank.html",
 }
 
 # ---------------------------------------------------------------------------
@@ -258,6 +258,18 @@ def _import_data():
 
 
 _data = _import_data()
+
+
+def _import_bank_view():
+    """银行视角聚合视图（客户池 / 单户档案 / 一户一档 / 台账 / 贷后 / 保险 / 区域）。"""
+    try:
+        import bank_view as module  # type: ignore[import-not-found]
+    except ImportError:
+        from backend import bank_view as module  # type: ignore[no-redef,import-not-found]
+    return module
+
+
+_bank_view = _import_bank_view()
 
 # CSV 模板辅助：数值列和风险等级列的关键词
 _NUMERIC_COLS = {"temperature_c", "precipitation_mm_24h", "wind_speed_mps", "snow_depth_cm", "ndvi", "carrying_capacity_sheep_unit", "cattle_count", "sheep_count", "grassland_mu", "credit_value", "credit_line", "used_credit", "score", "term_months", "overdue_times"}
@@ -423,6 +435,57 @@ def create_app() -> FastAPI:
     @app.get("/api/alerts")
     def alerts() -> list[dict[str, Any]]:
         return _data["get_alerts"]()
+
+    # ------------------------------------------------------------------
+    # 银行视角页面（bank_view 聚合；均为只读）
+    # 派生层数据一律带 is_derived / derived_note，不冒充真实工行业务数据。
+    # ------------------------------------------------------------------
+
+    @app.get("/api/bank/overview")
+    def bank_overview() -> dict[str, Any]:
+        """工作台汇总：客户数、待办、抵押物、保险、绿色信贷余额、待营销 TOP。"""
+        return _bank_view.overview()
+
+    @app.get("/api/bank/customer-pool")
+    def bank_customer_pool() -> dict[str, Any]:
+        """客户池：客户列表（含准入结论、资料完整度）+ 获客来源分布。"""
+        return _bank_view.customer_pool()
+
+    @app.get("/api/bank/customer/{name}")
+    def bank_customer_profile(name: str) -> dict[str, Any]:
+        """单户档案：准入结论、四条证据、台账、资料摘要、信号、任务。"""
+        result = _bank_view.customer_profile(name)
+        if not result.get("found"):
+            raise HTTPException(status_code=404, detail=f"Customer not found: {name}")
+        return result
+
+    @app.get("/api/bank/customer/{name}/documents")
+    def bank_customer_documents(name: str) -> dict[str, Any]:
+        """一户一档：28 项分 6 组，含状态 / 内容 / 来源。"""
+        result = _bank_view.customer_documents(name)
+        if not result.get("found"):
+            raise HTTPException(status_code=404, detail=f"Customer not found: {name}")
+        return result
+
+    @app.get("/api/bank/ledger")
+    def bank_ledger() -> dict[str, Any]:
+        """活体资产台账：抵押物总览 + 无票出栏占比排行 + 按县分布。"""
+        return _bank_view.ledger_board()
+
+    @app.get("/api/bank/post-loan")
+    def bank_post_loan() -> dict[str, Any]:
+        """贷后待办：真实任务表 + 派生信号合并成队列。"""
+        return _bank_view.post_loan_board()
+
+    @app.get("/api/bank/insurance")
+    def bank_insurance() -> dict[str, Any]:
+        """保险协同：保单核验队列 + 理赔联动 + 抵押折扣分档。"""
+        return _bank_view.insurance_board()
+
+    @app.get("/api/bank/regions")
+    def bank_regions() -> dict[str, Any]:
+        """区域与集中度：按县统计投放、额度池占用与耳标归属头数。"""
+        return _bank_view.region_board()
 
     @app.get("/api/weather")
     def weather(region_id: str | None = None) -> list[dict[str, Any]] | dict[str, Any]:
@@ -1704,6 +1767,18 @@ def create_app() -> FastAPI:
     @app.get("/admin")
     def admin_page() -> FileResponse:
         target = FRONTEND_DIR / "admin.html"
+        return FileResponse(target, headers={"Cache-Control": "no-store"})
+
+    @app.get("/bank")
+    def bank_console() -> FileResponse:
+        """银行版控制台（左侧边栏 7 页）。
+
+        必须显式注册：serve_frontend() 对未知路径会兜底返回 index.html，
+        不注册的话 /bank 会落到旧版首页。
+        """
+        target = FRONTEND_DIR / "bank.html"
+        if not target.exists():
+            raise HTTPException(status_code=404, detail="bank.html not found")
         return FileResponse(target, headers={"Cache-Control": "no-store"})
 
     # ======================================================================

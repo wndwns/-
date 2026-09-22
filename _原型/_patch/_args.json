@@ -1,0 +1,1 @@
+{"needle": "    moduleHref(code) {\n      return `/module.html?code=${encodeURIComponent(code || \"eco-monitor\")}`;\n    },\n\n", "repl": "", "mode": "literal", "relative_path": "frontend/app.js", "expected_count": 1}

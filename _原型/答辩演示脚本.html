@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="oSgQ4aYFIOtXOfiBIVzY1L">
+<head data-page-node-id="50A5Of5cC5su2IKpbehvIb">
+<meta charset="UTF-8" data-page-node-id="1GhJojb7gjf4H07TnVaR0D">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="Ntprdg6a4yyjrFhy0hhmMs">
+<title>工银牧融 · 答辩演示脚本</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --red:#C7000B; --red-bg:#FFF5F4; --red-soft:#FFE8E5;
+    --ink:#1A1D21; --ink2:#4A5158; --ink3:#8A9099;
+    --line:#E6E8EB; --line2:#F0F2F4; --bg:#F7F8FA; --card:#FFFFFF;
+    --ok:#12885A; --ok-bg:#EAF7F1;
+    --warn:#B76B12; --warn-bg:#FDF4E7;
+    --danger:#C42B22; --danger-bg:#FCEEED;
+  }
+  body{
+    font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+    background:var(--bg); color:var(--ink);
+    font-size:15px; line-height:1.75; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ display:flex; max-width:1320px; margin:0 auto; }
+
+  /* ---------- 侧边目录 ---------- */
+  aside{
+    width:240px; flex:0 0 240px; position:sticky; top:0; height:100vh;
+    padding:32px 20px 32px 28px; overflow-y:auto;
+  }
+  aside .bt{ font-size:11px; color:var(--ink3); letter-spacing:2px; margin-bottom:12px; }
+  aside .toc-logo{ font-size:15px; font-weight:700; margin-bottom:20px; }
+  aside .toc-logo span{ color:var(--red); }
+  aside a{
+    display:block; padding:7px 10px; font-size:13.5px; color:var(--ink2);
+    text-decoration:none; border-radius:6px; border-left:2px solid transparent;
+    margin-bottom:2px;
+  }
+  aside a:hover{ background:#EFF1F4; color:var(--ink); }
+  aside a.top{ color:var(--ink); font-weight:600; }
+
+  /* ---------- 主体 ---------- */
+  main{ flex:1; min-width:0; padding:36px 48px 80px; }
+
+  .head{ margin-bottom:36px; padding-bottom:28px; border-bottom:1px solid var(--line); }
+  .head h1{ font-size:30px; font-weight:700; letter-spacing:-.5px; line-height:1.3; }
+  .head h1 span{ color:var(--red); }
+  .head .sub{ font-size:15px; color:var(--ink2); margin-top:8px; }
+  .meta{ display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+  .meta span{
+    font-size:12.5px; padding:4px 12px; border-radius:20px;
+    background:#EFF1F4; color:var(--ink2);
+  }
+  .meta span.hl{ background:var(--red-bg); color:var(--red); font-weight:500; }
+
+  h2{
+    font-size:21px; font-weight:700; margin:44px 0 18px;
+    display:flex; align-items:baseline; gap:12px; scroll-margin-top:20px;
+  }
+  h2 .no{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:26px; height:26px; flex:0 0 26px; border-radius:7px;
+    background:var(--red); color:#fff; font-size:13px; font-weight:600;
+    position:relative; top:-1px;
+  }
+  h3{ font-size:16px; font-weight:600; margin:26px 0 10px; color:var(--ink); }
+
+  p{ margin-bottom:12px; }
+  strong{ font-weight:600; }
+  em{ font-style:normal; background:linear-gradient(transparent 62%, var(--red-soft) 62%); padding:0 1px; }
+
+  /* ---------- 台词块 ---------- */
+  .speech{
+    background:var(--card); border:1px solid var(--line); border-left:4px solid var(--red);
+    border-radius:0 8px 8px 0; padding:18px 22px; margin:16px 0;
+    font-size:16px; line-height:1.85;
+  }
+  .speech p{ margin:0 0 10px; }
+  .speech p:last-child{ margin-bottom:0; }
+  .speech .who{
+    display:inline-block; font-size:11px; color:var(--red); font-weight:600;
+    letter-spacing:1px; margin-bottom:8px;
+  }
+
+  /* ---------- 卡片 ---------- */
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:20px 24px; margin:16px 0;
+  }
+  .card.tint{ background:#FBFCFD; }
+  .card h4{ font-size:14.5px; font-weight:600; margin-bottom:12px; }
+
+  /* ---------- 幕 ---------- */
+  .scene{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:26px 30px; margin:20px 0;
+  }
+  .scene-h{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding-bottom:16px; border-bottom:1px solid var(--line2); margin-bottom:20px;
+  }
+  .scene-h .n{
+    width:30px; height:30px; flex:0 0 30px; border-radius:8px;
+    background:var(--red); color:#fff; font-weight:700; font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .scene-h .t{ font-size:18px; font-weight:700; }
+  .scene-h .pg{
+    font-size:12px; color:var(--ink3); background:#EFF1F4;
+    padding:3px 10px; border-radius:5px; margin-left:auto;
+  }
+  .scene-h .tm{
+    font-size:12px; color:var(--red); background:var(--red-bg);
+    padding:3px 10px; border-radius:5px; font-weight:500;
+  }
+  .scene .why{
+    font-size:13.5px; color:var(--ink2); background:#FBFCFD;
+    border:1px dashed var(--line); border-radius:8px; padding:12px 16px; margin-top:16px;
+  }
+  .scene .why b{ color:var(--ink); }
+
+  /* ---------- 表格 ---------- */
+  table{ width:100%; border-collapse:separate; border-spacing:0; font-size:14px; margin:14px 0; }
+  th{
+    text-align:left; padding:11px 14px; background:#F4F6F8; color:var(--ink2);
+    font-weight:600; font-size:12.5px; white-space:nowrap;
+  }
+  th:first-child{ border-radius:8px 0 0 0; }
+  th:last-child{ border-radius:0 8px 0 0; }
+  td{ padding:12px 14px; border-bottom:1px solid var(--line2); vertical-align:top; }
+  tr:last-child td{ border-bottom:0; }
+  tbody tr:hover td{ background:#FBFCFD; }
+
+  /* ---------- 徽标 ---------- */
+  .tag{
+    display:inline-block; font-size:12px; padding:2px 9px; border-radius:5px;
+    line-height:19px; white-space:nowrap; font-weight:500;
+  }
+  .tag.ok{ background:var(--ok-bg); color:var(--ok); }
+  .tag.warn{ background:var(--warn-bg); color:var(--warn); }
+  .tag.danger{ background:var(--danger-bg); color:var(--danger); }
+  .tag.gray{ background:#EFF1F4; color:var(--ink3); }
+  .tag.red{ background:var(--red-bg); color:var(--red); }
+
+  /* ---------- 问答 ---------- */
+  .qa{ border:1px solid var(--line); border-radius:10px; overflow:hidden; margin:14px 0; background:var(--card); }
+  .qa .q{
+    padding:14px 22px; background:#F4F6F8; font-weight:600; font-size:15px;
+    display:flex; gap:10px; align-items:baseline;
+  }
+  .qa .q .k{
+    color:var(--red); font-size:12px; font-weight:700; flex:0 0 auto;
+    background:var(--red-bg); padding:2px 8px; border-radius:5px;
+  }
+  .qa .a{ padding:16px 22px; font-size:14.5px; line-height:1.8; }
+  .qa .a p{ margin:0 0 9px; }
+  .qa .a p:last-child{ margin-bottom:0; }
+
+  /* ---------- 清单 ---------- */
+  ul.check{ list-style:none; }
+  ul.check li{
+    padding:9px 0 9px 30px; position:relative; border-bottom:1px solid var(--line2);
+    font-size:14.5px;
+  }
+  ul.check li:last-child{ border-bottom:0; }
+  ul.check li::before{
+    content:""; position:absolute; left:0; top:13px;
+    width:16px; height:16px; border:1.5px solid #C4C9D0; border-radius:4px;
+  }
+  ul.check li b{ color:var(--ink); }
+
+  .kv{ display:flex; gap:14px; padding:10px 0; border-bottom:1px solid var(--line2); font-size:14.5px; }
+  .kv:last-child{ border-bottom:0; }
+  .kv .kk{ flex:0 0 96px; color:var(--ink3); font-size:13px; padding-top:2px; }
+
+  .callout{
+    background:var(--red-bg); border-radius:10px; padding:20px 24px; margin:20px 0;
+    font-size:17px; font-weight:600; line-height:1.7; color:#7A1A14;
+  }
+  .callout .sm{ display:block; font-size:13px; font-weight:400; color:var(--ink2); margin-top:8px; }
+
+  .hr{ height:1px; background:var(--line); margin:40px 0 0; }
+
+  /* ---------- 打印 ---------- */
+  @media print{
+    body{ background:#fff; font-size:12pt; }
+    aside{ display:none; }
+    .wrap{ display:block; max-width:none; }
+    main{ padding:0; }
+    .scene, .qa, .card{ break-inside:avoid; page-break-inside:avoid; }
+    h2{ break-after:avoid; page-break-after:avoid; }
+    @page{ margin:18mm 16mm; }
+  }
+  @media (max-width:900px){
+    aside{ display:none; }
+    main{ padding:24px 20px 60px; }
+    .head h1{ font-size:24px; }
+  }
+</style>
+</head>
+<body data-page-node-id="Ol4KIDPICgmsIUcFmbL0Es">
+<div class="wrap" data-page-node-id="uc6M4Pb6KNzrvHYiWNcFgW">
+
+<aside data-page-node-id="HjRhR816TV77CDM2z1NCYJ">
+  <div class="toc-logo" data-page-node-id="Jz1qJE3WOKNpgkfnhiqrgZ">工银<span data-page-node-id="nt61iaaF6kVBHGgLkJoBHz">牧融</span></div>
+  <div class="bt" data-page-node-id="zBvl0NBOgAko6xDUR8MUcZ">目录</div>
+  <a href="#s0" class="top" data-page-node-id="dBau1eDjH3wxj1WJC9AyMj">开场 · 一句话定位</a>
+  <a href="#s1" class="top" data-page-node-id="Ahv3K5MoH2Yu4hCZ2SEkUW">角色：演两个端</a>
+  <a href="#s2" class="top" data-page-node-id="xFj2puhqfvlCB6KqpwU1li">演示动线 · 六幕</a>
+  <a href="#sc1" style="padding-left:22px" data-page-node-id="sVVtVMPvBmcMxZVJpgN8qD">幕 1 · 获客</a>
+  <a href="#sc2" style="padding-left:22px" data-page-node-id="z8egMEAbCbs67QMDXiPXGg">幕 2 · 引流</a>
+  <a href="#sc3" style="padding-left:22px" data-page-node-id="HMds72qvWISzTdUBlTPM2W">幕 3 · 定额</a>
+  <a href="#sc4" style="padding-left:22px" data-page-node-id="aLKo0R7h7ebyOoOf74bDEU">幕 4 · 抵押物管理</a>
+  <a href="#sc5" style="padding-left:22px" data-page-node-id="fn7gH8PEvyF2PxkEJSX4DR">幕 5 · 贷后</a>
+  <a href="#sc6" style="padding-left:22px" data-page-node-id="urR4jCTTnpyuyyDwZT9NE9">幕 6 · 会说不</a>
+  <a href="#s3" class="top" data-page-node-id="qvPbBFAPEHT7mNgLjYWoZZ">讲什么 / 藏什么</a>
+  <a href="#s4" class="top" data-page-node-id="ZsObsFOrchlYfzm7uw3HyJ">必答题预案 · 10 问</a>
+  <a href="#s5" class="top" data-page-node-id="ItMnlH0jFBljBaJYA7f6Lw">演示前检查清单</a>
+  <a href="#s6" class="top" data-page-node-id="TSLuD5jvUr42kngqocfpYv">时长控制</a>
+</aside>
+
+<main data-page-node-id="XAJRsNF8LufjvUZ92AUef4">
+
+  <div class="head" data-page-node-id="D5NYHFZEUPhWRGarXussGp">
+    <h1 data-page-node-id="qrXnlMg3wCf9yZYlMrOrJh">工银<span data-page-node-id="lkEQwDnMnDLxtYAGGJMmU2">牧融</span> · 答辩演示脚本</h1>
+    <div class="sub" data-page-node-id="AArDYVrwRHetSFjqQ5xOns">高原畜牧活体资产授信与贷后风控 · 银行视角版</div>
+    <div class="meta" data-page-node-id="ZtjptQnAf25eBm78QJlrkB">
+      <span class="hl" data-page-node-id="uRauGlgnMkzVtAS6xycliF">2026-09-23</span>
+      <span data-page-node-id="4HJb7y9trAZbxu8uGe7kIv">约 5.5 分钟（上限 7 分钟）</span>
+      <span data-page-node-id="Yh61lkVwGXsiPsxS0L4dpS">六幕动线</span>
+      <span data-page-node-id="eJsulFcoQoZQyP8dJs7FtX">10 问必答预案</span>
+      <span data-page-node-id="orBoohByrXmxwXpIPsmBTW">状态：待审阅</span>
+    </div>
+  </div>
+
+  <!-- ================= 开场 ================= -->
+  <h2 id="s0" data-page-node-id="SxssDvTeKcDrGVFHHfwaq1"><span class="no" data-page-node-id="AaGwhc4OBoUzivB7QYB2sr">0</span>开场：一句话定位</h2>
+
+  <div class="callout" data-page-node-id="GY6AN9PoX71StVHM4VvioN">
+    银行最不敢碰农村资产，而牧民最值钱的资产是活牛。<br data-page-node-id="BdY3GpHgppWMNhASTqSNMm">
+    我们做的事情是——<em data-page-node-id="MPQwB2yeOk0d7n5dfhWIRH">把活体抵押，从规模化圈养场做到了散养牧区。</em>
+    <span class="sm" data-page-node-id="JvcUTC8kGaLDgK9EFulGid">而散养牧区，才是银行真正覆盖不到、最需要金融服务的群体。</span>
+  </div>
+
+  <div class="card tint" data-page-node-id="lmUHB8ccvOvLkZQ2AiZ8kP">
+    <h4 data-page-node-id="z7XUyYn2gMtLAEoNQHgdx8">为什么用这句开场</h4>
+    <p data-page-node-id="ojdrCP8mqzWdxY8EKnTyLV">现在的活体抵押试点（江西吉安、四川广元、江苏盐城）几乎都聚焦<strong data-page-node-id="lyWu0jfGRxTTMLmwQ2gyoF">规模化养殖场</strong>——有圈舍、有固定场地，能装摄像头、能走 AI 计数通道。青藏高原的牧户没有这些条件，牲畜在草场上游牧。</p>
+    <p data-page-node-id="z1wDm0UL0Tj5py4bygmNG6"><strong data-page-node-id="8QopeBPlaq7xTtZNrdc4iw">这句话同时解释了「为什么这个场景难」和「为什么我们做的是增量」。</strong></p>
+  </div>
+
+  <!-- ================= 角色 ================= -->
+  <h2 id="s1" data-page-node-id="ygqs55KoV0RPQWQlpbRBx1"><span class="no" data-page-node-id="dZoLA6PDUHebxGeVLE1jVY">1</span>角色：演两个端，提一个端</h2>
+
+  <table data-page-node-id="J6nFyjgVhjJhGepsCcjIlH">
+    <thead data-page-node-id="EoCCyGPrZxMozUd5qWlEE6"><tr data-page-node-id="GlZqsDME4TjXeYX9eM4eVq"><th style="width:190px" data-page-node-id="tlamAEtDexABJtlmwXQaWb">端</th><th style="width:110px" data-page-node-id="QeSh70EvunnmsldXMRoAEJ">处理</th><th data-page-node-id="P1hd586lrhGBawcwpuXvCN">理由</th></tr></thead>
+    <tbody data-page-node-id="zoZEZ5b3SFuGiv3fTOt21Q">
+      <tr data-page-node-id="0XRsBLrbtxuM8M8hpUC9Ac"><td data-page-node-id="iTZMmnpw7mb9FDVeCD2ifR"><strong data-page-node-id="wKzRVz6Ht1JbkNTj1fuRWs">客户经理端（PC）</strong></td><td data-page-node-id="IZf7750F0uxIlyIl7vXhnL"><span class="tag red" data-page-node-id="lS43Ul2oCRf9Ee1YPic8Nn">主体演</span></td><td data-page-node-id="RS9O299rHo3TB51MPIFf2h">有完整动线：获客 → 建档 → 定额 → 贷后。演示的骨干</td></tr>
+      <tr data-page-node-id="LaOpagSCzvuGjKdHWuKDwL"><td data-page-node-id="E0HiyqarykkUizURFmgFG0"><strong data-page-node-id="69e8XcQRmMrfEE1cpX5Ewn">客户端（H5）</strong></td><td data-page-node-id="HQsWd9aJBVN5Wv2ZV0erbY"><span class="tag red" data-page-node-id="cQthAgGRQATP56DQBHyMOo">亮点演一幕</span></td><td data-page-node-id="UQk7BslIs7w2v890S75OBm">唯一客户能碰的界面，「自助测额度」是引流钩子，30 秒能讲透</td></tr>
+      <tr data-page-node-id="oZzUWXahEsnwxUYeG0XmFg"><td data-page-node-id="R7WedNeiVD1QHfkgNpRRiH">风控 / 审批端</td><td data-page-node-id="kofSA6zO3QIVztu8bgV3Zg"><span class="tag gray" data-page-node-id="sQJ4AqwZ0frDc5ZiBjE41n">提一句不演</span></td><td data-page-node-id="3syi5vtuHcqOygGs3gKN2C">与客户经理端是同一套页面、不同视角。用「依据」Tab 带过即可</td></tr>
+    </tbody>
+  </table>
+
+  <p data-page-node-id="E3731sOBqEcOusbKCGnLQI"><strong data-page-node-id="lf77ZDO1Hc0niIztprfjgh">不演更多角色。</strong>演示时间有限，<strong data-page-node-id="xhYf3tmrpHN3XMnwwDJZOO">深度 &gt; 广度</strong>。评委想看的不是"有几个角色"，而是"这套东西怎么帮银行做成一笔业务"。</p>
+
+  <div class="speech" data-page-node-id="SNxoSmVdDhkQkTVWO5REXM">
+    <span class="who" data-page-node-id="HeqR1k6ZaeiEQZWuTYaa6m">如果被问「你们就一个角色吗」</span>
+    <p data-page-node-id="dqTYtVPWewBp8u9hZB5rj6">不是，我们分客户经理、风控审批、客户三个视角，但<strong data-page-node-id="tCHg4jIoivGA1EzIgkesqC">页面是同一套</strong>——区别在于客户经理看结论和动作，风控看「依据」层的数据来源、阈值和边界。我们不为了显得功能多而拆出十几个角色。</p>
+  </div>
+
+  <!-- ================= 动线 ================= -->
+  <h2 id="s2" data-page-node-id="d2oNpmRgh34z7Yiy50L3Me"><span class="no" data-page-node-id="kB8btxdvFGrbM38st5R8KS">2</span>演示动线 · 六幕</h2>
+
+  <!-- 幕1 -->
+  <div class="scene" id="sc1" data-page-node-id="MgRjbYxdUgf3hFY9Fqbiti">
+    <div class="scene-h" data-page-node-id="Cg7kEuoIdQu8WSYBO5XGqS">
+      <span class="n" data-page-node-id="7q6BCzDKuTCptKkULzV1v4">1</span><span class="t" data-page-node-id="1cb0ngxajfN23aYC2oXxEi">获客 —— 客户从哪来</span>
+      <span class="tm" data-page-node-id="eXEXgcy7l7M6BPCl8Fy9cB">50 秒</span>
+      <span class="pg" data-page-node-id="H2OgVPpAQrwipw9arYj7in">页面：客户池</span>
+    </div>
+    <div class="speech" data-page-node-id="iuD9lAB4oQkA4SEgnplCEq">
+      <p data-page-node-id="KwkJzo4JH5yjo6JjaWHI5n">客户经理每天第一个问题是：<strong data-page-node-id="Qb8bh8hoSH0gaWBljeX6vr">我今天该跑谁？</strong></p>
+      <p data-page-node-id="H8yZPMGQvjehR8QTbGR01Z">我们的客户池有三条来源，其中两条<strong data-page-node-id="GXcoAsm65wiHkqUSVqSp4a">不需要我们自己去牧区扫街</strong>——</p>
+      <p data-page-node-id="tyFVbYFi5QxxV4UWYYPfWW">第一条，<strong data-page-node-id="gfbPC8ONO18BDKbxOZ4zw1">政府数据匹配</strong>：耳标、防疫、检疫票数据里出现了这个人，但行内没有他的授信记录。34 户。</p>
+      <p data-page-node-id="SXVCapzW7WBlxkOV6zu1tR">第二条，<strong data-page-node-id="SY9OgqJSG0PWLRFeAbjyNK">产业链反推</strong>：核心企业的交易记录里有他的上游牧户，这些人有稳定销路、有真实回款。52 户。</p>
+      <p data-page-node-id="ZWYTkeNBJdEuokpF1dzfrS">第三条，客户自己通过 H5 自助测额度留资。</p>
+    </div>
+    <p data-page-node-id="uSBBtvA9rbHwNcyjTiAcTO"><strong data-page-node-id="KV30xsNgV3jZgMM9HkZCg7">动作</strong>：滚到「待营销名单 TOP 5」，指一下「资料完整度」这一列。</p>
+    <div class="speech" data-page-node-id="du8G2S49Rg8m09s6W5HZVX">
+      <p data-page-node-id="pp01Msm9j7EUkOgA7iwDxu">名单按「可授信额度 × 资料完整度」排序——<strong data-page-node-id="UL02V13bGUHGJfYBkzVX1G">额度高、资料全的先跑</strong>，客户经理的转化率最高。</p>
+    </div>
+  </div>
+
+  <!-- 幕2 -->
+  <div class="scene" id="sc2" data-page-node-id="OtOLuBxYBB9BjiAXbAUCDX">
+    <div class="scene-h" data-page-node-id="7GHrA2IPZc4kELVLFFeCnJ">
+      <span class="n" data-page-node-id="fxJeewqOG8rJcxG3qe3Lrb">2</span><span class="t" data-page-node-id="aj1f3p2HD1ZiOwiEQLLXTv">引流 —— 客户自己上门</span>
+      <span class="tm" data-page-node-id="l8ri4eBWnjpEvT637EtZs4">40 秒</span>
+      <span class="pg" data-page-node-id="vEZzmDZnvKItpfHqUvw4nr">页面：客户端 H5</span>
+    </div>
+    <div class="speech" data-page-node-id="gjtAqkKqveogenIPKkx8g2">
+      <p data-page-node-id="wIrLFxWzx4pyTdn6cotoub">这是客户自己在手机上填的表：所在县、养殖类型、存栏数、草场面积、有没有耳标、打没打疫苗、投没投保、大概年收入。<strong data-page-node-id="38XBIpjiJyeKBSAgfqfFx1">八项，不验证，客户自己填。</strong></p>
+      <p data-page-node-id="oK4rSkP4UvFoDPN013h8qh">输出不是给一个数就完了——<strong data-page-node-id="axsligsRqvxum4EiXPCFd4">我们给三件事</strong>：</p>
+      <p data-page-node-id="RA5eEFGvRgeolez95FEpFX">一个额度区间；一句<strong data-page-node-id="758ld7gOCddZywPj40SfdR">瓶颈说明</strong>，比如"限制你的是草场超载，不是资产不够"；还有一条<strong data-page-node-id="QYSTPJPnOy3rMo2rJKyzBM">提升建议</strong>：「给全部牲畜上保险，预估可提到 XX 万」。</p>
+      <p data-page-node-id="1lAGctivLa81hpLae710ME"><strong data-page-node-id="RlFydEHFKLIztrQRW115XQ">这一步才是关键</strong>：客户看完知道该去补什么。他去补耳标、买保险，然后再回来找我们。<strong data-page-node-id="PAZmcgxCmUIGtGlOYTsBdR">引流不是等客户上门，是让客户知道怎么才能贷到钱。</strong></p>
+    </div>
+    <div class="why" data-page-node-id="vbAu1BRSGidOPmIeFz7Ptr"><b data-page-node-id="TW1NVqd1exfcXVo89wdoIG">为什么这一条值钱</b>：把「客户没数据」变成「客户主动去补数据」——闭环了。</div>
+  </div>
+
+  <!-- 幕3 -->
+  <div class="scene" id="sc3" data-page-node-id="hUJ9iEDJFO0k1QVHI4DBYi">
+    <div class="scene-h" data-page-node-id="7z28AhT3shlLMTa8n5Xn79">
+      <span class="n" data-page-node-id="ipdHoxHdsSZwDSzEOfbK3H">3</span><span class="t" data-page-node-id="snBPWYmPdRQO1vBq8w207f">定额 —— 贷多少，以及为什么是这个数</span>
+      <span class="tm" data-page-node-id="p7JHR1uuhmteELN4j94xMz">70 秒</span>
+      <span class="pg" data-page-node-id="KGX05v2jJIpKyq6LfBobKn">客户档案 → 班戈县绿色牧业合作社 → 授信</span>
+    </div>
+    <div class="speech" data-page-node-id="57wZxQmpPxTa3EcxohxItC">
+      <p data-page-node-id="nW1jRyEbMm6joDTPHVD9pV">这户建议贷 90 万。<strong data-page-node-id="PhWBPFLRtvesJHkR41im7e">这个数是怎么来的，我们敢当场拆开。</strong></p>
+      <p data-page-node-id="T7v4R7xYXyeWuW9WYFBfJ8">需求侧是必要饲草采购 125 万减自筹 35 万，缺口 90 万。</p>
+      <p data-page-node-id="lpEy8p7iFpb1LSOBTeLJdf">供给侧有几个上限：标准雪灾下的偿债支持上限 98.9 万、统一授信可用 105 万、产品上限 120 万。</p>
+      <p data-page-node-id="HNa36bsRymtZgqj2eyblJG"><strong data-page-node-id="WPvCyQXWyFo60CarblSv9N">最终瓶颈是需求侧的 90 万——不是偿债能力不足，是买草的资金缺口。</strong></p>
+      <p data-page-node-id="2tCyvwItnjZ9OUTIe55lRV">这句话对客户经理很重要：他据此知道要跟客户谈的是<strong data-page-node-id="G5nw2fkhcn3hPWbDv2kJvs">饲草采购的融资安排</strong>，不是"你还款能力有问题"。</p>
+    </div>
+    <p data-page-node-id="jQ1DmOPQQEfSEwFdaDlSVB"><strong data-page-node-id="TRILGDvzOFPdhF3HHP2j4H">动作</strong>：指「抵押折扣分档」表。</p>
+    <div class="speech" data-page-node-id="fD7EIVEWYrKFuy6W3ppbvt">
+      <p data-page-node-id="Zwjc10UfxvPlxBrlJoh6Uv">再看保险在这里的位置。保险<strong data-page-node-id="WHZj6yzkLsYaCwMFRQDJ2q">不是口号、也不是乘一个系数</strong>——它决定抵押的折扣档位：</p>
+      <p data-page-node-id="NoowUco1UDF5Y8ABE2qvLu">有耳标有保险按 70% 认抵押，只有耳标没保险是 40%，没耳标没保险不计入。</p>
+      <p data-page-node-id="SJm7ZCzOMnudTVAtNHpTRl"><strong data-page-node-id="eHHOevCe6zKJOn4y5eV5DP">逻辑很简单：牛死了只有保险赔，没保险的牛，抵押价值本来就不成立。</strong></p>
+      <p data-page-node-id="BK3cmHahhgQchamDDMsF4p">抵押上限算出来 688 万，远高于 90 万——<strong data-page-node-id="C166dEh7Q9j6GXNJmInszW">所以这户的瓶颈不在资产，在需求。</strong></p>
+      <p data-page-node-id="7oFhNKPh9fNYf52Z8rpZvE">模型分在哪里？<strong data-page-node-id="Bseb3c3Mk4BL8gnjQwQ1Qt">模型分不进这个金额。</strong>它只用来决定人工核查的优先级。金额是纯计算链，可以复算。</p>
+    </div>
+  </div>
+
+  <!-- 幕4 -->
+  <div class="scene" id="sc4" data-page-node-id="0tYjtbbfpDul5Jls6hK1GX">
+    <div class="scene-h" data-page-node-id="699V61ARXna1UGXSW7DY9R">
+      <span class="n" data-page-node-id="41C1jAVt24FH2BSn7vVInh">4</span><span class="t" data-page-node-id="OYdo67PWm7RHL4lR3InR6T">抵押物怎么管住</span>
+      <span class="tm" data-page-node-id="ApYblDKKYrjPsCJzI3nDZV">60 秒</span>
+      <span class="pg" data-page-node-id="NUKpO7HWPA8IZOdz1ZyjW2">资产 Tab → 活体资产台账</span>
+    </div>
+    <div class="speech" data-page-node-id="3ZxXmuRDP40xwefKM1MoZw">
+      <p data-page-node-id="c4UivtqKFSSqLwiooWszGi">活体抵押最大的风险不是牛不值钱，是<strong data-page-node-id="Fj2U6yA3WfvEoDPFwbYSwN">牛会自己走掉</strong>。房子不会跑，设备不会消失，牛会走、会死、会被偷偷卖掉。</p>
+      <p data-page-node-id="LsUvpMDCK0ahTItz61499Z">所以我们做的是一本台账。看这一列——<strong data-page-node-id="B4V3GAHGFsIVvGRrGxuGnX">「是否有对价」</strong>。</p>
+      <p data-page-node-id="r2eUnGp55CC2X8vO1pEFV4">销售出去的、死亡的（有理赔），都是<strong data-page-node-id="xjSTyaznZ8XsvczEKk9uqD">有对价</strong>的出栏，正常经营。</p>
+      <p data-page-node-id="Jaq0EBt6e4sCfPYFoum4ko">自食、赠送、丢失，是<strong data-page-node-id="IBVDEFnvsiH3cAsD396xs4">无对价</strong>的出栏——<strong data-page-node-id="GNlmxjEl0FlzqhM6Ui0eVq">抵押物在无偿流失</strong>。</p>
+      <p data-page-node-id="faLUDHwhrZHGFhDyGSAFMN">这一列就是把"出了多少头"拆成"哪些是正常卖、哪些是白流失"。</p>
+    </div>
+    <p data-page-node-id="74OlkQfU1UK3Fdtllsm762"><strong data-page-node-id="xIS7abDgus7A0DZ6lESjMR">动作</strong>：切到活体资产台账，「无票出栏占比」排行。</p>
+    <div class="speech" data-page-node-id="aeKlc2bCEaszD7CG6oDIKN">
+      <p data-page-node-id="Eu9mUvlLiEGmHz6X0C0MpA">这户的合作社无票出栏 7%，本县同类客户均值 3.2%，正常。</p>
+      <p data-page-node-id="qvBNadHqKwMBvh8JkHNbqO">扎西家庭牧场 45%——这个数<strong data-page-node-id="GDnCmglG5ZswVziVORx6is">在出事之前就看得见</strong>，比"有没有逾期"前置得多。</p>
+    </div>
+  </div>
+
+  <!-- 幕5 -->
+  <div class="scene" id="sc5" data-page-node-id="ddOMam0FFBFtY2T4COz8s6">
+    <div class="scene-h" data-page-node-id="MYMKZBdKyXcLth4aN55iA9">
+      <span class="n" data-page-node-id="5wB6KKRFJNYygNnDLmnUAp">5</span><span class="t" data-page-node-id="DeUhvMN55FPVhNdE45KS0r">贷后 —— 从季度发现变成当月发现</span>
+      <span class="tm" data-page-node-id="SXGAKjfrzDQcPLuDgQQapn">50 秒</span>
+      <span class="pg" data-page-node-id="hNQAKMKkzaGQQq65yneto4">页面：贷后待办</span>
+    </div>
+    <div class="speech" data-page-node-id="Y4yp8sQYTHtjINLMLmBmT6">
+      <p data-page-node-id="PbDuuf9D9TixwMFSzMbnve">贷后最怕一件事：牛卖了，钱没还贷款。</p>
+      <p data-page-node-id="SqNbFWQz2gXDHVMC3UT9su">传统做法是一季度盘一次库。<strong data-page-node-id="dkDrOXLzx41W2W57TVA0GU">我们不用等盘库</strong>——检疫票走银政数据专线，<strong data-page-node-id="aGmc67tl1u3HSHiaRf068g">卖牛当月我们就能看到这条出栏记录</strong>；账上没有对应回款，自动生成核查任务。</p>
+      <p data-page-node-id="tm0koXBMSDuBU7V8CA8Co6">那盘库还有什么用？<strong data-page-node-id="1fEzKjCyYVAtChVFtabcNe">盘库专门抓另一类：无票的私下交易。</strong>私下卖牛的人不会去注销耳标，账面完全看不出来，只能现场数。</p>
+      <p data-page-node-id="MxlaJranQBWrx7Tep8lDZ9">而且盘库还有个作用不是发现、是<strong data-page-node-id="84Foi0GuyXsOcFGBT5hmcM">威慑</strong>——客户知道我们会来数牛，就不敢私下卖。</p>
+    </div>
+  </div>
+
+  <!-- 幕6 -->
+  <div class="scene" id="sc6" data-page-node-id="XMTnRiiPeBJpCaxLPAd7G5">
+    <div class="scene-h" data-page-node-id="CyyMXWwemnpDaNkSZLhkjT">
+      <span class="n" data-page-node-id="zMXGWlamZu6QQjNKoymvHb">6</span><span class="t" data-page-node-id="JV9IAjQyailFB8BJimmjkj">会说不（收尾王牌）</span>
+      <span class="tm" data-page-node-id="hU9rP0gNjH6AaVDXb9Rsr2">50 秒</span>
+      <span class="pg" data-page-node-id="193iOOvtFmWw3HsllJipsL">客户档案 → 切两户</span>
+    </div>
+    <div class="speech" data-page-node-id="VhXU4yDU6xc6oT259YGjgQ">
+      <p data-page-node-id="4AiLpz5NVLWBPLfR8SAQEe">最后看两户。</p>
+      <p data-page-node-id="J9Od7WqmjqtIYDqa1PKTdk">扎西家庭牧场——<strong data-page-node-id="ySyfNsCYgggVKQzvg0jiPI">系统给的是"暂缓放款"</strong>。因为盘库差异 24 头还没定性、无票出栏占比 45%。前置条件没满足，<strong data-page-node-id="AHYPTtjJafFJxJm1jRnlzQ">不进入金额测算</strong>，页面上不显示任何金额。</p>
+      <p data-page-node-id="tMAH4899zwN0fGGsqQwGWE">次仁某某——<strong data-page-node-id="ezMfQBrwv13yiw47uU4HCH">资料完整度 31%</strong>，没耳标登记、没草场权属、没防疫记录。系统给的是"待补资料"，列出缺什么、怎么补。<strong data-page-node-id="uLaaT2nbL9MRVUJWFmu7US">这不是拒贷，是给了一条路。</strong></p>
+    </div>
+    <div class="callout" data-page-node-id="z7COdI0nBug9wGh16DGfNo">
+      可信的"不会算"，比精确的"算得出"更值钱。
+      <span class="sm" data-page-node-id="94q0UFzbrvbKe1AkedXSd4">我们宁愿说"资料不够，我不给你算"，也不生成一个看起来精确、实际没有依据的分数。这是我们对银行负责，也是对牧民负责。</span>
+    </div>
+    <div class="why" data-page-node-id="ytI3vErKfckDu4FNgjVUfv"><b data-page-node-id="jSX1GB0iMFEVJFjtGl5o1g">幕 6 无论多赶都不能砍</b> —— 它是整个演示的记忆点。</div>
+  </div>
+
+  <div class="hr" data-page-node-id="aQGw3XhcYcuzVrFsGcktS0"></div>
+
+  <!-- ================= 讲藏 ================= -->
+  <h2 id="s3" data-page-node-id="9upi2rXDwCCkr8OS49kjNT"><span class="no" data-page-node-id="Dn4WJeNbQt6DLBmTYYDWue">3</span>讲什么 / 藏什么</h2>
+
+  <h3 data-page-node-id="rfoPcXsjUQbbcL6uvJGZtp">主动讲 —— 这些是加分项</h3>
+  <table data-page-node-id="g6oWWeCTPSU97nSY5r0H76">
+    <thead data-page-node-id="0X9S0MpEtZlvSkIAxRqgtm"><tr data-page-node-id="cDbt6exwE38I5ruHqpNQOl"><th style="width:230px" data-page-node-id="nUXW9FpSz4RGYeB9O53Zzr">内容</th><th data-page-node-id="CPPvHXWaBRgqWYvXm7FKc9">为什么主动讲</th></tr></thead>
+    <tbody data-page-node-id="RX2ZgEbzt6OXRjK8N0iWp3">
+      <tr data-page-node-id="eu3I8J1ENa61iIUzbAgryb"><td data-page-node-id="QRGZGqYOEBYPYRw1xKVvQQ">额度算法（需求侧 vs 供给侧取小）</td><td data-page-node-id="gJocj55aC1VMa0BdG0LPmv">项目技术核心，<strong data-page-node-id="8uFamqXSE01TU9dKE3VBSV">能当场复算</strong></td></tr>
+      <tr data-page-node-id="EIdojZOWAS7GVLvgpy4Q8E"><td data-page-node-id="NYgugA16G8Wn6U8i5q2Eg2">保险进抵押折扣档位</td><td data-page-node-id="RweuLDEiHGMNPQK9ObFast">把"保险协同"从口号变成硬逻辑，别家讲不出这个</td></tr>
+      <tr data-page-node-id="nPumW0fL3KToOYmEn4zfsL"><td data-page-node-id="rV6ZPDHMYKyy2qzjEpcLAH">有价出 / 无价出的判别</td><td data-page-node-id="3GkZdts3L4uoLPltlnQmY7">行业 know-how，一听就知道懂信贷实务</td></tr>
+      <tr data-page-node-id="bixjYiqgD9sdZ9rEkdkyYt"><td data-page-node-id="HmyCdGOUnROV4xN5xyljF8"><strong data-page-node-id="V23vuZR2ZVX28rONGvHqPC">检疫票替代发票</strong></td><td data-page-node-id="uPTSeQtGDSWaZDnjcqK1YY">直接回应牧区开票率低的现实问题，且法定强制、覆盖率更高</td></tr>
+      <tr data-page-node-id="0ECAxTtja5CQlX6mNZkwt8"><td data-page-node-id="5lxn7SUPLtohWCboSfVBTK"><strong data-page-node-id="ohG1SL1kZKPruBT7JesFUi">账实不符 ≠ 欺骗</strong></td><td data-page-node-id="CZmGZkB5Sz8YmyRKA7lyqP">体现风控成熟度，同时解释盘库的真实作用</td></tr>
+      <tr data-page-node-id="gwnX67PWxtsPO9mRww8UuZ"><td data-page-node-id="YzsCjki2PlLrSjCCEb0AFq"><strong data-page-node-id="DcRBHVGxNzSRSMt6lo6XU7">跨行资金不可见</strong></td><td data-page-node-id="BiVdnUe4zNIP6kUABlFJ9K"><strong data-page-node-id="7Afzzq7MiOdJBpiuq9h4U5">主动交底</strong>。不主动说会被问倒；主动说显得专业</td></tr>
+      <tr data-page-node-id="bDkLVOW7bsNmfHe6zjcZFV"><td data-page-node-id="PdwbJLDFy5KVapekkP6bWq">阈值分层（哪些能标定、哪些是经验值）</td><td data-page-node-id="EuzUwAAdvh2EQFUnx6WxEt">分层回答强于"都是算的"或"都是拍的"</td></tr>
+    </tbody>
+  </table>
+
+  <h3 data-page-node-id="61JP17GmHkO2ZffVIpNbUv">折叠、不主动展开</h3>
+  <table data-page-node-id="GO2fJMjWZJecboHL8o77QO">
+    <thead data-page-node-id="iGpVbQjn4VkTWinpcZHmug"><tr data-page-node-id="M2OAbpXdREfkFDs5PNl9WK"><th style="width:230px" data-page-node-id="vQ4BwxJ4F5uHIzSW3FE03F">内容</th><th data-page-node-id="A8EQ8h0AQDY8ASlgVuPXkG">处理</th></tr></thead>
+    <tbody data-page-node-id="7d6PlU2QCbzObaUXrIEFS7">
+      <tr data-page-node-id="CuoTJiBuF1CNvlTW59niVu"><td data-page-node-id="G0kNCkW684CkiyfC0RjTSz">数据来源分级、可信度分档</td><td data-page-node-id="3CLl3IxRIoRpSYD3haU6LC">放在「依据」Tab，评委追问时点开</td></tr>
+      <tr data-page-node-id="Gi3tYet1FEBtovPchfk8ha"><td data-page-node-id="UZXfzT9GSvEqIHsVfJmCzi">模型指标（MAE、SHAP、事件月百分位）</td><td data-page-node-id="WZUtyhdlOYuw9bAEI8T7pS">已有一整套口径，被问再答，不主动展开</td></tr>
+      <tr data-page-node-id="Jda8N6AIQYlkdMLm09azCB"><td data-page-node-id="EmHupvOyQ1B7YEgV1vBEAW">时空网格、载畜量、迁徙</td><td data-page-node-id="ACCz1tOVE8PBHx9RC1EcFO">已撤前端入口，不提</td></tr>
+      <tr data-page-node-id="s6cyBy7F869rFfR316e2BO"><td data-page-node-id="xGfIGy36AfJuEGDuxSSAmA">边疆民生、绿色绩效叙事</td><td data-page-node-id="E4AxcU0gV5L2JCkfcu4iIE">最多一句话带过，不占篇幅</td></tr>
+    </tbody>
+  </table>
+
+  <h3 data-page-node-id="pW37NmzkGGbd8AbmcXgpKO">一句也别说的</h3>
+  <table data-page-node-id="LBIEv0oL6g9ESOpVeEKiDJ">
+    <thead data-page-node-id="uRYJzOusm3o6z9yVMcQUwm"><tr data-page-node-id="K3KegVXgv84q0kbpHHfhvG"><th data-page-node-id="dp1efRwIJm7CIbLM9KfGYx">不要说</th><th data-page-node-id="jokkVIYmGOAnStYvEbPQ2I">准确说法</th></tr></thead>
+    <tbody data-page-node-id="xPHmgVsDeBBjRhYcTP1q7k">
+      <tr data-page-node-id="u6IW5lZNxgJ1Yrjyoxe7r6"><td data-page-node-id="NgWQ9Vmtoi0Y0DxrRbeiZ1">政府会自动把数据同步给我们</td><td data-page-node-id="AWhKCG3uTtoGY4xcwt2t5c">这是<strong data-page-node-id="frh6Vpn4Qmu65g3zmKWPGz">提案</strong>，需要谈成银政数据共享或数据交易中心授权</td></tr>
+      <tr data-page-node-id="KGdXXirztFQKFbFfqyVgfR"><td data-page-node-id="7pOGn2Nb0ektsudvgJUTEp">我们能监测资金回流全链条</td><td data-page-node-id="GHRvvXeqR89SyxWzxj4J6E">跨行不可见，只有行内闭环可见</td></tr>
+      <tr data-page-node-id="BF8TI0WdZXi8G3CdUB5X4V"><td data-page-node-id="HxFS2QcAUpCnK7yK1w4wLE">把样例数据说成真实工行业务数据</td><td data-page-node-id="lIF25KEbn6sLTNcu98q3Y0">客户数据是按真实业务字段结构合成的，标注来源分级</td></tr>
+    </tbody>
+  </table>
+
+  <div class="hr" data-page-node-id="XPUWIiMJI5RJ0Ec44P92y0"></div>
+
+  <!-- ================= 必答题 ================= -->
+  <h2 id="s4" data-page-node-id="FP7V09GJZPfA21KMmqkuHd"><span class="no" data-page-node-id="5exoNMHg70N2c53MHV1Bjf">4</span>必答题预案 · 10 问</h2>
+
+  <div class="qa" data-page-node-id="1l0lgYX8Q8HpYwM7RuTeBF">
+    <div class="q" data-page-node-id="pWCFhUvFhqJjUZ0rKOnKx4"><span class="k" data-page-node-id="BFV1f3HaaA9gvoFb49UH1F">Q1</span>政府为什么愿意给你们数据？</div>
+    <div class="a" data-page-node-id="bP49Akp1iPypzJZlQIg1Kc">
+      <p data-page-node-id="KR55dKvcnBvzLaSzA8U6Ro">两个通道。一是<strong data-page-node-id="qdVgDEjyqhBjb0wgZLZR2h">银政数据共享</strong>——与农业农村局、畜牧站建信息共享机制，四川广元、江西吉安都这么做的。二是<strong data-page-node-id="cA2ivy0gYQ9mAtDVyn4wjz">数据交易中心授权运营</strong>——把政府公共数据脱敏后经数据交易中心授权给金融平台，广西的「兴农易贷」就是这条路径。</p>
+      <p data-page-node-id="8lG5cQ3dC6PkFLshnnLIul">至于政府为什么愿意：绿色信贷和乡村振兴本身是地方的考核指标，<strong data-page-node-id="N2lop8yoC7epsbEBaXibwm">银行放得出钱、风险可控，对政府也是成绩</strong>。</p>
+    </div>
+  </div>
+
+  <div class="qa" data-page-node-id="HF9genq8YdRWFX4IvCqZTN">
+    <div class="q" data-page-node-id="6NKZmVS8pDXZRc272GVcMJ"><span class="k" data-page-node-id="v1sXKbL3HFgMdC4Js6H6M4">Q2</span>跨行资金你们看得到吗？</div>
+    <div class="a" data-page-node-id="wVuCzgTq2VrmH4pQbbly0A">
+      <p data-page-node-id="K1ihyLymjaMYfQ0u9lJfba"><strong data-page-node-id="QCGCPSU9SJGUp9AqsS3uzA">看不到，这是我们的能力边界。</strong>牧区资金主要在农行、农商行、邮储流转，工行能看到的只是一部分。</p>
+      <p data-page-node-id="RhnKw5PYzpERE25ZhQOsCS">所以我们不靠事后追资金，靠两件事：<strong data-page-node-id="7zkyiQOdpaw0nfYRYsJZE1">受托支付</strong>把钱直接付给真实供应商，从源头堵住挪用；<strong data-page-node-id="cwLP01jCQKCVfj8TQWkgI6">交易对手核验</strong>识别空壳公司和关联方。</p>
+      <p data-page-node-id="1bT5KiWO8LVFGksyOrwua9">行内闭环的资金流向我们能看到，页面上也标注了"仅限行内账户可见"。</p>
+    </div>
+  </div>
+
+  <div class="qa" data-page-node-id="g0XLpDEpFRX9ZGcGIMR5K8">
+    <div class="q" data-page-node-id="DRAa76AT8g2xgi30uebgdO"><span class="k" data-page-node-id="cJkEAWGNHclTgGhYIw0TGs">Q3</span>牧区开票率那么低，你们怎么验证经营？</div>
+    <div class="a" data-page-node-id="DYhG2Y9pNLVfSHtOno5C2p">
+      <p data-page-node-id="hNvFEITTYVMak8CKbfrd3b">我们<strong data-page-node-id="3VuVCFiSkFiVHA2DTGnNF1">不用发票</strong>，用《动物检疫合格证明》。</p>
+      <p data-page-node-id="p79Ck9Size5PCzpSag99y7">依据是《动物防疫法》第五十一条：屠宰、经营、运输的动物应当附具检疫合格证明；<strong data-page-node-id="D7ynbKQeDtr3kGkSL8hUhf">所有出栏畜禽必须检疫合格取得证明才能离场，没证明牲畜运不走</strong>。</p>
+      <p data-page-node-id="XHvALOUmBOsWp3HlHdFaAi">检疫证明上载明货主、种类、<strong data-page-node-id="iDLAc88hVe6CxkqFJnqbZv">数量</strong>、启运地、目的地，由官方兽医签发、全国统一格式、可追溯查询。</p>
+      <p data-page-node-id="faz6gokPapDgArhgfwkUF7">我们用<strong data-page-node-id="reYUq62zjnhKAQpkiFEWtn">「检疫票头数 + 耳标出栏记录 + 收款流水」三方交叉验证</strong>。头数乘市场价就是销售额。</p>
+      <p data-page-node-id="lJB2sypMktBOpzSu205GCv">覆盖率和可信度都比发票高——<strong data-page-node-id="ES6JUg9or0BAPaXJbuSOZP">虚开一张检疫票，可能在运输路上就被检查站查了。</strong></p>
+    </div>
+  </div>
+
+  <div class="qa" data-page-node-id="rfx7Siy5snUeRTb8LOEIsI">
+    <div class="q" data-page-node-id="cggd4iEN0zs0XCSI4x2pqZ"><span class="k" data-page-node-id="mSuSZhAgbYvZMJLUW57rX6">Q4</span>盘库发现数量和账面不一致，是不是说明造假？</div>
+    <div class="a" data-page-node-id="aqJTDambLBYEjSo70eO88T">
+      <p data-page-node-id="UIjKmFwcKj6apFDssyZmNa"><strong data-page-node-id="ty1C7CFpckBUktV7V1Rit9">不是。</strong>账实不符的原因很多：耳标脱落没补挂、牛走失在山里几天找不回来、寄养或代牧（盘库当天不在场）、补挂新标但档案没更新、系统同步延迟、甚至盘库本身漏扫。</p>
+      <p data-page-node-id="dElhX6l6YTHHUNpYpZxG2Q">所以系统产出的是<strong data-page-node-id="KXN6GFf9sZTPX1T2CWupZL">核查任务，不是结论</strong>。定性由客户经理现场完成，结论留痕。</p>
+      <p data-page-node-id="sgBtITjyvFy2RCbuZXYMdC">如果系统直接把差异判成"欺骗"，在牧区会产生大量误报，客户经理就不信这个系统了。</p>
+    </div>
+  </div>
+
+  <div class="qa" data-page-node-id="vazMFTjZJHtQrbr4tHAHah">
+    <div class="q" data-page-node-id="e2KwoMIB9eMtH5D8O7jy2m"><span class="k" data-page-node-id="My9GdLEbBZRBUbjeixGlSf">Q5</span>你们的阈值是哪来的？</div>
+    <div class="a" data-page-node-id="STVWMbRYfCJpSXuiTgheiZ">
+      <p data-page-node-id="nagL66LZysRPtXafiFduDO">分两类。</p>
+      <p data-page-node-id="VjqUkqqgfrDd3oGKUSimA5"><strong data-page-node-id="XML534m36ugDzXIAxPE3qX">触发类阈值</strong>——存栏降幅、进账降幅、防疫覆盖率的告警线——<strong data-page-node-id="D8MAEVuRd0JRcCmFEYNFAs">是用真实数据标定的</strong>：取本县同类客户的历史波动率，超过 2 个标准差判定异常。数据基础是我们已有的 3,120 行气象、2,392 行遥感数据和 128 条有凭证的真实灾害事件。</p>
+      <p data-page-node-id="dFe6FPZNbA6gHg5ucYXViI"><strong data-page-node-id="ZOCB79sNq00GIDxrgNDldG">核定类参数</strong>——抵押折扣率、还款保障倍数——是<strong data-page-node-id="qtZMMHZtroWJ15JU09LAGX">经验起始值</strong>，量级依据是活体处置周期和涉农贷款风险覆盖惯例，我们给出了 ±10% 的敏感性分析。</p>
+    </div>
+  </div>
+
+  <div class="qa" data-page-node-id="upPLwoYR4F3eWJeqPcd1jb">
+    <div class="q" data-page-node-id="EWfmbX00sr1Li8DhK7HKW3"><span class="k" data-page-node-id="FwTj0mrdpa3Bl1YUpCccPk">Q6</span>活牛会跑会死，你们凭什么敢抵押？</div>
+    <div class="a" data-page-node-id="l24CLYuRHu4SdIkURDdS4w">
+      <p data-page-node-id="pwHZM3G81uE9FF3ohL0B2J">四层。<strong data-page-node-id="UMZ7p1mdaAgj1CJ37iYKyj">一</strong>，一畜一标、编码全国唯一、可官方验真（农业农村部「牲畜耳标管理」APP、中国兽医网畜禽标识查询）。<strong data-page-node-id="3Ub5VHSaL6Lu6DSvbqnYDU">二</strong>，抵押折扣按投保情况分档，没保险的牛只按 40% 甚至不计入。<strong data-page-node-id="ZSCR3EcHyXQBhRQ7vik9Ep">三</strong>，保险赔付资金优先偿还贷款本息——这是活体抵押试点的通行安排。<strong data-page-node-id="iwo89Hi19nvV8vLjpCYrPo">四</strong>，可以到人民银行动产融资统一登记公示系统做权属登记，<strong data-page-node-id="2uLuaqZR5VGfN0PIZAjiY1">防止一物多押</strong>。</p>
+    </div>
+  </div>
+
+  <div class="qa" data-page-node-id="xnLsuxnBoXmkrDHoxVEBRK">
+    <div class="q" data-page-node-id="8QQnxBDR6BNLbFkHbHKy8u"><span class="k" data-page-node-id="cCbbC7YrLIJ1QT0xgZb5M5">Q7</span>这不就是政府那套畜牧监管平台吗？</div>
+    <div class="a" data-page-node-id="MySFDtnXNiGSw0hpMZAqg7">
+      <p data-page-node-id="qAmzGSBOHFk1qtmBHLzMGx">不是，方向正好相反。</p>
+      <p data-page-node-id="bHSFsgGzSW2YXdnEmyr7wi">政府的平台是<strong data-page-node-id="NgPhJmLH5Cw7umdJZuBlPA">自下而上采集</strong>——派人建档、贴耳标、打疫苗、开检疫票。那是财政的事，银行没有执法权，也不该干。</p>
+      <p data-page-node-id="zQfpJwydg4WTy0oCxsLBh8">我们是<strong data-page-node-id="tCWESvixTFAcVCPBZgXiSS">自上而下接入 + 做信贷决策</strong>：政府已经采到的数据，我们接进来，变成授信依据和贷后信号。</p>
+      <p data-page-node-id="qD7nurnn0QIpCJxwM8Pv1N"><strong data-page-node-id="nrDknYFpcN8tcFls6gODaj">一句话：我们不做采集端，只做接入端和决策端。</strong></p>
+    </div>
+  </div>
+
+  <div class="qa" data-page-node-id="iGhVTUIQS8UzY2xt8uVJMT">
+    <div class="q" data-page-node-id="TX8emc1UoBQCGGG2J1TF97"><span class="k" data-page-node-id="6uVAOVcfuTFWkHGEREQjw0">Q8</span>和已有的活体抵押试点比，你们差在哪？</div>
+    <div class="a" data-page-node-id="e4YsqYAvOuzIa1kkZlgUtx">
+      <p data-page-node-id="G8PeKEixM7NP0CGkuabYBT">不差在功能，差在<strong data-page-node-id="AwZRWHxRgQJNWVgIEPU8VZ">场景</strong>。</p>
+      <p data-page-node-id="n9Gt9l7XoWf5EHDWxIOuLX">吉安的「数字畜牧贷」、广元的第三方监管、盐城的生猪试点，基本都是<strong data-page-node-id="Jd6Cy9ZI5aUDppmNRqDJQc">规模化圈养场</strong>——有圈舍、有固定场地，能装高清监控、能走 AI 计数通道。</p>
+      <p data-page-node-id="FZDjmH5mfhxhyzO4qRLfH8"><strong data-page-node-id="yrE3aeCV3iszdjMFh3H6Cj">我们做的是青藏高原的散养牧户</strong>：没有圈舍、没有固定场地，牲畜在草场上游牧，摄像头那套用不了。</p>
+      <p data-page-node-id="eT8WcUlljtXq4MAYpxJAzb">所以我们只能走轻资产路线——<strong data-page-node-id="VQKsvNfzZBNANQDVCT5KQz">耳标 + 检疫票 + 遥感</strong>。这不是妥协，<strong data-page-node-id="z6DaL4SaiTNzez4M3RAIdN">这是唯一能把金融服务送到散养牧区的路径</strong>。</p>
+    </div>
+  </div>
+
+  <div class="qa" data-page-node-id="f4eDGbpxiP88y96i4tAqEA">
+    <div class="q" data-page-node-id="XBOWDGcb5TkkC5BJfvPkpB"><span class="k" data-page-node-id="CxGJY1Z6jt7SJcP1KOM9wT">Q9</span>你们的数据是真实的吗？</div>
+    <div class="a" data-page-node-id="jQvjFcwfFffHEumv9eVd4G">
+      <p data-page-node-id="hHRyrqJMGDvaN9y32KnTVc">环境数据是真实的公开观测——26 个县的气象和遥感，来自 CMFD 和 MODIS，共五千多行。</p>
+      <p data-page-node-id="hTeP8je9UJfhKxnEAcHWog"><strong data-page-node-id="YmiaZ3RzAd1hotdnw65IfM">客户数据是按真实业务字段结构合成的</strong>，总量约束来自公开统计年鉴。我们在页面上和文档里都标注了数据来源分级，不冒充真实工行业务数据。</p>
+      <p data-page-node-id="TGwWmqqmR618Q4Wco3El4f">真实客户数据的接入，依赖银政合作和客户授权。</p>
+    </div>
+  </div>
+
+  <div class="qa" data-page-node-id="0FbwhfPUNfCBvuU8TGKCFx">
+    <div class="q" data-page-node-id="WvOSblHP6u59kCl1eawtur"><span class="k" data-page-node-id="1xEwLY6SQOolyTKSYy2AX4">Q10</span>模型在里面起什么作用？</div>
+    <div class="a" data-page-node-id="eZbuVVmPFN28PZNnILcF0z">
+      <p data-page-node-id="aDoidL2PSnsGtWYEMoGVHn"><strong data-page-node-id="VyTZA9QwrVFSSP2EMYEDSQ">只进核查优先级，不进金额。</strong></p>
+      <p data-page-node-id="pDv8LVKRaRPiw3zYj5wxR0">模型输出的风险分，用来决定客户经理先核查谁。<strong data-page-node-id="SutXnbHntvvwv1LjiiOQbH">金额是独立的纯计算链</strong>——饲草缺口、现金流、DSCR、各上限取小，可以当场复算。</p>
+      <p data-page-node-id="UBx6G3ycoXrISUDOJUWreZ">这样设计的原因：避免"因灾放贷"，也避免不可解释的重复扣减。</p>
+    </div>
+  </div>
+
+  <div class="hr" data-page-node-id="ZINkX3kLe7CD070cBocwGJ"></div>
+
+  <!-- ================= 清单 ================= -->
+  <h2 id="s5" data-page-node-id="gk7G5GHaJrBRQ12Yxvmjtj"><span class="no" data-page-node-id="KBOzmS9uYRWnrhZwgJzdll">5</span>演示前检查清单</h2>
+
+  <div class="card" data-page-node-id="UQQUP4ZsvYUUTUAxf87K0Q">
+    <ul class="check" data-page-node-id="gbVsh9XUKfpyU9UmVrM6Bs">
+      <li data-page-node-id="ZFiGtxOxmvGxVU1JSOwl6j">服务已启动，端口确认；首页、客户池、客户档案、活体资产台账、贷后待办<strong data-page-node-id="PQ8pWGFNNQJzem0dr02EE8">五个页面逐页点一遍</strong>确认能打开</li>
+      <li data-page-node-id="8HpWoQ5c7Br35Flo9n5QfV">三户数据就位：班戈县合作社（可贷 90 万）、扎西家庭牧场（暂缓）、次仁某某（待补资料）</li>
+      <li data-page-node-id="fzb1s66NxlXYJrGPA7hkLc">客户档案的切换器能正常切三户，<strong data-page-node-id="EW7eT2Fq4OW7JRN8NOHiG1">切换后数据确实变了</strong>（重点验一次）</li>
+      <li data-page-node-id="Cfhf5RWmmj3r3SM8lqkzXs">授信 Tab 的瓶颈说明、抵押折扣分档表可见</li>
+      <li data-page-node-id="e6YSH7NS4P7CYfW7vwvZgY">活体资产台账的「是否有对价」列、无票出栏占比排行可见</li>
+      <li data-page-node-id="kpAwZ7LirdPAwyPascMK9X"><strong data-page-node-id="FPLuGcfOUH8AEdsKXI6dPP">断网预案</strong>：哪些页面依赖外部 API（高德地图、Open-Meteo）？断网后能不能照常演示核心动线</li>
+      <li data-page-node-id="Fw3J5ZKPm9n1BbFRAvnrRC">投屏分辨率：左侧边栏 + 表格在投影下是否清晰；必要时浏览器缩放 110%</li>
+      <li data-page-node-id="grYLmz6dOmL0Wd9508EPrO">浏览器标签页只留演示要用的，<strong data-page-node-id="UH2sSdp3WXC4GM06xFeDsR">关掉一切可能弹窗的东西</strong></li>
+      <li data-page-node-id="ucIh20OY9x0jFrbFhPpWQX">如果演 H5，提前在手机上打开并保持登录态</li>
+      <li data-page-node-id="iRBH62mknrp8bAY7XGYVQK">关掉聊天软件、邮件提醒</li>
+    </ul>
+  </div>
+
+  <div class="hr" data-page-node-id="Ll1Fci10bf0aeDKcnb5Gya"></div>
+
+  <!-- ================= 时长 ================= -->
+  <h2 id="s6" data-page-node-id="0ZEuXptR6evUprijLkpHQA"><span class="no" data-page-node-id="efSCT1kgh5ufx1hzHuf0Cx">6</span>时长控制</h2>
+
+  <table data-page-node-id="LrMjAxbxpGZSHdSHH7voCH">
+    <thead data-page-node-id="HxJfFb7yxAg2PfNqqPUtWK"><tr data-page-node-id="QbFMhpskaj9fri3kRM34Ai"><th style="width:60px" data-page-node-id="RlAbQMXMAcnltcVUpD7icB">幕</th><th data-page-node-id="fTEO4RcoyKXbi1tIOPikwY">内容</th><th style="width:110px" class="r" data-page-node-id="PRL3fD3uT0I5uOGwruWa1C">目标</th><th style="width:110px" data-page-node-id="g0IpOPNihsQGwFV3VQ4spr">上限</th></tr></thead>
+    <tbody data-page-node-id="vvRk74bB7fneBOaQWdpeXo">
+      <tr data-page-node-id="8J1jlWhkC3Xl0u73B28E45"><td data-page-node-id="OCFPEhTLPk83AcUecRWmz7">0</td><td data-page-node-id="6jKlVWwEFR0OIwCgM8jiOc">开场定位</td><td data-page-node-id="TVuhSqxwASDUKopprx9BMv">15 秒</td><td data-page-node-id="yhvDwZFziy5Z9TFiHRnHW7">20 秒</td></tr>
+      <tr data-page-node-id="NeGy7Sx05WrjwROFVfZeut"><td data-page-node-id="gZ25RBVsUiaMEuiox13tKG">1</td><td data-page-node-id="IRypfWDYAkOmJmHO5qYh27">获客</td><td data-page-node-id="I3W7HrajwbMgMMWUxg0dz8">50 秒</td><td data-page-node-id="7LYCDzSmFKQhMEjxm6HyIS">60 秒</td></tr>
+      <tr data-page-node-id="IW76TW7VaPEkjwxokVI3Zo"><td data-page-node-id="C4OjoO9cYVZro67WMdjr2l">2</td><td data-page-node-id="s8oExcG6K4TBR8jQtLQ8F0">引流（H5）</td><td data-page-node-id="wRuUIzrOK6ZfGdf4yaHg5k">40 秒</td><td data-page-node-id="otGECYrdiyoEbgwwBhnck7">50 秒</td></tr>
+      <tr data-page-node-id="IW6eSDJSnCdYPdiGRZU5du"><td data-page-node-id="I27rqgnbJsMtBLQUMoh74f">3</td><td data-page-node-id="fBADMdKYvpLMO4ZYYtLuCJ"><strong data-page-node-id="DlgA75RSyUpLmfEQNCH4D5">定额</strong></td><td data-page-node-id="bcoZBwigSkQiUG37G1MCzl">70 秒</td><td data-page-node-id="l657fE8Yw8ThDJtICbaSTo">90 秒</td></tr>
+      <tr data-page-node-id="IATakkY21lZXfEhxCZccdD"><td data-page-node-id="xf85fGu01qRnj1YJMJFKoF">4</td><td data-page-node-id="TjASHDTrCTwVVGOQbrCErv"><strong data-page-node-id="AKVWTq6bv7lhvo8WS5w5Bj">抵押物管理</strong></td><td data-page-node-id="NEIsZOWL11UGtDTasD0xld">60 秒</td><td data-page-node-id="ghstTqvlhWaWteAuQ0OGeY">70 秒</td></tr>
+      <tr data-page-node-id="mLPjqB7UtoT8sGUa9uiZr0"><td data-page-node-id="A9gQ7kma4yUbn1BM3OwiUG">5</td><td data-page-node-id="6FPN8SryjbmKs5SUr7NC28">贷后</td><td data-page-node-id="DD0qoYsZNuLEuQLV1inzd7">50 秒</td><td data-page-node-id="XIGkcbaIzKSxOhra0CUoMC">60 秒</td></tr>
+      <tr data-page-node-id="sk7qnkUSfTrhGYIEtBYOvN"><td data-page-node-id="8jjLJmp8TiXDYbT5UrZAZU">6</td><td data-page-node-id="8oaxvBVCO0FUu2liD9IwKH"><strong data-page-node-id="voeX0Ogxo79rh1dJNi6DgZ">会说不（收尾）</strong></td><td data-page-node-id="DPnBaxO96tUbvFvaSwhL9G">50 秒</td><td data-page-node-id="dD8dKkh8uA0tAnrQURQ1XO">60 秒</td></tr>
+      <tr style="background:#F4F6F8" data-page-node-id="vyiTPdyqii3a9QFdInI6MA"><td colspan="2" data-page-node-id="rSEE7U82BCYOKMLgBUl9Dn"><strong data-page-node-id="RgjM3iXud7y1DnANwY5JKZ">合计</strong></td><td data-page-node-id="JZKEqldiaQbPhL8Ba5krPw"><strong data-page-node-id="PW8vGzDoniuTTGxIARosnA">约 5.5 分钟</strong></td><td data-page-node-id="jHxnInVFEp6WbYvoVDhm39"><strong data-page-node-id="VrlSeoefFJRF4FZroQFNyF">约 7 分钟</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="card tint" data-page-node-id="ZukyEleshr64xJov1MvGqY">
+    <p data-page-node-id="AQu9XaDCmhcG3iE1reLFF1"><strong data-page-node-id="yrU9UUbsTH7HJ5ygi0pHnO">被压缩时先砍幕 2（H5）和幕 1 的后半（待营销名单）</strong>，因为它们是"锦上添花"，而幕 3 / 4 / 6 是核心。</p>
+    <p data-page-node-id="id18fVhazMss3cVYB0rkVG"><strong data-page-node-id="0kCk7aWuNkese6rReLvGLn">幕 6 无论多赶都不能砍</strong> —— 它是整个演示的记忆点。</p>
+  </div>
+
+</main>
+</div>
+</body>
+</html>
