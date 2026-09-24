@@ -8,7 +8,8 @@
 - 参赛名：**工银牧融**；前端品牌名：**牧融绿链**。
 - 定位：工行高原畜牧绿色金融风险评估与贷后管理平台。
 - 服务对象：工行（不是政府）。
-- 当前阶段：**银行视角大改造的方案探讨期**，未动代码。方案稿见 `银行视角改造方案探讨_20260923.md`。
+- 当前阶段：**银行版一期已落地**（2026-09-23，`8a0bedf`：活体抵押上限 / 两级 bottleneck / 银行版控制台 `/bank` / 25 项回归测试 + 8 个 `/api/bank/*` 路由），**二期（资产侧）未开始**。
+- 文档入口：方案稿 `银行视角改造方案探讨_20260923.md`（六步探讨全文 + §19.7 分期）；一期实施记录见本文件第 10 节；答辩排练看 `答辩演示脚本_银行版_20260923.md`。
 
 ## 2. 开工流程（每次接手都走一遍）
 
@@ -175,6 +176,36 @@ $env:PORT=8100; C:\Users\WH\.workbuddy\binaries\python\envs\default\Scripts\pyth
 # 前台 http://127.0.0.1:8100/bank   旧版 http://127.0.0.1:8100/
 ```
 依赖装在隔离 venv：`C:\Users\WH\.workbuddy\binaries\python\envs\default`（pytest / fastapi / uvicorn / numpy / scikit-learn / httpx / python-multipart）。
+
+## 11. Git 与推送（2026-09-23 更新）
+
+| 项 | 值 |
+|---|---|
+| 远端 | `https://github.com/wndwns/-.git`（owner: wndwns）|
+| **默认分支** | **`main`**（同组人打开仓库直接看到）|
+| 当前工作分支 | `feature/demo-guide` |
+| 两者关系 | `origin/main` == `origin/feature/demo-guide` == `8a0bedf`，内容完全一致 |
+| 其他分支 | `master`（92f6977，历史遗留，与 main 分叉，勿动）、`feature/npp`、`codex/*` 系列 |
+| 保护分支 | `codex/backup/pre-deepening-20260807`（勿覆盖）|
+
+**推主支的正确姿势**（不切分支、不碰工作区）：
+
+```bash
+git push origin feature/demo-guide            # 先备份工作分支
+git push origin feature/demo-guide:main       # 快进推到 main
+git fetch origin && git branch -f main origin/main   # 同步本地引用
+```
+
+**两个已踩的坑**：
+
+1. **`.github/workflows/*` 需要凭据带 `workflow` scope**，否则被 GitHub 拒：
+   `refusing to allow an OAuth App to create or update workflow ... without 'workflow' scope`。
+   本次推 main 时该错误未再现（换梯子后凭据重新授权过）。**再遇到就重新登录一次凭据**，或建 classic PAT 勾 `repo` + `workflow`。
+2. **本机网络（Clash 7897）间歇性可用**。push 失败先 `git ls-remote origin` 试水，
+   报 `TLS connect error / unexpected eof` 是网络，不是权限；mihomo 的 REST 控制接口是关的
+   （`external-controller: ''`），**命令行换不了节点，只能在 Clash Verge GUI 里换**。
+
+**CI 补充已入库**：`95b2a30`（2026-09-24）新增 3 个测试步骤（`test_credit_decision_extended` / `test_credit_decision_pledge` / `test_bank_api`）+ `node --check frontend/bank.js`。
 
 ### 已核实的信贷骨架现状（改这块前先看）
 
