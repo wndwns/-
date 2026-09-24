@@ -20,8 +20,16 @@ jobs:
         run: python backend/test_truthful_outputs.py
       - name: Credit decision regression
         run: python backend/test_credit_decision.py
+      - name: Credit decision extended regression
+        run: python backend/test_credit_decision_extended.py
+      - name: Live-stock pledge & bottleneck regression
+        run: python backend/test_credit_decision_pledge.py
+      - name: Bank view API regression
+        run: python backend/test_bank_api.py
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
       - name: Frontend syntax check
         run: node --check frontend/app.js
+      - name: Bank console syntax check
+        run: node --check frontend/bank.js
