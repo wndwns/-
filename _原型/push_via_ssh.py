@@ -100,7 +100,9 @@ def write_ssh_config(proxy: str) -> str:
         f"  StrictHostKeyChecking accept-new\n"
         f"  UserKnownHostsFile {known_hosts}\n"
     )
-    path = os.path.join(tempfile.gettempdir(), "gh_push_ssh_config")
+    # 正斜杠：这个路径要嵌进 `git -c core.sshCommand="ssh -F <path>"`，
+    # 那串会经 sh 解析，反斜杠会被当转义吃掉（实测变成 C:UsersWHAppData...）。
+    path = os.path.join(tempfile.gettempdir(), "gh_push_ssh_config").replace("\\", "/")
     # 必须 UTF-8：本项目路径含中文（项目 / 副本），ASCII 会直接抛 UnicodeEncodeError
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(cfg)
