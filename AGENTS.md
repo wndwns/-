@@ -417,7 +417,7 @@ $env:PORT=8100; C:\Users\WH\.workbuddy\binaries\python\envs\default\Scripts\pyth
 | 远端 | `https://github.com/wndwns/-.git`（owner: wndwns）|
 | **默认分支** | **`main`**（同组人打开仓库直接看到）|
 | 当前工作分支 | `feature/demo-guide` |
-| 两者关系 | `origin/main` == `origin/feature/demo-guide` == **`64ab654`**（更新于 2026-09-26；此表此前写成 `a456d7c`，落后两次提交） |
+| 两者关系 | `origin/main` == `origin/feature/demo-guide` == **`282bf33`**（更新于 2026-09-26 21:2x；此表此前写成 `64ab654`，落后一次提交） |
 | 其他分支 | `master`（92f6977，历史遗留，与 main 分叉，勿动）、`feature/npp`、`codex/*` 系列 |
 | 保护分支 | `codex/backup/pre-deepening-20260807`（勿覆盖）|
 
@@ -462,6 +462,29 @@ $PY _原型/push_via_ssh.py feature/demo-guide:main    # 快进推 main
 - 脚本会往 `%TEMP%\gh_push_ssh_config` 写一份 ssh config（**UTF-8**——本路径含中文，
   用 ASCII 写会直接 `UnicodeEncodeError`），ProxyCommand 指回自身 `--bridge` 模式。
 - 备选（需人工）：`gh auth refresh -h github.com -s workflow`，或建 classic PAT 勾 `repo` + `workflow`。
+
+### 已踩的第三个坑：本地 ref 写不进去（2026-09-26 实测）
+
+现象：`git commit` 成功（打印 `[feature/demo-guide 282bf33]`，对象也写进 `.git/objects`），
+但**分支 ref 文件没落盘** → 紧接着 `git log` 报 `your current branch does not have any commits yet`。
+`git update-ref` / `git branch -f` 同样**返回成功却不写文件**。
+
+判据与处置：
+
+- 先查三处：<code>cat .git/HEAD</code>、<code>ls .git/refs/heads/</code>、<code>tail .git/logs/refs/heads/&lt;分支&gt;</code>。
+  **reflog 是权威依据** —— 它记录了 git 自己认为该分支应该指向哪个提交，用它来恢复不会丢东西。
+- 恢复手段（实测有效）：手动建目录再写文件，git 随即能解析——
+
+  ```bash
+  mkdir -p .git/refs/heads/feature
+  printf '<40位sha>\n' > .git/refs/heads/feature/demo-guide
+  git rev-parse HEAD     # 应立刻能解析
+  ```
+
+- **连带风险**：此时 <code>git branch -f main origin/main</code> 会拿**陈旧的 <code>origin/main</code>**
+  （本机 packed-refs 里残留过 <code>903df8c</code>，而远端其实是 <code>64ab654</code>）把本地 <code>main</code> 带歪。
+  所以对齐本地引用前，**先用 <code>git ls-remote origin</code> 确认远端真值**，再按真值写，**不要用本地的 remote-tracking ref**。
+- 顺序：推完先 <code>git ls-remote origin</code> 核对远端，再按远端值修本地 ref，最后 <code>git status</code> 确认干净。
 
 ### 其他两个已踩的坑
 
