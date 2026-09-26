@@ -48,7 +48,7 @@ DOC_TEMPLATE: list[tuple[str, str, str, str, bool]] = [
     # 主体资料（6）
     ("subject_name", "主体名称", "主体资料", "行内", True),
     ("subject_type", "主体类型", "主体资料", "行内", True),
-    ("region_name", "所在地区", "主体资料", "行内", True),
+    ("region_name", "所在地区", "主体资料", "行内", False),
     ("customer_manager", "客户经理", "主体资料", "行内", True),
     ("grassland_mu", "草场面积", "主体资料", "行内", True),
     ("grassland_title", "草场权属证明", "主体资料", "客户提供", False),
@@ -383,9 +383,102 @@ def _find_subject(ctx: dict[str, Any], name: str) -> dict[str, Any] | None:
     return None
 
 
+# --------------------------------------------------------------------------
+# 授信测算（唯一金额链）
+# --------------------------------------------------------------------------
+
+# 主体 → 测算案例的显式对应。
+# 不用「同名 / 同县」模糊匹配：同一个县有多户主体（如 naqu-bange 有 3 户），
+# 模糊匹配会把别人家的测算结果套到这户头上。
+# 案例自带 name 与主体名一致时自动对应，不一致的在这里显式登记。
+_SUBJECT_CASE_ALIAS: dict[str, str] = {
+    "百巴村牦牛养殖合作社": "baiba-village",
+}
+
+
+def _load_cases() -> dict[str, Any]:
+    """读取授信测算案例（credit_cases.json）。"""
+    try:
+        from .store import read_credit_cases  # type: ignore[import-not-found]
+    except ImportError:  # pragma: no cover - 脚本方式直接跑
+        from store import read_credit_cases  # type: ignore[no-redef]
+    try:
+        return read_credit_cases().get("cases") or {}
+    except Exception:  # noqa: BLE001 - 案例文件异常按「不可用」报，见 credit_estimate
+        return {}
+
+
+def _estimate_for(name: str, cases: dict[str, Any]) -> dict[str, Any]:
+    """按主体名取测算结果。cases 由调用方一次载入，避免逐户读盘。"""
+    case = None
+    for cand in cases.values():
+        if cand.get("name") == name:
+            case = cand
+            break
+    if case is None:
+        alias_id = _SUBJECT_CASE_ALIAS.get(name)
+        if alias_id:
+            case = cases.get(alias_id)
+    if case is None:
+        return {
+            "state": "no_case",
+            "status": None,
+            "amount_yuan": None,
+            "note": "该户尚未建立测算案例，故不显示建议金额",
+        }
+
+    try:
+        from .credit_decision import evaluate_credit_case  # type: ignore[import-not-found]
+    except ImportError:  # pragma: no cover - 脚本方式直接跑
+        from credit_decision import evaluate_credit_case  # type: ignore[no-redef]
+
+    result = evaluate_credit_case(case)
+    amount = result.get("recommended_amount_yuan")
+    dscr = result.get("dscr")
+    return {
+        "state": "ok",
+        "case_id": result.get("case_id") or "",
+        "case_name": result.get("case_name") or "",
+        "status": result.get("status") or "",
+        "amount_yuan": int(amount) if amount is not None else None,
+        "reason": result.get("reason") or "",
+        "gap_yuan": float(result.get("gap_yuan") or 0),
+        "missing_materials": list(result.get("missing_materials") or []),
+        "bottleneck": result.get("bottleneck") or {},
+        "dscr": float(dscr) if dscr is not None else None,
+        "data_status": result.get("data_status") or {},
+    }
+
+
+def credit_estimate(name: str) -> dict[str, Any]:
+    """该主体的授信测算结果（唯一金额链输出）。
+
+    三种状态显式区分，互不冒充：
+      - ok          : 走了 evaluate_credit_case，金额与瓶颈都来自计算；
+      - no_case     : 该户没有测算案例（银行版 76 户里目前只有 2 户有）；
+      - unavailable : 案例文件缺失或损坏 —— 与 no_case 分开报，避免「数据坏了」看起来像「没案例」。
+
+    **不得用行内已有授信额度（credit_line）顶替建议金额。**
+    """
+    cases = _load_cases()
+    if not cases:
+        return {
+            "state": "unavailable",
+            "status": None,
+            "amount_yuan": None,
+            "note": "测算案例文件缺失或损坏，当前无法给出建议金额",
+        }
+    return _estimate_for(name, cases)
+
+
 def _conclusion(subject: dict[str, Any], fin: dict[str, Any] | None,
                 ledger: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
-    """准入结论（L1）。判定顺序：无授信资料 -> 待补资料；有逾期或高无票出栏 -> 待核查；否则可测算。"""
+    """准入结论（L1）。判定顺序：无授信资料 -> 待补资料；有逾期或高无票出栏 -> 待核查；否则可测算。
+
+    只给准入结论，**不给金额**：建议金额一律由唯一额度链给出
+    （credit_decision.evaluate_credit_case，见 credit_estimate），
+    不得拿行内已有授信额度回显顶替。
+    """
     fin = fin or {}
     has_credit = bool(fin.get("credit_line"))
     has_land = bool(subject.get("grassland_mu"))
@@ -402,7 +495,7 @@ def _conclusion(subject: dict[str, Any], fin: dict[str, Any] | None,
             "status": "待补资料", "tone": "warn",
             "headline": "待补资料 · 未测算",
             "note": f"资料完整度 {completeness}% ｜ 缺 {'、'.join(missing_critical) or '关键资料'}",
-            "action": "发起补录", "amount_yuan": None,
+            "action": "发起补录",
         }
     if overdue > 0 or ledger["unpriced_ratio"] >= 30:
         reasons = []
@@ -414,14 +507,13 @@ def _conclusion(subject: dict[str, Any], fin: dict[str, Any] | None,
             "status": "待核查", "tone": "danger",
             "headline": "暂缓放款 · 待核查",
             "note": f"前置条件未满足：{'；'.join(reasons)}",
-            "action": "发起核查", "amount_yuan": None,
+            "action": "发起核查",
         }
     return {
         "status": "可测算", "tone": "ok",
-        "headline": "可贷",
-        "note": f"资料完整度 {completeness}% ｜ 准入资料齐备",
-        "action": "提交测算",
-        "amount_yuan": int(_num(fin.get("credit_line")) * 10000),
+        "headline": "可贷 · 待测算",
+        "note": f"资料完整度 {completeness}% ｜ 准入资料齐备 ｜ 建议金额需经额度链测算给出",
+        "action": "查看测算",
     }
 
 
@@ -462,6 +554,7 @@ def customer_profile(name: str) -> dict[str, Any]:
         "subject_name": name,
         "subject": {k: v for k, v in subject.items() if k != "name"},
         "conclusion": conclusion,
+        "estimate": credit_estimate(name),
         "finance": fin or {},
         "ledger": ledger,
         "documents_summary": docs["summary"],
@@ -482,8 +575,13 @@ def customer_profile(name: str) -> dict[str, Any]:
 # --------------------------------------------------------------------------
 
 def customer_pool() -> dict[str, Any]:
-    """客户池：客户列表 + 获客来源分布。"""
+    """客户池：客户列表 + 获客来源分布。
+
+    行内 `credit_line_yuan` 是**已有授信额度**（万元 x 10000），不是额度链算出的建议金额；
+    建议金额看每行的 `estimate` —— 无测算案例的户为 no_case，一律不显示金额。
+    """
     ctx = _load_all()
+    cases = _load_cases()
     rows: list[dict[str, Any]] = []
     source_count: dict[str, int] = defaultdict(int)
 
@@ -491,10 +589,14 @@ def customer_pool() -> dict[str, Any]:
         name = s.get("name")
         if not name:
             continue
-        fin = ctx["finance"].get(name)
+        fin = ctx["finance"].get(name) or {}
         ledger = _derive_ledger(s, ctx)
         docs = customer_documents(name)
         conclusion = _conclusion(s, fin, ledger, docs)
+        if cases:
+            est = _estimate_for(name, cases)
+        else:
+            est = {"state": "unavailable"}
         src = _derive_source(ctx, name)
         source_count[src] += 1
         rows.append({
@@ -506,13 +608,19 @@ def customer_pool() -> dict[str, Any]:
             "admission_stage": s.get("admission_stage"),
             "conclusion_status": conclusion["status"],
             "conclusion_tone": conclusion["tone"],
-            "amount_yuan": conclusion["amount_yuan"],
+            "conclusion_headline": conclusion["headline"],
+            "credit_line_yuan": int(_num(fin.get("credit_line")) * 10000),
+            "estimate": {
+                "state": est.get("state"),
+                "status": est.get("status"),
+                "amount_yuan": est.get("amount_yuan"),
+            },
             "score": s.get("score"),
             "completeness": docs["summary"]["completeness"],
             "source": src,
         })
 
-    rows.sort(key=lambda r: (-(r["amount_yuan"] or 0), -r["completeness"]))
+    rows.sort(key=lambda r: (-r["credit_line_yuan"], -r["completeness"]))
     return {
         "total": len(rows),
         "sources": [{"source": k, "count": v} for k, v in

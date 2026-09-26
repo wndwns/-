@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-import json, math, calendar
+import json, math, calendar, time
 from pathlib import Path
 from collections import defaultdict
 from datetime import date, timedelta
@@ -768,14 +768,43 @@ EXTERNAL_DISASTER_APIS = {
 }
 
 
-def compute_spi(region_id: str, target_month: str, scale: int = 3) -> dict[str, Any]:
+def latest_climate_month(region_id: str) -> str:
+    """气候数据里可用于「当期」对照的月份。
+
+    取该县记录中**与当前月份相同**的最近一年（今天 2026-09 -> 2025-09）。
+
+    为什么不取「数据里最后一个月」：青藏高原冬季降水趋近 0，历史标准差随之趋近 0，
+    Z-score 版 SPI 会爆出无意义量级（实测目标月 2025-12 时谢通门 SPI = +14.82，
+    被判成「严重洪涝」）。同月对照可避开这一点。
+
+    为什么不取「系统当前月」：数据滞后时该月无记录，monthly_precip.get(k, 0)
+    会把它静默当作 0 降水，于是 (0 - 历史均值) / 历史标准差 恒为极端负值 ——
+    实测 2026-09 时 26 个县 SPI 全在 -12.46 ~ -3.09，集体误报「严重干旱」。
+    """
+    records = _load_climate().get(region_id) or []
+    dates = [r.get("date") or "" for r in records]
+    dates = [d for d in dates if len(d) >= 7]
+    if not dates:
+        return date.today().strftime("%Y-%m")
+    cur_month = date.today().strftime("%m")
+    same = sorted({d[:7] for d in dates if d[5:7] == cur_month})
+    if same:
+        return same[-1]
+    return max(d[:7] for d in dates)
+
+
+def compute_spi(region_id: str, target_month: str | None = None,
+                scale: int = 3) -> dict[str, Any]:
     """简化 SPI 干旱指数计算。
 
     SPI-3: 前 3 个月累计降水标准化异常。
     SPI < -1: 轻度干旱, < -1.5: 中度, < -2: 严重。
 
     标准 SPI 需 Gamma 分布拟合, 此处用 Z-score 简化。
+    target_month 省略时取 latest_climate_month(region_id)。
     """
+    if target_month is None:
+        target_month = latest_climate_month(region_id)
     climate = _load_climate()
     records = climate.get(region_id, [])
     if not records:
@@ -862,6 +891,164 @@ def compute_spi(region_id: str, target_month: str, scale: int = 3) -> dict[str, 
     }
 
 
+# ---------------------------------------------------------------------------
+# 雪深预报取数与缓存
+# ---------------------------------------------------------------------------
+# 为什么要这一段：snow_disaster_risk 原本每次调用都实时打 Open-Meteo（单县实测约 2.9 秒），
+# 而 /api/warning/comprehensive-all 要对 26 个县串行调用 → 实测 76~88 秒。
+# Open-Meteo 支持一次请求多个坐标（latitude=a,b,c & longitude=x,y,z，返回数组），
+# 所以「预热一次」只需 1 次 HTTP，之后 26 个县全部命中缓存。
+#
+# 缓存策略：
+#   - TTL 默认 30 分钟（预报本身按小时更新，没必要每次都拉）
+#   - 取到空结果时用较短的「失败 TTL」重试窗口，避免网络抖动被缓存半小时
+#   - 全部取不到时上层仍会走 ERA5 历史同期降级分支（原有行为，不变）
+
+_SNOW_TTL_SECONDS = 30 * 60
+_SNOW_FAIL_TTL_SECONDS = 5 * 60
+_snow_cache: dict[str, dict[str, Any]] = {}
+_county_coords_cache: dict[str, dict[str, float]] | None = None
+
+
+def _county_coords() -> dict[str, dict[str, float]]:
+    """县坐标表。只在首次读盘，之后走内存。
+
+    ⚠️ 路径必须从**项目根**取：`parents[1] / "public_data"`。
+    此前写成 `BASE / "public_data"`（BASE 是 backend 目录），而文件在项目根，
+    于是坐标表恒为空 → 所有县都退回默认坐标 (31.36, 90.01) → 26 个县查的是同一个点。
+    `feed_calculator.py` 用的是正确写法，可对照。
+    """
+    global _county_coords_cache
+    if _county_coords_cache is not None:
+        return _county_coords_cache
+    coords: dict[str, dict[str, float]] = {}
+    csv_path = Path(__file__).resolve().parents[1] / "public_data" / "region_list.csv"
+    if csv_path.exists():
+        import csv
+        with open(csv_path, encoding="utf-8-sig") as f:
+            for row in csv.DictReader(f):
+                coords[row.get("region_id", "")] = {
+                    "lat": float(row.get("latitude", 31)),
+                    "lon": float(row.get("longitude", 90)),
+                }
+    _county_coords_cache = coords
+    return coords
+
+
+def _fetch_snow_forecast(region_ids: list[str],
+                         days_ahead: int = 16) -> dict[str, list[dict[str, Any]]]:
+    """一次 HTTP 拿多个县的雪深/降雪预报（Open-Meteo 多坐标）。
+
+    变量与时区（2026-09-26 实测确认，API 自报单位见 daily_units）：
+      - daily=snow_depth_max  单位 **米**  -> 换算成厘米需 ×100
+      - daily=snowfall_sum    单位 **厘米** -> 原样
+    注意：daily 里**没有** `snow_depth` 这个变量（只有 hourly 有），
+    之前用 `daily=snow_depth` 会拿到 HTTP 400，取数永远失败。
+
+    Returns:
+        {region_id: [{"date", "snow_depth_cm", "snowfall_cm"}, ...]}
+        取不到的县不在返回里（调用方按空处理，会走 ERA5 降级）。
+    """
+    from urllib.request import Request, build_opener, ProxyHandler, urlopen
+    from urllib.parse import urlencode
+
+    if not region_ids:
+        return {}
+    coords_map = _county_coords()
+    picked = [(rid, coords_map.get(rid) or {"lat": 31.36, "lon": 90.01})
+              for rid in region_ids]
+
+    forecast_days = min(days_ahead, 16)
+    params = urlencode({
+        "latitude": ",".join(str(p[1]["lat"]) for p in picked),
+        "longitude": ",".join(str(p[1]["lon"]) for p in picked),
+        "daily": "snow_depth_max,snowfall_sum",
+        "forecast_days": forecast_days,
+        "timezone": "Asia/Shanghai",
+    })
+    req = Request(
+        f"https://api.open-meteo.com/v1/forecast?{params}",
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+    )
+    try:
+        try:
+            opener = build_opener(ProxyHandler({}))
+            with opener.open(req, timeout=20) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        except Exception:  # noqa: BLE001 - 直连失败回退带代理
+            with urlopen(req, timeout=20) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+
+    # 单坐标 Open-Meteo 返回对象，多坐标返回数组 —— 统一成列表再逐县取
+    items = payload if isinstance(payload, list) else [payload]
+    out: dict[str, list[dict[str, Any]]] = {}
+    for (rid, _), item in zip(picked, items):
+        if not isinstance(item, dict):
+            continue
+        daily = item.get("daily") or {}
+        dates = daily.get("time") or []
+        depths = daily.get("snow_depth_max") or [0] * len(dates)
+        falls = daily.get("snowfall_sum") or [0] * len(dates)
+        rows = []
+        for i, d in enumerate(dates):
+            depth_m = depths[i] if i < len(depths) else 0
+            fall_cm = falls[i] if i < len(falls) else 0
+            rows.append({
+                "date": d,
+                # snow_depth_max 单位是米 -> 厘米
+                "snow_depth_cm": round((depth_m or 0) * 100, 1),
+                "snowfall_cm": round(fall_cm or 0, 1),
+            })
+        if rows:
+            out[rid] = rows
+    return out
+
+
+def _snow_cache_get(region_id: str) -> list[dict[str, Any]] | None:
+    """命中且未过期才返回；否则 None（空结果用更短的失败 TTL）。"""
+    item = _snow_cache.get(region_id)
+    if not item:
+        return None
+    ttl = _SNOW_TTL_SECONDS if item["forecast"] else _SNOW_FAIL_TTL_SECONDS
+    if time.time() - item["at"] > ttl:
+        return None
+    return item["forecast"]
+
+
+def _snow_cache_put(region_id: str, forecast: list[dict[str, Any]]) -> None:
+    _snow_cache[region_id] = {"at": time.time(), "forecast": forecast}
+
+
+def prefetch_snow_forecasts(region_ids: list[str] | None = None,
+                            days_ahead: int = 16) -> dict[str, Any]:
+    """预热雪深预报缓存：一次 HTTP 拉多个县。
+
+    返回统计信息，便于在接口里回显「这次到底打了几次外部 API」。
+    """
+    if region_ids is None:
+        region_ids = sorted(_county_coords().keys())
+    need = [r for r in region_ids if _snow_cache_get(r) is None]
+    started = time.time()
+    fetched: list[str] = []
+    if need:
+        got = _fetch_snow_forecast(need, days_ahead)
+        for rid in need:
+            rows = got.get(rid) or []
+            _snow_cache_put(rid, rows)
+            if rows:
+                fetched.append(rid)
+    return {
+        "requested": len(region_ids),
+        "from_cache": len(region_ids) - len(need),
+        "http_calls": 1 if need else 0,
+        "fetched": len(fetched),
+        "empty": len(need) - len(fetched),
+        "elapsed_ms": round((time.time() - started) * 1000),
+    }
+
+
 def snow_disaster_risk(region_id: str, days_ahead: int = 16) -> dict[str, Any]:
     """雪灾风险评估。
 
@@ -871,63 +1058,19 @@ def snow_disaster_risk(region_id: str, days_ahead: int = 16) -> dict[str, Any]:
           雪深 ≥ 5cm 持续 ≥ 3天 → 轻度雪灾
           雪深 ≥ 10cm 持续 ≥ 5天 → 中度雪灾
           雪深 ≥ 15cm 持续 ≥ 7天 → 重度雪灾
+
+    取数走 _snow_cache：预热后（见 prefetch_snow_forecasts）0 次 HTTP，
+    未命中才单县拉一次；拉不到则走下面的 ERA5 历史同期降级分支。
     """
-    from urllib.request import Request, build_opener, ProxyHandler, urlopen
-    from urllib.parse import urlencode as _urlencode
-
-    # 获取坐标
-    county_coords = {}
-    csv_path = BASE / "public_data" / "region_list.csv"
-    if csv_path.exists():
-        import csv
-        with open(csv_path, encoding="utf-8-sig") as f:
-            for row in csv.DictReader(f):
-                county_coords[row.get("region_id", "")] = {
-                    "lat": float(row.get("latitude", 31)),
-                    "lon": float(row.get("longitude", 90)),
-                }
-
-    coords = county_coords.get(region_id, {"lat": 31.36, "lon": 90.01})
-
-    # 获取天气预报
     forecast_days = min(days_ahead, 16)
     today = date.today().isoformat()
     end_date = (date.today() + timedelta(days=forecast_days - 1)).isoformat()
 
-    snow_forecast = []
-    try:
-        params = _urlencode({
-            "latitude": coords["lat"],
-            "longitude": coords["lon"],
-            "daily": "snowfall_sum,snow_depth",
-            "start_date": today,
-            "end_date": end_date,
-            "timezone": "Asia/Shanghai",
-        })
-        req = Request(
-            f"https://api.open-meteo.com/v1/forecast?{params}",
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
-        )
-        try:
-            opener = build_opener(ProxyHandler({}))
-            with opener.open(req, timeout=10) as resp:
-                payload = json.loads(resp.read().decode("utf-8"))
-        except Exception:
-            with urlopen(req, timeout=10) as resp:
-                payload = json.loads(resp.read().decode("utf-8"))
-
-        daily = payload.get("daily", {})
-        dates = daily.get("time", [])
-        for i, d in enumerate(dates):
-            snow_depth = (daily.get("snow_depth", [0] * len(dates))[i] or 0) / 100
-            snowfall = (daily.get("snowfall_sum", [0] * len(dates))[i] or 0) / 10
-            snow_forecast.append({
-                "date": d,
-                "snow_depth_cm": round(snow_depth, 1),
-                "snowfall_cm": round(snowfall, 1),
-            })
-    except Exception:
-        pass
+    snow_forecast = _snow_cache_get(region_id)
+    if snow_forecast is None:
+        fetched = _fetch_snow_forecast([region_id], days_ahead)
+        snow_forecast = fetched.get(region_id) or []
+        _snow_cache_put(region_id, snow_forecast)
 
     # 从历史数据补充或其他来源
     if not snow_forecast:
@@ -1039,9 +1182,8 @@ def comprehensive_warning(region_id: str, target_year: int | None = None) -> dic
     # 3. NDVI 实时监控
     ndvi_result = check_realtime_ndvi(region_id, latest_available_month)
 
-    # 4. 旱灾风险
-    today_month = date.today().strftime("%Y-%m")
-    drought_result = compute_spi(region_id, today_month)
+    # 4. 旱灾风险（目标月 = 与当前月份相同的最近一年，见 latest_climate_month）
+    drought_result = compute_spi(region_id)
 
     # 5. 雪灾风险
     snow_result = snow_disaster_risk(region_id)
@@ -1205,7 +1347,7 @@ if __name__ == "__main__":
 
     elif args[0] == "spi":
         rid = args[1] if len(args) > 1 else "naqu-bange"
-        result = compute_spi(rid, date.today().strftime("%Y-%m"))
+        result = compute_spi(rid)
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
     else:

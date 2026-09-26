@@ -171,6 +171,18 @@ class CreditDecisionEvaluateRequest(BaseModel):
     inputs: dict[str, Any] = Field(default_factory=dict)
 
 
+class BankTaskRequest(BaseModel):
+    """银行版操作任务请求：控制台上的「补录 / 核验 / 处置 / 转派」按钮落库。
+
+    最小实现：只追加一条留痕记录，不做状态流转（那属方案稿二期「贷后任务闭环」）。
+    """
+    subject_name: str
+    action: str
+    detail: str = ""
+    owner: str = ""
+    due_days: int | None = None
+
+
 class DemoGuideRequest(BaseModel):
     """演示助手消息请求。"""
     query: str
@@ -486,6 +498,53 @@ def create_app() -> FastAPI:
     def bank_regions() -> dict[str, Any]:
         """区域与集中度：按县统计投放、额度池占用与耳标归属头数。"""
         return _bank_view.region_board()
+
+    @app.get("/api/bank/tasks")
+    def bank_tasks_list(name: str | None = None) -> dict[str, Any]:
+        """银行版操作留痕：任务列表（可按客户过滤）+ 概览。
+
+        GET /api/bank/tasks               → 全部（最近 50 条）
+        GET /api/bank/tasks?name=某客户    → 单户留痕
+        """
+        try:
+            from bank_tasks import list_tasks, summary, TaskWriteError
+        except ImportError:
+            from backend.bank_tasks import (  # type: ignore[no-redef]
+                list_tasks, summary, TaskWriteError)
+
+        try:
+            rows = list_tasks(name)
+        except TaskWriteError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail={"error": "bank_tasks_unavailable", "message": str(exc)},
+            )
+        return {"tasks": rows, "count": len(rows), "summary": summary()}
+
+    @app.post("/api/bank/task")
+    def bank_task_create(payload: BankTaskRequest) -> dict[str, Any]:
+        """登记一条操作任务（补录 / 核验 / 处置 / 转派 / 批量处置）。
+
+        这是「预警 → 任务 → 处置 → 留痕」的最小一步：只追加记录。
+        主体不存在 → 404；动作不在白名单 → 400；任务表损坏 → 500。
+        """
+        try:
+            from bank_tasks import create_task, TaskWriteError
+        except ImportError:
+            from backend.bank_tasks import create_task, TaskWriteError  # type: ignore[no-redef]
+
+        if not _bank_view.customer_profile(payload.subject_name).get("found"):
+            raise HTTPException(status_code=404,
+                                detail=f"Customer not found: {payload.subject_name}")
+        try:
+            row = create_task(payload.subject_name, payload.action,
+                              payload.detail, payload.owner, payload.due_days)
+        except TaskWriteError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "invalid_task", "message": str(exc)},
+            )
+        return {"ok": True, "task": row}
 
     @app.get("/api/weather")
     def weather(region_id: str | None = None) -> list[dict[str, Any]] | dict[str, Any]:
@@ -1648,14 +1707,20 @@ def create_app() -> FastAPI:
         """全部县域预警汇总。
 
         GET /api/warning/comprehensive-all?year=2025
+
+        性能：先一次预热雪深预报（Open-Meteo 多坐标，1 次 HTTP），再逐县算综合风险。
+        未预热时该接口曾要 76~88 秒 —— 26 个县各自实时打一次预报 API。
         """
         try:
-            from early_warning import comprehensive_warning, _load_npp_data
+            from early_warning import (comprehensive_warning, _load_npp_data,
+                                       prefetch_snow_forecasts)
         except ImportError:
-            from backend.early_warning import comprehensive_warning, _load_npp_data  # type: ignore[no-redef]
+            from backend.early_warning import (  # type: ignore[no-redef]
+                comprehensive_warning, _load_npp_data, prefetch_snow_forecasts)
 
         npp_data = _load_npp_data()
         regions = sorted(set(entry["region_id"] for entry in npp_data))
+        prefetch = prefetch_snow_forecasts(regions)
 
         results = {}
         high_risk = []
@@ -1677,6 +1742,7 @@ def create_app() -> FastAPI:
             "high_risk_regions": high_risk,
             "mid_risk_regions": mid_risk,
             "details": results,
+            "prefetch": prefetch,
         }
 
     @app.get("/api/warning/gdi")
@@ -1718,8 +1784,7 @@ def create_app() -> FastAPI:
         except ImportError:
             from backend.early_warning import compute_spi, snow_disaster_risk
 
-        today_month = date.today().strftime("%Y-%m")
-        drought = compute_spi(region_id, today_month)
+        drought = compute_spi(region_id)
         snow = snow_disaster_risk(region_id)
 
         return {

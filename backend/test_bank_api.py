@@ -11,6 +11,7 @@
 
 覆盖：
   - 8 个 /api/bank/* 端点：状态码与关键结构
+  - 建议金额来源：必须来自唯一额度链，不得回显行内授信额度（见 2026-09-25 口径待办）
   - 未知客户 -> 404
   - 单户档案：切换客户后内容确实不同（不是假按钮）
   - 一户一档：28 项 / 6 组，状态取值合法
@@ -80,11 +81,112 @@ def test_customer_pool_sorted_and_complete() -> None:
     assert pool["total"] == len(pool["customers"])
     srcs = {s["source"] for s in pool["sources"]}
     assert srcs, "获客来源不能为空"
-    # 可算额度的排在前面
-    amounts = [c["amount_yuan"] or 0 for c in pool["customers"]]
-    assert amounts == sorted(amounts, reverse=True), "客户池应按可算额度降序"
+    # 按行内已有授信额度降序（不是建议金额——建议金额只有部分户有）
+    amounts = [c["credit_line_yuan"] for c in pool["customers"]]
+    assert amounts == sorted(amounts, reverse=True), "客户池应按已有授信额度降序"
     for c in pool["customers"]:
         assert 0 <= c["completeness"] <= 100
+
+
+def test_amount_comes_from_credit_chain_not_credit_line() -> None:
+    """「建议金额」必须来自唯一额度链，不得用行内已有授信额度回显顶替。
+
+    背景：2026-09-25 定位到 bank_view._conclusion() 曾以
+    ``int(finance.credit_line * 10000)`` 当建议金额输出，界面在客户档案 L1 标成
+    「建议 X 万」；而黄金案例走唯一额度链算出的结果应是 900000 元（90 万）。
+    旧用例只断言结构、不断言金额来源，所以 14/14 全绿也没拦住。本用例补上「来源」断言。
+    """
+    pool = _get("/api/bank/customer-pool")
+
+    # 1) 列表里不再有冒充建议金额的顶层 amount_yuan；授信额度单列且语义明确
+    for c in pool["customers"]:
+        assert "amount_yuan" not in c, f"{c['subject_name']} 仍在顶层输出 amount_yuan"
+        assert "credit_line_yuan" in c, f"{c['subject_name']} 缺 credit_line_yuan"
+        est = c["estimate"]
+        assert est["state"] in ("ok", "no_case", "unavailable")
+
+    # 2) 没有测算案例、或案例判不了/被拒的户，一律不得给出金额
+    for c in pool["customers"]:
+        est = c["estimate"]
+        if est["state"] != "ok" or est.get("status") != "feasible":
+            assert est.get("amount_yuan") is None, (
+                f"{c['subject_name']} 状态 {est['state']}/{est.get('status')} 却给了金额"
+            )
+
+    # 3) 黄金案例户：金额来自额度链，且不等于授信额度回显
+    prof = _get("/api/bank/customer/班戈县绿色牧业合作社")
+    est = prof["estimate"]
+    assert est["state"] == "ok", "班戈户应有测算案例"
+    assert est["amount_yuan"] == 900000, f"黄金案例建议金额应保持 900000，实为 {est['amount_yuan']}"
+    credit_line_yuan = int(float(prof["finance"]["credit_line"]) * 10000)
+    assert est["amount_yuan"] != credit_line_yuan, "建议金额不得等于行内授信额度回显"
+    assert est["bottleneck"]["final"] == "qualified_demand", "黄金案例最终瓶颈应是需求侧"
+
+
+def test_concurrent_task_writes_do_not_corrupt_store() -> None:
+    """并发登记任务不得把 bank_tasks.json 写坏。
+
+    背景：bank_tasks.create_task 是「读-改-写」，FastAPI 同步路由跑在线程池里，
+    前端批量登记又是并发 POST —— 2026-09-26 实测 10 个并发请求直接把文件写成
+    ``Extra data: line 46 column 2``。修法：模块内加写锁 + 临时文件原子替换。
+    本用例并发打 12 次，断言：全部 2xx、任务条数 == 成功次数、文件仍是合法 JSON。
+    """
+    import json as _json
+    import threading
+    from pathlib import Path as _Path
+
+    backend_dir = _Path(__file__).resolve().parent
+    tasks_file = backend_dir / "data_store" / "bank_tasks.json"
+    backup = tasks_file.read_text(encoding="utf-8") if tasks_file.exists() else None
+
+    subject = "班戈县绿色牧业合作社"
+    results: list[int] = []
+    lock = threading.Lock()
+
+    def fire(i: int) -> None:
+        r = _client.post("/api/bank/task", json={
+            "subject_name": subject, "action": "核验",
+            "detail": f"并发回归 #{i}", "owner": "test", "due_days": 3,
+        })
+        with lock:
+            results.append(r.status_code)
+
+    try:
+        threads = [threading.Thread(target=fire, args=(i,)) for i in range(12)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=60)
+
+        assert len(results) == 12, f"并发请求没全部返回：{results}"
+        assert all(200 <= c < 300 for c in results), f"有非 2xx：{results}"
+
+        # 文件必须是合法 JSON，且条数不小于成功次数（并发下可能叠加历史记录）
+        data = _json.loads(tasks_file.read_text(encoding="utf-8"))
+        assert isinstance(data, list), "任务表不是数组"
+        mine = [r for r in data if r.get("owner") == "test"]
+        assert len(mine) == 12, f"并发写入丢了记录：期望 12 条，实际 {len(mine)}"
+
+        # 列表接口应能读出来（读路径也没被写坏）
+        listed = _get("/api/bank/tasks")
+        assert listed["count"] >= 12
+    finally:
+        # 还原（不留测试垃圾）
+        if backup is None:
+            tasks_file.unlink(missing_ok=True)
+        else:
+            tasks_file.write_text(backup, encoding="utf-8")
+
+
+def test_task_rejects_unknown_action_and_navigation_only() -> None:
+    """动作白名单：乱写要 400，纯跳转动作（查看）不落库。"""
+    for bad in ({"subject_name": "班戈县绿色牧业合作社", "action": "随便写"},
+                {"subject_name": "班戈县绿色牧业合作社", "action": "查看"}):
+        r = _client.post("/api/bank/task", json=bad)
+        assert r.status_code == 400, f"{bad['action']} -> {r.status_code}"
+    # 未知客户 -> 404
+    r = _client.post("/api/bank/task", json={"subject_name": "不存在的人", "action": "核验"})
+    assert r.status_code == 404, f"未知客户 -> {r.status_code}"
 
 
 def test_unknown_customer_returns_404() -> None:

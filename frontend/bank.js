@@ -22,13 +22,33 @@
     ledger: '/api/bank/ledger',
     postloan: '/api/bank/post-loan',
     insurance: '/api/bank/insurance',
-    regions: '/api/bank/regions'
+    regions: '/api/bank/regions',
+    tasks: '/api/bank/tasks',
+    task: '/api/bank/task'
   };
 
   function get(url) {
     return fetch(url, { headers: { Accept: 'application/json' } }).then(function (r) {
       if (!r.ok) { throw new Error(url + ' -> ' + r.status); }
       return r.json();
+    });
+  }
+
+  /** POST JSON。失败时尽量把后端的 detail 原文带出来（后端对业务错误用 400 + {message}）。 */
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body || {})
+    }).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (data) {
+        if (!r.ok) {
+          var detail = data && data.detail;
+          var msg = (detail && (detail.message || detail)) || ('HTTP ' + r.status);
+          throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        }
+        return data;
+      });
     });
   }
 
@@ -63,7 +83,13 @@
         profile: {}, docs: { items: [], groups: [], summary: {} },
         currentName: '',
         led: {}, post: { queue: [], by_level: {} }, ins: { queue: [], claims: [], discount_tiers: [] },
-        reg: { rows: [] }
+        reg: { rows: [] },
+        /* 操作留痕（银行版控制台按钮落库） */
+        tasks: { tasks: [], count: 0, summary: {} },
+        taskForm: {
+          open: false, action: '', subject_name: '', detail: '', owner: '',
+          due_days: 7, busy: false, error: '', done: ''
+        }
       };
     },
 
@@ -86,7 +112,7 @@
       this.crumb = '工作台';
       var self = this;
       // 首屏只加载工作台需要的两块数据
-      Promise.all([this.loadOverview(), this.loadPostLoan(), this.loadPool()])
+      Promise.all([this.loadOverview(), this.loadPostLoan(), this.loadPool(), this.loadTasks()])
         .catch(function (e) { self.error = String(e.message || e); });
     },
 
@@ -101,7 +127,7 @@
         this.crumb = this.crumbText;
         window.scrollTo(0, 0);
         if (p === 'ledger') { this.loadLedger(); }
-        if (p === 'postloan') { this.loadPostLoan(); }
+        if (p === 'postloan') { this.loadPostLoan(); this.loadTasks(); }
         if (p === 'insurance') { this.loadInsurance(); }
         if (p === 'region') { this.loadRegions(); }
         if (p === 'pool') { this.loadPool(); }
@@ -196,9 +222,141 @@
         if (!yuan) { return '—'; }
         return (yuan / 10000).toFixed(0) + ' 万元';
       },
+      /* ---------------- 操作任务（按钮落库 + 留痕） ----------------
+         跳转类按钮只切 Tab；写操作类（补录/核验/处置/转派/批量处置）走 POST /api/bank/task，
+         真写入 data_store/bank_tasks.json。                                        */
+      loadTasks: function (name) {
+        var self = this;
+        var url = API.tasks + (name ? ('?name=' + encodeURIComponent(name)) : '');
+        return get(url).then(function (d) { self.tasks = d; return d; })
+          .catch(function (e) {
+            self.tasks = { tasks: [], count: 0,
+                           summary: { available: false, note: String(e.message || e) } };
+          });
+      },
+      openTask: function (action, subjectName, detail) {
+        this.taskForm = {
+          open: true, action: action, subject_name: subjectName || '',
+          detail: detail || '', owner: '', due_days: 7,
+          busy: false, error: '', done: '', bulk_names: null, note: ''
+        };
+      },
+      taskAction: function (action, detail) {
+        var name = (this.profile && this.profile.subject_name) || this.currentName || '';
+        this.openTask(action, name, detail);
+      },
+      taskActionFor: function (action, subjectName, detail) {
+        this.openTask(action, subjectName, detail);
+      },
+      bulkAction: function (action) {
+        var q = (this.post && this.post.queue) || [];
+        var names = [];
+        for (var i = 0; i < q.length && names.length < 10; i++) {
+          if (q[i] && q[i].subject_name && names.indexOf(q[i].subject_name) < 0) {
+            names.push(q[i].subject_name);
+          }
+        }
+        if (!names.length) { this.error = '队列为空，没有可批量处置的对象'; return; }
+        this.openTask(action, names[0], action + '：队列前 ' + names.length + ' 户');
+        this.taskForm.bulk_names = names;
+        this.taskForm.note = '将对任务队列前 ' + names.length + ' 户各登记一条留痕';
+      },
+      submitTask: function () {
+        var f = this.taskForm;
+        if (f.busy) { return; }
+        f.error = ''; f.done = '';
+        if (!f.subject_name) { f.error = '缺少客户'; return; }
+        var self = this;
+        var names = (f.bulk_names && f.bulk_names.length) ? f.bulk_names : [f.subject_name];
+        var payloads = names.map(function (n) {
+          return { subject_name: n, action: f.action, detail: f.detail,
+                   owner: f.owner, due_days: f.due_days || null };
+        });
+        f.busy = true;
+        /* 串行提交：批量登记时并发 POST 会在服务端形成读-改-写竞争
+           （服务端已加锁，但串行还能给出准确进度、也少一次失败回滚） */
+        var doneCount = 0;
+        var chain = Promise.resolve();
+        payloads.forEach(function (p) {
+          chain = chain.then(function () {
+            return post(API.task, p).then(function () {
+              doneCount++;
+              f.done = '已登记 ' + doneCount + ' / ' + payloads.length + ' 条';
+            });
+          });
+        });
+        chain
+          .then(function () {
+            f.busy = false;
+            f.done = '已登记 ' + doneCount + ' 条留痕';
+            return self.loadTasks();
+          })
+          .then(function () {
+            if (self.page === 'profile' && self.currentName) { return self.loadProfile(); }
+          })
+          .catch(function (e) {
+            f.busy = false;
+            f.error = '已登记 ' + doneCount + ' 条后失败：' + String(e.message || e);
+            return self.loadTasks();
+          });
+      },
+      /** L1 主按钮：查看测算只切 Tab；发起补录/核查 走留痕登记。 */
+      verdictAction: function () {
+        var a = (this.profile && this.profile.conclusion && this.profile.conclusion.action) || '';
+        if (a === '查看测算') { this.tab = 'credit'; return; }
+        if (a === '发起补录') { return this.taskAction('补录', '按准入结论发起补录'); }
+        if (a === '发起核查') { return this.taskAction('核验', '按准入结论发起核查'); }
+        this.tab = 'doc';
+      },
+
       fmtWan: function (v) {
         if (v === null || v === undefined || v === '') { return '—'; }
         return v + ' 万元';
+      },
+
+      /* ---------------- 测算结论 ----------------
+         建议金额只来自额度链测算（profile.estimate）；无案例的户一律不显示金额，
+         不得用行内已有授信额度（profile.finance.credit_line）顶替。      */
+      estLabel: function () {
+        var e = this.profile.estimate || {};
+        if (e.state !== 'ok') { return '—'; }
+        if (e.status === 'feasible') { return '可测算 · 已出金额'; }
+        if (e.status === 'blocked') { return '资料不足 · 不进入测算'; }
+        if (e.status === 'infeasible') { return '测算未通过 · 暂不放款'; }
+        return e.status || '—';
+      },
+      estCls: function () {
+        var e = this.profile.estimate || {};
+        if (e.status === 'feasible') { return 'b-ok'; }
+        if (e.status === 'infeasible') { return 'b-danger'; }
+        if (e.status === 'blocked') { return 'b-warn'; }
+        return 'b-info';
+      },
+      verdictHeadline: function () {
+        var e = this.profile.estimate || {};
+        if (e.state === 'ok') {
+          if (e.status === 'feasible') { return '可贷'; }
+          if (e.status === 'blocked') { return '资料不足 · 不进入测算'; }
+          if (e.status === 'infeasible') { return '测算未通过 · 暂不放款'; }
+        }
+        return (this.profile.conclusion || {}).headline || '';
+      },
+      verdictWan: function () {
+        var e = this.profile.estimate || {};
+        if (e.state === 'ok' && e.status === 'feasible' && e.amount_yuan) {
+          return '建议 ' + this.wan(e.amount_yuan);
+        }
+        return '';
+      },
+      verdictNote: function () {
+        var e = this.profile.estimate || {};
+        var base = (this.profile.conclusion || {}).note || '';
+        if (e.state === 'ok') { return e.reason || base; }
+        if (e.state === 'no_case') {
+          return '该户尚未建立测算案例，本次不给出建议金额 —— 建议金额只能由唯一额度链'
+            + '（必要饲草采购缺口 vs 供给侧四项取小）算出，需先补齐该户的经营与采购资料。';
+        }
+        return '测算案例数据不可用，当前无法给出建议金额。';
       },
       pctCls: function (p) {
         p = Number(p) || 0;

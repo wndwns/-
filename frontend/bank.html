@@ -114,16 +114,16 @@
         </div>
 
         <div class="card">
-          <div class="card-h"><h2>待营销名单 TOP 5</h2><span class="hint">按「可授信额度 × 资料完整度」排序</span></div>
+          <div class="card-h"><h2>待营销名单 TOP 5</h2><span class="hint">按行内已有授信额度排序，同额度看资料完整度</span></div>
           <div class="tw">
             <table>
-              <thead><tr><th>排名</th><th>客户</th><th>所在县</th><th class="r">可算额度</th><th>资料完整度</th><th>获客来源</th><th class="r">操作</th></tr></thead>
+              <thead><tr><th>排名</th><th>客户</th><th>所在县</th><th class="r">已有授信额度</th><th>资料完整度</th><th>获客来源</th><th class="r">操作</th></tr></thead>
               <tbody>
                 <tr v-for="(c, i) in (ov.top_prospects || [])" :key="c.subject_name">
                   <td class="num">{{ i + 1 }}</td>
                   <td class="linkish" @click="openCustomer(c.subject_name)">{{ c.subject_name }}</td>
                   <td>{{ c.region_name }}</td>
-                  <td class="r num">{{ wan(c.amount_yuan) }}</td>
+                  <td class="r num">{{ c.credit_line_yuan ? wan(c.credit_line_yuan) : '—' }}</td>
                   <td><div class="bar"><i :style="{ width: (c.completeness || 0) + '%' }"></i></div></td>
                   <td><span class="badge b-info">{{ c.source }}</span></td>
                   <td class="r"><span class="btn btn-sm btn-ghost" @click="openCustomer(c.subject_name)">看档案</span></td>
@@ -169,7 +169,7 @@
             <table>
               <thead><tr>
                 <th>客户名称</th><th>类型</th><th>所在县</th><th class="r">存栏</th>
-                <th class="r">草场(亩)</th><th>准入结论</th><th class="r">可算额度</th>
+                <th class="r">草场(亩)</th><th>准入结论</th><th class="r">已有授信额度</th>
                 <th class="r">资料</th><th class="r">操作</th>
               </tr></thead>
               <tbody>
@@ -180,7 +180,7 @@
                   <td class="r num">{{ c.book_head }}</td>
                   <td class="r num">{{ c.grassland_mu }}</td>
                   <td><span class="badge" :class="'b-' + c.conclusion_tone">{{ c.conclusion_status }}</span></td>
-                  <td class="r num">{{ c.amount_yuan ? wan(c.amount_yuan) : '—' }}</td>
+                  <td class="r num">{{ c.credit_line_yuan ? wan(c.credit_line_yuan) : '—' }}</td>
                   <td class="r"><span class="badge" :class="pctCls(c.completeness)">{{ c.completeness }}%</span></td>
                   <td class="r"><span class="btn btn-sm btn-ghost" @click="openCustomer(c.subject_name)">查看</span></td>
                 </tr>
@@ -192,7 +192,7 @@
             <div class="fold-body">
               <ul>
                 <li>主体与授信字段来自 <code>data_store/business_subjects.json</code> 与 <code>finance_credit.json</code>；源文件里已标注 <code>is_sample</code> 的原样透传，不冒充真实工行业务数据。</li>
-                <li>「存栏」= 牛 + 羊头数之和；「可算额度」按现有授信额度换算，<b>不是</b>完整定额模型的输出。</li>
+                <li>「存栏」= 牛 + 羊头数之和；「已有授信额度」取自行内授信记录，<b>不是</b>建议金额 —— 建议金额只由唯一额度链测算给出，见该户「客户档案 → 授信」。</li>
                 <li>「资料完整度」= ( 已填 + 待核验 × 0.5 ) ÷ 28，按一户一档模板计算。</li>
               </ul>
             </div>
@@ -222,13 +222,13 @@
           <div class="v-main">
             <div class="v-label">{{ profile.subject_name }} · 准入结论</div>
             <div class="v-big" v-if="profile.conclusion">
-              {{ profile.conclusion.headline }}
-              <em v-if="profile.conclusion.amount_yuan">· 建议 {{ wan(profile.conclusion.amount_yuan) }}</em>
+              {{ verdictHeadline() }}
+              <em v-if="verdictWan()">· {{ verdictWan() }}</em>
             </div>
-            <div class="v-note" v-if="profile.conclusion">{{ profile.conclusion.note }}</div>
+            <div class="v-note" v-if="profile.conclusion">{{ verdictNote() }}</div>
           </div>
           <div class="v-acts">
-            <span class="btn btn-main" v-if="profile.conclusion">{{ profile.conclusion.action }}</span>
+            <span class="btn btn-main" v-if="profile.conclusion" @click="verdictAction()">{{ profile.conclusion.action }}</span>
             <span class="btn" @click="nav('ledger')">看台账</span>
             <span class="btn" @click="nav('postloan')">看贷后</span>
           </div>
@@ -315,9 +315,9 @@
                       <td class="muted">{{ it.source }}</td>
                       <td class="muted">{{ it.judgeable ? '源数据' : '需人工' }}</td>
                       <td class="r">
-                        <span v-if="it.status === '缺失'" class="btn btn-sm btn-ghost">补录</span>
-                        <span v-else-if="it.status === '待核验'" class="btn btn-sm btn-ghost">核验</span>
-                        <span v-else class="btn btn-sm">查看</span>
+                        <span v-if="it.status === '缺失'" class="btn btn-sm btn-ghost" @click="taskAction('补录', it.label)">补录</span>
+                        <span v-else-if="it.status === '待核验'" class="btn btn-sm btn-ghost" @click="taskAction('核验', it.label)">核验</span>
+                        <span v-else class="btn btn-sm" @click="tab = 'ev'">查看</span>
                       </td>
                     </tr>
                   </template>
@@ -424,12 +424,33 @@
               </div>
             </div>
             <div class="card" style="margin:0">
-              <div class="card-h"><h2>额度测算入口</h2></div>
-              <div class="v-note" style="margin:0 0 12px">
-                本次演示只展示现有授信要素；完整定额需调用授信测算接口（<span class="mono">/api/credit-decision/evaluate</span>），
-                其唯一建议金额为需求侧与供给侧取小的纯计算链结果。
+              <div class="card-h"><h2>额度测算</h2><span class="hint">唯一金额链 · 需求侧与供给侧取小</span></div>
+              <template v-if="profile.estimate && profile.estimate.state === 'ok'">
+                <div class="tw">
+                  <table>
+                    <tbody>
+                      <tr><td style="width:132px">测算结论</td>
+                        <td><span class="badge" :class="estCls()">{{ estLabel() }}</span>
+                          <span class="muted mono" style="margin-left:8px">{{ profile.estimate.case_id }}</span></td></tr>
+                      <tr><td>建议金额</td>
+                        <td class="num">{{ profile.estimate.amount_yuan ? wan(profile.estimate.amount_yuan) : '—（不形成建议金额）' }}</td></tr>
+                      <tr><td>最终瓶颈</td>
+                        <td>{{ (profile.estimate.bottleneck || {}).final_label || '—' }}</td></tr>
+                      <tr><td>需求侧 / 供给侧</td>
+                        <td class="num">{{ wan((profile.estimate.bottleneck || {}).demand_side_yuan) }} / {{ wan((profile.estimate.bottleneck || {}).supply_side_yuan) }}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="v-note" style="margin:12px 0 0">{{ profile.estimate.reason }}</div>
+                <div v-if="(profile.estimate.missing_materials || []).length" class="v-note" style="margin:8px 0 0">
+                  缺料：{{ profile.estimate.missing_materials.join('、') }}
+                </div>
+              </template>
+              <div v-else-if="profile.estimate && profile.estimate.state === 'no_case'" class="v-note" style="margin:0">
+                该户尚未建立测算案例，故不显示建议金额。<b>行内已有授信额度不等同于建议金额</b> ——
+                建议金额只能由唯一额度链（必要饲草采购缺口 vs 供给侧四项取小）算出，需要先补齐该户的经营与采购资料。
               </div>
-              <span class="btn btn-main">去测算</span>
+              <div v-else class="v-note" style="margin:0">测算案例文件缺失或损坏，当前无法给出建议金额。</div>
             </div>
           </div>
           <div class="card">
@@ -475,7 +496,7 @@
                     <td><span class="badge" :class="levelCls(s.level)">{{ s.level }}</span></td>
                     <td><span class="badge b-warn">{{ s.status }}</span></td>
                     <td class="muted">{{ s.source === 'real_field' ? '源数据' : '派生' }}</td>
-                    <td class="r"><span class="btn btn-sm btn-ghost">处置</span></td>
+                    <td class="r"><span class="btn btn-sm btn-ghost" @click="taskAction('处置', s.signal_class + '：' + s.trigger)">处置</span></td>
                   </tr>
                   <tr v-if="!(profile.signals || []).length"><td colspan="6"><div class="empty">暂无贷后信号</div></td></tr>
                 </tbody>
@@ -636,8 +657,8 @@
             </div>
           </div>
           <div class="v-acts">
-            <span class="btn btn-main">批量处置</span>
-            <span class="btn">转派</span>
+            <span class="btn btn-main" @click="bulkAction('批量处置')">批量处置</span>
+            <span class="btn" @click="bulkAction('转派')">转派</span>
           </div>
         </div>
 
@@ -691,6 +712,32 @@
               </ul>
             </div>
           </details>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>操作留痕</h2>
+            <span class="hint">来自 <span class="mono">data_store/bank_tasks.json</span> · 控制台按钮写入的最近记录</span></div>
+          <div class="tw">
+            <table>
+              <thead><tr><th>时间</th><th>客户</th><th>动作</th><th>说明</th><th>责任人</th><th>时限</th></tr></thead>
+              <tbody>
+                <tr v-for="t in (tasks.tasks || [])" :key="t.task_id">
+                  <td class="muted mono">{{ (t.created_at || '').replace('T', ' ').slice(0, 16) }}</td>
+                  <td><span class="linkish" @click="openCustomer(t.subject_name)">{{ t.subject_name }}</span></td>
+                  <td><span class="badge b-info">{{ t.action }}</span></td>
+                  <td>{{ t.detail || '—' }}</td>
+                  <td>{{ t.owner || '—' }}</td>
+                  <td class="muted">{{ t.due || '—' }}</td>
+                </tr>
+                <tr v-if="!(tasks.tasks || []).length">
+                  <td colspan="6"><div class="empty">
+                    {{ tasks.summary && tasks.summary.available === false
+                       ? '任务表不可用：' + (tasks.summary.note || '')
+                       : '还没有留痕记录 —— 在客户档案或本页点「处置 / 转派 / 核验」登记后会出现在这里' }}
+                  </div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -769,7 +816,7 @@
                   <td><span class="badge" :class="r.liability_verified ? 'b-ok' : 'b-warn'">
                     {{ r.liability_verified ? '已核' : '待核' }}</span></td>
                   <td><span class="badge" :class="r.status === '已核验' ? 'b-ok' : 'b-warn'">{{ r.status }}</span></td>
-                  <td class="r"><span class="btn btn-sm btn-ghost">核验</span></td>
+                  <td class="r"><span class="btn btn-sm btn-ghost" @click="taskActionFor('核验', r.subject_name, '保单责任范围核验')">核验</span></td>
                 </tr>
               </tbody>
             </table>
@@ -822,6 +869,46 @@
         </div>
       </section>
 
+    </div>
+  </div>
+
+  <!-- ===================== 操作任务面板（按钮落库） ===================== -->
+  <div class="task-mask" v-if="taskForm.open" @click.self="taskForm.open = false">
+    <div class="task-box">
+      <div class="task-h">
+        <h3>{{ taskForm.action }} · 登记</h3>
+        <span class="task-x" @click="taskForm.open = false">✕</span>
+      </div>
+      <div class="task-body">
+        <div class="task-row">
+          <label>客户</label>
+          <input v-model="taskForm.subject_name" readonly>
+        </div>
+        <div class="task-row">
+          <label>说明</label>
+          <input v-model="taskForm.detail" placeholder="如：核验草场权属证明">
+        </div>
+        <div class="task-row">
+          <label>责任人</label>
+          <input v-model="taskForm.owner" placeholder="客户经理">
+        </div>
+        <div class="task-row">
+          <label>时限（天）</label>
+          <input type="number" min="1" max="180" v-model.number="taskForm.due_days">
+        </div>
+        <div class="task-hint" v-if="taskForm.note"><b>{{ taskForm.note }}</b></div>
+        <div class="task-hint">
+          写入 <span class="mono">data_store/bank_tasks.json</span>，只追加留痕，不做状态流转
+          （完整流转属二期「贷后任务闭环」）。
+        </div>
+        <div class="task-err" v-if="taskForm.error">{{ taskForm.error }}</div>
+        <div class="task-ok" v-if="taskForm.done">{{ taskForm.done }}</div>
+      </div>
+      <div class="task-acts">
+        <span class="btn btn-main" @click="submitTask()" :class="{ disabled: taskForm.busy }">
+          {{ taskForm.busy ? '登记中…' : '登记' }}</span>
+        <span class="btn" @click="taskForm.open = false">取消</span>
+      </div>
     </div>
   </div>
 </div>

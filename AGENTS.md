@@ -64,6 +64,8 @@ git diff --check
 ```
 
 涉及授信金额时另跑 `backend/test_credit_decision.py`、`backend/test_credit_decision_extended.py`。
+涉及预警取数（`early_warning.py`）时跑 `backend/test_warning_month.py`（10 条口径不变量，离线约 0.4s）。
+一次跑全：`python -m pytest backend -q`（当前 **73 passed**）。
 改动 Python 后用 Serena `get_diagnostics_for_file` 过一遍改动文件。
 改动 API 或页面时启动服务检查 `/api/health`、`/api/platform`、`/api/model/status`。
 
@@ -112,6 +114,10 @@ git diff --check
 | D9 | `bottleneck` 结构 | 改为两级（final / supply_side / demand_side_yuan / supply_side_yuan） | 2026-09-23 |
 | D10 | 导航形态 | **左侧边栏**（3 组 7 项），替代现有顶部 8 项 + 「更多」下拉 | 2026-09-23 |
 | D11 | 新页面数 | **7 页**（原 8 页，原型 v2 后删「数据接入中心」并下沉为「资料」Tab） | 2026-09-23 |
+| D12 | 银行版「建议金额」 | 有测算案例的户走 `evaluate_credit_case()` 真链路；无案例的户**不给金额**（不回显行内授信额度）。列表里授信额度改名 `credit_line_yuan`。黄金案例 900000 元不变 | 2026-09-26 |
+| D13 | 8 个死按钮 | **分两档**：跳转类切 Tab；写操作类走 `POST /api/bank/task` **真落库** + 贷后页留痕卡。不做完整状态流转（留二期） | 2026-09-26 |
+| D14 | 旱灾 SPI 目标月 | 取气候数据中**与当前月份相同**的最近一年。**不刷新数据、不加界面标注、不加超范围守卫**（用户明确要求最小改动）。SPI 是回看指标不是预测 | 2026-09-26 |
+| D15 | 是否刷新气候数据到当期 | **暂不刷新**。已核实 ERA5 能提供当期实测且与已存数据逐值同源，但 `_load_climate()` 同时供给 GDI / 气候修正 NPP / 雪灾 ERA5 降级，影响面超出旱灾 | 2026-09-26 |
 
 ### 探讨进度
 
@@ -164,22 +170,224 @@ git diff --check
 
 ### 已知遗留
 
-- ⏸ **【待办·口径】银行版「建议金额」不是算出来的（2026-09-25 定位，未修）**
-  `backend/bank_view.py` 的 `_conclusion()` 第 424 行原为
-  `"amount_yuan": int(_num(fin.get("credit_line")) * 10000)` —— 取**行内授信额度**回显，
-  并不是需求侧/供给侧取小的唯一金额链输出。而 `frontend/bank.html:226` 把它标成
-  「**建议 X 万**」，位置正是客户档案 L1 大字（答辩最显眼处）。
-  - 证据：黄金案例唯一链实跑 = **900000 元**；76 户 `credit_line` 是 271 / 255 / 233 万…
-  - 与 `答辩口径.md` 第 56 行「唯一建议金额（模型不乘额度、不掺保险）」直接冲突。
-  - `test_bank_api` 14/14 全绿也没拦住 —— 它只断言结构，**不断言金额来源**。
-  - **已定方向（用户 2026-09-25 选「先止血：不显示金额」）**：① `_conclusion` 三个分支
-    不再输出 `amount_yuan`；② `customer_pool` 的 `amount_yuan` 改名 `credit_line_yuan`
-    并按其排序；③ 前端同步 6 处（`bank.html` 117 / 120–126 / 172–183 / 195 / 226 / 测算入口按钮）。
-  - 半成品补丁已存：`D:\DesktopData\项目\.workbuddy\todo-银行版建议金额口径-20260925.diff`（108 行，`git apply` 即恢复）。
-  - 让金额「真由算出来」属二期：需要「主体 → case」构造器（案例文件只有 2 个，银行版有 76 户）。
-- ✅ `ci.yml` 与 §10/§11 的未提交项已于 2026-09-24 入库并推送（`95b2a30` / `a456d7c` / `f93cac2` / `11e2dbb`）。
+- ✅ **【已修·口径】银行版「建议金额」改由唯一额度链给出（2026-09-26）**
+  原 `backend/bank_view.py` 的 `_conclusion()` 第 424 行直接回显行内授信额度
+  （`"amount_yuan": int(_num(fin.get("credit_line")) * 10000)`），而 `frontend/bank.html:226`
+  把它标成「**建议 X 万**」（客户档案 L1 大字，答辩最显眼处），与 `答辩口径.md` 第 56 行
+  「唯一建议金额（模型不乘额度、不掺保险）」冲突 —— 同一户两个数字：界面 271 万 vs 唯一链 **90 万**。
+  **现改为**：`bank_view.credit_estimate()` 调 `credit_decision.evaluate_credit_case()`，三种状态显式区分、
+  互不冒充 ——
+  | state | 含义 | 是否给金额 |
+  |---|---|---|
+  | `ok` | 走了唯一额度链（含 `status` = feasible / infeasible / blocked） | feasible 才给 |
+  | `no_case` | 该户没有测算案例（76 户里目前只有 2 户有） | **不给** |
+  | `unavailable` | 案例文件缺失或损坏（与 `no_case` 分开报，避免数据坏了像「没案例」） | **不给** |
+  - 持仓户实况：**班戈户 = 90 万元**（瓶颈在需求侧）；**百巴户 = 资料不足 · 不进入测算**；其余 **74 户 no_case**。
+  - 主体 → 案例用**显式对应**（案例自带 `name` 同名自动匹配 + `_SUBJECT_CASE_ALIAS` 登记百巴户），
+    不用「同名/同县」模糊匹配 —— 同一县有多户，模糊匹配会张冠李戴。
+  - 行内授信额度改名 `credit_line_yuan`，界面一律标「**已有授信额度**」，与建议金额分开陈列。
+  - `frontend/bank.html`：客户池与待营销名单表头 →「已有授信额度」；档案 L1 大字 → 测算结论；
+    授信 Tab 的死按钮「去测算」→ 真实「额度测算」卡（结论 / 建议金额 / 最终瓶颈 / 需求侧 vs 供给侧 / 案例编号）。
+  - 测试：`test_bank_api` **14 → 15 项**，新增「建议金额必须来自额度链、不得回显授信额度」用例；
+    已做**反向验证**（注入旧回显行为 → 用例变红 14/15，两处注入各验一次）。
+  - 待办补丁 `D:\DesktopData\项目\.workbuddy\todo-银行版建议金额口径-20260925.diff` 已被本方案取代，可删。
+- ✅ `ci.yml` 与 §10/§11 的未提交项已于 2026-09-24 入库并推送（`95b2a30` / `a456d7c` / `f93cac2` / `11e2dbb` / `64ab654`）。
+- ⏸ **数据矛盾（待你裁定，未改）**：主体「百巴村牦牛养殖合作社」的测算案例 `baiba-village` 判 `blocked`，
+  理由是「缺少有效保险合同、授信记录、还款记录、连续经营现金流」；但 `finance_credit.json` 里该户
+  有 `real_insurance` 来源的授信记录（授信 600 万 / 已用 500 万）与保单（养殖险 1135 头 / 88%）。
+  两边对不上，答辩被问「这家不是有授信吗」会难答。三个方向（案例补料转可测算 / 只改 `blocked_reason` 措辞 / 撤掉该户授信记录）属口径决策，未擅自改。
 - `frontend/data.html` 里指向 3 个已下线壳页的链接成为死链（该页当前无导航入口，影响有限）。
-- 授信 Tab 只展示现有授信要素，**未接** `/api/credit-decision/evaluate`（界面留了入口按钮）。
+
+### 2026-09-26 覆盖面复检发现的遗留（逐条实测，未改）
+
+- ⏸ **银行版有 8 个「按钮样式但无事件绑定」的控件**（`frontend/bank.js` 无任何事件委托，
+  故无 `@click` 即必死）。已实测「点击零反应、零网络请求」：
+  | 位置 | 控件 | 备注 |
+  |---|---|---|
+  | `bank.html:231` | 客户档案 L1 主按钮（`btn-main`，文案 = `{{ profile.conclusion.action }}`） | **最显眼**，渲染成「查看测算」/「发起补录」/「发起核查」 |
+  | `bank.html:318–320` | 资料 Tab 逐项 补录 / 核验 / 查看 | |
+  | `bank.html:499` | 信号明细行 处置 | |
+  | `bank.html:660–661` | 贷后待办 批量处置 / 转派 | |
+  | `bank.html:793` | 保险协同 核验 | |
+  对照组「看台账」正常（触发 `GET /api/bank/ledger`），可确认非测试环境问题。
+- ⏸ **`GET /api/warning/comprehensive-all` 约 76–88 秒**：对 26 个县**串行**调
+  `early_warning.snow_disaster_risk()`，而该函数**每次实时请求 Open-Meteo**（单县实测 2.9s，
+  占 `comprehensive_warning` 总耗时的 99.8%；其余四个子函数均 < 1ms）。单县带 `?year=` 的
+  `/api/warning/comprehensive/{region_id}` 也要 3.4s。
+  **当前前端未接**：`frontend/app.js:75` 的 `api.warningAll()` 只定义、**无调用点**
+  （数据底座页走的是 `loadWarningData()` → `warningGdi` + `warningNdvi`，都很快）。
+  所以属**潜在**风险：一旦有人把「全县预警总览」接上，页面会卡住；且该接口在 `openapi.json` 里公开。
+- ⏸ **422 响应的 `detail` 是字符串，违反 FastAPI 自己声明的 `HTTPValidationError`**
+  （该结构的 `detail` 必须是数组）。`server.py` 有 **7 处**：1849 / 1854 / 1856 / 1861 / 1863 / 1866 / 1910。
+  例：`POST /api/credit-decision/evaluate` 传 `{"case_id": ""}` → `422 {"detail":"未知案例 case_id: "}`。
+  - **运行时不受影响**：`frontend/app.js:2634` 明确同时兼容两种形状（`typeof detail === "string"`）。
+  - 受影响的是：自动生成的客户端、Swagger UI 示例、契约测试（schemathesis 会判为 high 级失败）。
+  - 复现：`curl -X POST -H 'Content-Type: application/json' -d '{"case_id": ""}' http://127.0.0.1:8100/api/credit-decision/evaluate`
+
+### 2026-09-26 第二轮：死按钮接线 + 雪灾取数修复（均已落地）
+
+#### A. 8 个「按钮样式但无事件」的控件已全部接线
+
+`bank.js` 无任何事件委托，故无 `@click` 即必死；实测原为「点击零反应、零网络请求」。
+按两档处理：
+
+| 类型 | 位置 | 现在做什么 |
+|---|---|---|
+| **跳转** | `bank.html:231` L1 主按钮（文案「查看测算」） | 切到「授信」Tab |
+| **跳转** | 资料 Tab 逐项「查看」 | 切到「依据」Tab |
+| **写操作** | 资料 Tab「补录 / 核验」、贷后信号「处置」、贷后页「批量处置 / 转派」、保险「核验」 | 弹「操作任务面板」，确认后 **POST `/api/bank/task`** 真落库 |
+
+- **新增 `backend/bank_tasks.py`**（最小实现）：动作白名单、追加写 `data_store/bank_tasks.json`、
+  凭据不落库；`bank_view` 保持只读。
+- **新增 2 条路由**：`GET /api/bank/tasks[?name=]`、`POST /api/bank/task`。
+  业务校验失败用 **400**（不是 422）—— 422 的 `detail` 被 FastAPI 声明为数组，返回字符串会违反自身 schema。
+- **新增「操作留痕」卡**在贷后待办页，展示最近记录；贷后页另有留痕空态文案。
+- ⚠️ **并发写入坑（已修）**：`create_task` 是「读-改-写」，同步路由跑在线程池里，前端批量登记又并发 POST
+  —— 实测 10 个并发请求直接把 JSON 写成 `Extra data: line 46 column 2`。
+  修法：模块内 `threading.Lock` + 临时文件原子替换；前端同时改为**串行提交**。
+  回归用例 `test_concurrent_task_writes_do_not_corrupt_store` 已做反向验证（去掉锁 → 10/12 请求 400、用例变红）。
+- 跳转类不落库，仅切 Tab，避免制造无意义记录。
+
+#### B. `/api/warning/comprehensive-all` 从 76~88 秒降到 1.6 秒
+
+挖下去发现**三个叠加的既有 bug**，这才是慢的真因（不是缺缓存）：
+
+| # | 问题 | 证据 |
+|---|---|---|
+| 1 | 县坐标表路径错：写成 `BASE/public_data/`（BASE 是 backend 目录），文件在**项目根** → 坐标表恒为空 → **26 个县全查同一个默认坐标** | `_county_coords()` 返回 0 条；`feed_calculator.py` 用的是正确的 `parents[1]` |
+| 2 | 变量名错：用 `daily=snow_depth`，而 **daily 里没有这个变量**（只有 hourly 有；daily 的是 `snow_depth_max`）→ HTTP 400 → **取数从来没成功过**，一直静默落到 ERA5 温度代理降级分支 | Open-Meteo 返回 `Invalid value: Cannot initialize ForecastVariableDaily from invalid String value snow_depth` |
+| 3 | 单位错：`/100`。实测 API 自报 `hourly.snow_depth` 与 `daily.snow_depth_max` 单位是**米**，转厘米应 **×100** | API 响应里的 `daily_units` |
+
+**修法**：坐标路径改 `parents[1]`；改用 `daily=snow_depth_max,snowfall_sum`；单位 ×100；
+新增 `prefetch_snow_forecasts()` 用 **Open-Meteo 多坐标**一次拉全 26 县 + 30 分钟 TTL 缓存
+（取到空结果用 5 分钟短 TTL，避免网络抖动被缓存半小时）。
+
+**效果**（本机实测）：
+
+| | 改造前 | 改造后 |
+|---|---|---|
+| 首次调用 | 76~88 s | **1.63 s**（1 次 HTTP 拉 26 县） |
+| 第二次调用 | 同前 | **0.125 s**（全部命中缓存，`http_calls: 0`） |
+| 各县雪深序列 | 恒为 1 种（且为空） | **9 / 26 种**（终于各县不同） |
+| 数据来源 | 恒为 ERA5 温度代理降级 | **Open-Meteo 免费预报**（主路径恢复） |
+
+接口返回值新增 `prefetch` 字段，回显本次「打了几次外部 API、命中多少缓存」。
+
+#### C. ⏸ 仍待裁定（未改）
+
+- 主体「百巴村牦牛养殖合作社」的数据矛盾（见上一条）仍待裁定。
+- 7 处 422 字符串 `detail` 的契约问题仍待裁定（新增的路由已避开，旧代码未动）。
+
+### 2026-09-26 第三轮：旱灾 SPI 目标月修正（已落地）
+
+#### 问题
+
+`compute_spi(region_id, target_month)` 被喂的是**系统当前月**（`date.today()` = 2026-09）。
+数据滞后时该月及其前两月**无任何记录**，而函数内 `monthly_precip.get(k, 0)` 把它
+**静默当作 0 降水** → `(0 − 历史均值) / 历史标准差` 恒为极端负值 ——
+实测 26 个县 SPI 全在 **−12.46 ~ −3.09**，集体误报「严重干旱」→ 26/26 县顶成高风险。
+
+> ⚠️ 订正此前记录：曾写「气象数据只到 2024」是**错的**。`climate_era5.json`
+> 26 县一致覆盖 **2020-01-01 → 2025-12-31**。
+
+#### 改动（最小面）
+
+| 位置 | 改动 |
+|---|---|
+| `early_warning.py` | **新增** `latest_climate_month(region_id)`：取该县数据中**与当前月份相同**的最近一年 |
+| `early_warning.py` | `compute_spi` 的 `target_month` 改为可选（`None` → 走上面那个函数） |
+| `early_warning.py` | `comprehensive_warning` 与 CLI 不再传系统当前月 |
+| `server.py` | `/api/warning/disaster/{region_id}` 同步改为不传月份 |
+
+#### 为什么是「同月」而不是「数据最后一个月」
+
+| 目标月 | SPI 范围 | 结果 |
+|---|---|---|
+| 2025-09（同月） | −1.94 ~ +2.05 | 全部可解读；旱情分布 正常 15 / 轻度 6 / 中度 2 / 偏湿 1 / 中洪 1 / 严洪 1 |
+| 2025-12（最后一个月） | −4.07 ~ **+14.82** | 冬季降水趋 0 → `std` 塌陷（谢通门 std=2.5 / 均值 4.6）→ Z-score 爆表，冒出「严重洪涝 3 个县」 |
+
+#### 效果（实测）
+
+| 指标 | 改前 | 改后 |
+|---|---|---|
+| 旱灾触发 | 26 县全「高」 | 中 10 + 高 1 |
+| `overall_risk` | 高风险 26 | **高 18 / 中 6 / 正常 2** |
+| `target_month` | 2026-09（数据外） | **2025-09**（26/26 一致） |
+
+#### 新增回归测试
+
+`backend/test_warning_month.py`（10 条口径不变量，离线、不联网、约 0.4 秒）。
+`early_warning` 此前**完全没有测试覆盖** —— 这正是那三处静默失效能长期存活的原因。
+反向验证脚本 `_原型/verify_warning_tests_bite.py`（逐条注入原始 bug，确认测试真的会红）。
+五条注入反向验证全部咬住：
+
+| 注入 | 变红的用例 |
+|---|---|
+| 默认月改回系统当前月 | W2b / W3 / W4 / W9 |
+| 改回取数据最后一个月 | W8 / W9 |
+| 坐标表路径改回 `backend` 目录 | W3 / W4 / W5 / W6 |
+| `daily` 变量改回 `snow_depth` | W7 |
+| 单位改成 `÷100` | W7 |
+
+#### 未解决（如实登记）
+
+- **用户裁定「算了，不刷新」**（2026-09-26）：气候数据**维持**覆盖 2020-01 → 2025-12，
+  旱情继续按「最近可用同月」展示。已核实但**未实施**的刷新方案记录在下面一条，将来要做时按它走。
+- 所有 `/api/warning/*` 接口**前端均未接线**（`warningAll` / `loadDisaster` 只定义、无调用），
+  所以本次修正**当前页面上看不到**。页面上那列「干旱」来自 `weather_data`（分布正常：
+  中 2165 / 高 268 / 低 687），是另一条链，未受影响。
+- 重叠窗口的 SPI 本身仍是 **Z-score 简化版**（函数注释已承认标准 SPI 需 Gamma 拟合），
+  月际可比性有限，仅在同一月份口径内自洽。
+
+#### 已核实但搁置：把气候数据刷新到当期
+
+| 验证项 | 结果 |
+|---|---|
+| ERA5 档案接口能给到什么时候 | **2026-01-01 → 2026-09-24**（267 天） |
+| 26 县能否一次请求拉完 | ✅ 一次全拿到，10~15 秒 |
+| 已存数据是否同源 | ✅ **逐日逐值完全一致**（班戈 2020-01-01~01-05，降水与温度精确到 0.1 位相同）→ `climate_era5.json` 就是 ERA5，刷新不会造成口径拼接偏差 |
+
+用真实 2026 数据在内存里试算（**未写文件**）：目标月 `2026-09` → SPI −1.7 ~ +4.22，
+正常 19 / 偏湿 3 / 轻度 1 / 中度 1 / 严洪 2（对比现在搬 2025-09 是 −1.94 ~ +2.05）。
+
+**为什么搁置**：`_load_climate()` 不只喂旱灾，还喂 **GDI 退化评估**（行 294）、
+**气候修正 NPP 预测**（行 420）、**雪灾 ERA5 降级分支**（行 1078）。补 2026 会让这些数字一起变动。
+`climate_era5.json` 已入 git（26 县 / 56992 行 / 5.1 MB），补 267 天约 +0.4 MB。
+要做时：先写 `public_data/scripts/` 下的刷新脚本，再重跑全量验证比对 GDI / NPP / 雪灾三处输出。
+
+### 测试工具链（2026-09-26 落地）
+
+> 通用脚本已整理到 `C:\Users\WH\Desktop\项目\测试\工具\测试套件\`（含 `run.bat`、`README.md`、
+> 5 个脚本与 4 个坑的说明）。那里是**跨项目复用**的套件；本项目的专用测试仍在 `backend/test_*.py`。
+
+| 工具 | 状态 | 说明 |
+|---|---|---|
+| 全路由冒烟 | ✅ 已跑 | 79 条 GET + 17 条 POST；无 5xx；鉴权与畸形输入均被正确拒绝 |
+| schemathesis | ✅ 已跑 | `schemathesis run http://127.0.0.1:8100/openapi.json --checks all`。130 失败中 127 条是 FastAPI 常态（未文档化的 404/422、TRACE→404）；真问题是上面那条 422 契约 |
+| 视觉回归 | ✅ 已落地 | `_原型/vr_snap.py` + `.workbuddy/tmp/_vr_baseline/`（22 张）。**无改动重复跑 0.000%**，阈值 0.02%，阈值 0.5% 会漏掉「标题多几个字」（约 0.04%） |
+| hypothesis 不变量 | ✅ 已落地 | `backend/test_credit_invariants.py`（7 条，pytest 与直跑皆可，约 5s） |
+| 预警口径不变量 | ✅ 已落地 | `backend/test_warning_month.py`（10 条，离线不联网，约 0.4s）。含 HTTP 层替身，可离线验证请求变量名与单位换算方向 |
+| mutmut | ❌ 不可用 | 原生 Windows 不支持；官方要求走 WSL，而本机 **WSL 被安全策略列入程序黑名单**，无法从命令行解除 |
+| cosmic-ray | ⚠️ 部分 | mutmut 的替代。`bank_view.py` 生成 **1051** 个变异体，约 30s/个（全跑约 9 小时），本次跑 12 个后主动停止。session 库在 `.workbuddy/tmp/cr-session.sqlite`，**可续跑** |
+
+**已发现的 9 个存活变异体（= 假覆盖点，均在 `bank_view.py` 派生/展示层）**：
+
+| 行 | 代码 | 缺的断言 |
+|---|---|---|
+| 209 | `out_total = _stable(...) if book_head else 0` | 无耳标时出栏必须为 0 |
+| 214 | `out_unpriced = round(out_total * _stable(...) / 100)` | 无票出栏算法本身 |
+| 249 | `"level": "高" if overdue >= 2 else "中"` | 逾期 1/2 期边界 |
+| 370 | `completeness = round((filled + pending*0.5)/total*100)` | 资料完整度公式系数 |
+| **532** | `[c for c in ctx["claims"] if c.get("subject_name") == name]` | **按客户隔离理赔记录**（A 的理赔不得出现在 B 的档案） |
+| 542 | `repayment_status or "行内无记录"` | 兜底文案 |
+| 550 | `][:4]` | todos 上限 |
+| 753 | `rows.sort(key=... (r["status"] != "待核验", -r["book_head"]))` | 保险队列排序键 |
+
+> 金额链模块 `credit_decision.py` **尚未跑到**，所以「金额链覆盖好、展示层覆盖弱」还不能下定论。
+
+**视觉回归的 3 个坑（都已在上面的脚本里解决）**：① 入场动画 → `reduced_motion` + 关 CSS 过渡 + 等 `getAnimations()`；
+② 旧 SPA 首页 hero **每 5s 轮播 4 张标语** → 注入脚本掐掉那个 5000ms 的 `setInterval`（`app.js:2390`，周期值唯一）；
+③ 阈值别设太大（0.5% 会漏小改动）。
 
 ### 二期（资产侧）清单 —— 2026-09-25 逐条在代码里核实过，未开始
 
@@ -189,7 +397,8 @@ git diff --check
 | 单户耳标明细 | ❌ `_derive_ledger` 只出聚合数字 | 耳标级台账（耳标号 / 品种 / 状态 / 是否投保） |
 | 单户抵押上限展示 | ❌ `bank_view.py` 无 pledge 字段；`credit_decision._live_stock_pledge_limit()`（391–481 行）**已算好**但只在 evaluate 链内 | 四档折扣 + 上限金额接到「资产」/「授信」Tab |
 | 逐笔出栏流水 | ❌ 只有构成汇总 | 有票/无票、日期、头数、凭证号 |
-| 「去测算」接线 | ❌ 死按钮（无 `@click`） | 见上方口径待办 |
+| 「去测算」接线 | ✅ **已接**（2026-09-26）：死按钮换成「额度测算」卡 | 已完成，见 §10 |
+| 主体 → 测算案例构造器 | ❌ 76 户里只有 2 户有案例，其余 74 户为 `no_case`、不显示金额 | 若要全户出金额，需先定「无源参数（自有采购资金、月度净经营现金、产品上限、饲草到场价、牲畜单价）按什么标定」 |
 
 
 ### 运行
@@ -208,7 +417,7 @@ $env:PORT=8100; C:\Users\WH\.workbuddy\binaries\python\envs\default\Scripts\pyth
 | 远端 | `https://github.com/wndwns/-.git`（owner: wndwns）|
 | **默认分支** | **`main`**（同组人打开仓库直接看到）|
 | 当前工作分支 | `feature/demo-guide` |
-| 两者关系 | `origin/main` == `origin/feature/demo-guide` == `a456d7c`，内容完全一致 |
+| 两者关系 | `origin/main` == `origin/feature/demo-guide` == **`64ab654`**（更新于 2026-09-26；此表此前写成 `a456d7c`，落后两次提交） |
 | 其他分支 | `master`（92f6977，历史遗留，与 main 分叉，勿动）、`feature/npp`、`codex/*` 系列 |
 | 保护分支 | `codex/backup/pre-deepening-20260807`（勿覆盖）|
 

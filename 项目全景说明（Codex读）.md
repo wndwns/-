@@ -24,6 +24,7 @@
 - <code>backend/server_v2.py</code>、<code>backend/server_v3.py</code>、<code>frontend_v2/</code>、<code>frontend_v3/</code> 是历史版本和视觉迭代参考，不是当前入口。
 - <code>demo/</code> 是早期演示页，不是当前业务系统。
 - 旧版保护分支：<code>codex/backup/pre-deepening-20260807</code>，指向提交 <code>2d40dec</code>。
+- 银行版控制台：<code>frontend/bank.html</code>，由路由 <code>/bank</code> 提供（2026-09-23 一期落地）。与主 SPA（<code>/</code>）**共用同一后端与同一套 <code>/api</code>**，二者是并列前端，不是版本迭代关系。
 
 ### 0.3 后续修改的硬约束
 
@@ -320,6 +321,20 @@
 
 当前 GDI 并未完整复现论文 PCA、K-means 和曲率流程；实现是 NPP、NDVI、折算草产量归一化后的等权简化，并用草产量阈值分级。输出中的论文方法名称必须配合“简化版”说明。
 
+**2026-09-26 口径修正（两项，静默失效）**
+
+1. **雪灾取数**。此前 <code>snow_disaster_risk()</code> 有三处叠加错误：县坐标表路径指向 <code>backend/public_data/</code> 而文件在项目根，坐标表恒空，26 个县查的是同一个点；<code>daily=snow_depth</code> 这个变量在 daily 里不存在（正确名是 <code>snow_depth_max</code>），请求恒返回 400 并静默落到 ERA5 温度代理降级；单位换算方向写反（API 自报该字段单位是米，应 ×100 而非 ÷100）。现已全部修正，并改为 **Open-Meteo 多坐标一次请求拉全 26 县** + 30 分钟 TTL 缓存。效果：<code>/api/warning/comprehensive-all</code> 从 76~88 秒降到首次约 1.6 秒、命中缓存约 0.1 秒；各县雪深序列从恒为 1 种（且为空）变为 9/26 种；数据来源恢复为 Open-Meteo 主路径。
+2. **旱灾 SPI 目标月**。<code>compute_spi()</code> 原本被喂系统当前月（<code>date.today()</code>）。数据滞后时该月及前两月无记录，函数内 <code>monthly_precip.get(k, 0)</code> 将其**静默当作 0 降水**，于是 <code>(0 − 历史均值) / 历史标准差</code> 恒为极端负值，实测 26 个县 SPI 全在 −12.46~−3.09，集体误报“严重干旱”并把 26/26 县顶成高风险。现新增 <code>latest_climate_month()</code>：取该县气候数据中**与当前月份相同**的最近一年（今天 2026-09 → 2025-09）。修正后旱灾触发从 26 县全“高”变为中 10 + 高 1，<code>overall_risk</code> 从高风险 26 变为高 18 / 中 6 / 正常 2。
+
+两点必须一起记住：
+
+- **SPI 不是预测**，它是“已观测降水相对往年同期的偏离”，是回看指标。因此当气候数据滞后时，系统显示的是**最近可用同月的实测情况**，不是对当期的预测。
+- 不取“数据里最后一个月”而取“同月”：高原冬季降水趋近 0，历史标准差随之塌陷，Z-score 版 SPI 会放大成无意义量级（实测目标月 2025-12 时谢通门 <code>std=2.5 / 均值 4.6</code> → SPI = +14.82，被判成“严重洪涝”）；取同月 2025-09 时 SPI 范围是 −1.94~+2.05，全部可解读。
+
+**已知但尚未处理**：气候数据 <code>climate_era5.json</code> 覆盖 2020-01-01 → 2025-12-31（26 县一致）。已核实 ERA5 档案接口**能提供到当期的实测降水**（2026-01-01 → 2026-09-24，267 天；26 县一次请求约 10~15 秒），且**已存数据与 ERA5 逐日逐值完全一致**（班戈 2020-01-01~01-05 的降水与温度精确到 0.1 位相同），说明二者同源、刷新不会产生口径拼接问题。但 <code>_load_climate()</code> 同时供给 GDI 退化评估、气候修正 NPP 与雪灾 ERA5 降级分支，刷新会让这些数字一起变动，影响面超出旱灾本身。**用户 2026-09-26 裁定暂不刷新**，维持“最近可用同月”的口径。
+
+**未接线**：所有 <code>/api/warning/*</code> 接口前端均未调用（<code>warningAll</code> / <code>loadDisaster</code> 只定义、无调用），所以上述修正当前在页面上看不到。页面上那列“干旱”来自 <code>weather_data</code>（分布正常：中 2165 / 高 268 / 低 687），是另一条数据链，未受影响。
+
 ### 6.4 五灾种 90 天预测
 
 <code>backend/disaster_forecast.py</code> 支持寒潮、雪灾、干旱、暴雪和生态风险：
@@ -477,7 +492,7 @@ FastAPI
 
 | 文件 | 责任 |
 |---|---|
-| <code>server.py</code> | FastAPI 应用、84 个路由、静态文件、导入导出、外部集成 |
+| <code>server.py</code> | FastAPI 应用、98 个路径（82 GET / 18 POST / DELETE·PATCH·PUT·OPTIONS 各 1）、静态文件、导入导出、外部集成 |
 | <code>data.py</code> | 数据访问、区域/主体/金融/闭环读取、四维风险、平台聚合 |
 | <code>store.py</code> | 11 类 JSON 表、CSV 解析、替换/追加、导入元数据 |
 | <code>db.py</code> | 可选 MySQL 连接池和初始化 |
@@ -496,6 +511,12 @@ FastAPI
 | <code>test_truthful_outputs.py</code> | 真实性边界的最小回归检查 |
 | <code>test_credit_decision.py</code>、<code>test_credit_decision_extended.py</code> | 授信测算黄金样例与边界回归检查 |
 | <code>test_event_similarity.py</code> | 事件相似度无监督候选的回归检查 |
+| <code>bank_view.py</code> | **银行版视角聚合**（2026-09-23 新增）：概览、客户池、客户档案、资料、台账、贷后、保险、区域共 8 个只读视图；无随机，派生层逐条标 <code>is_derived</code> |
+| <code>bank_tasks.py</code> | **操作留痕**（2026-09-26 新增）：动作白名单 + 追加写 + 文件锁（并发安全），写入 <code>data_store/bank_tasks.json</code>；只追加留痕，不做状态流转 |
+| <code>test_credit_decision_pledge.py</code> | 活体抵押四档折扣回归检查 |
+| <code>test_bank_api.py</code> | 银行版 8 个视图 + 任务留痕接口（含并发写入用例），17 项 |
+| <code>test_credit_invariants.py</code> | 唯一金额链不变量（hypothesis 属性测试），7 条 |
+| <code>test_warning_month.py</code> | 预警取数口径不变量（SPI 目标月 / 坐标表 / daily 变量名 / 单位方向），10 条，离线不联网 |
 | <code>validate_all.py</code>、<code>validate_daily.py</code>、<code>validate_npp.py</code> | 数据/模型一致性与 NPP 校验脚本 |
 | <code>schema.sql</code>、<code>seed_data.sql</code> | 可选 MySQL 建表和种子数据 |
 
@@ -552,6 +573,17 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 14. 灾害预测。
 
 风险评估页已经形成“对象池 → 证据 → 四个业务问题 → 客户经理工作流”的主交互。深化实施后，该页顶部新增“授信与贷后工作台”（主体选择、可编辑参数、三情景摘要、唯一建议金额、月度现金流明细、贷后核查建议），原风险评估内容保留在该页下方作为辅助视图。导航按“核心业务 / 生态证据 / 辅助能力”三组组织，14 个页面全部保留，首页从辅助导航可达。
+
+**银行版控制台（<code>/bank</code>，2026-09-23 一期落地）**
+
+与上面 14 页的旧 SPA 是**并列关系，不是替代**：<code>/</code> 是主 SPA，<code>/bank</code> 是银行版控制台，两者共用同一后端与同一套 <code>/api</code>。银行版采用左侧边栏 3 组 7 项；客户档案页含 6 个 Tab（概览 / 资料 / 资产 / 授信 / 贷后 / 依据）并带顶部客户切换器（下拉 + 上一户 / 下一户）。
+
+**2026-09-26 两处落地**
+
+1. **“建议金额”口径修正**。此前客户档案 L1 大字显示的“建议 X 万”取的是 <code>finance_credit</code> 里**行内已有的授信额度**回显，不是唯一金额链的输出 —— 同一户（班戈县绿色牧业合作社）在新控制台显示 271 万、在旧测算页显示 90 万。现值改为：<code>bank_view.credit_estimate()</code> 返回三态 —— 有测算案例的户走 <code>evaluate_credit_case()</code> 真链路（班戈 = 90 万，瓶颈在需求侧），案例数据不足以支撑的户标 <code>blocked</code>，无案例的户标 <code>no_case</code> 并**不给出建议金额**；列表中的授信额度改名 <code>credit_line_yuan</code>，明确它是“已有授信额度”。黄金案例 90 万元不变。
+2. **8 个按钮接线**（此前渲染成按钮但点下去零反应、零请求）。跳转类（L1 主按钮 → 授信 Tab，资料“查看” → 依据 Tab）直接导航；写操作类（补录 / 核验 / 处置 / 转派 / 批量处置）弹操作面板后 <code>POST /api/bank/task</code> **真落库**，贷后页新增“操作留痕”卡。批量处置并发写曾把 JSON 写坏，已加文件锁 + 临时文件原子替换，并配了并发回归用例。
+
+**余下未做**：二期（资产侧）—— 盘库管理、单户耳标明细、单户抵押上限展示（<code>_live_stock_pledge_limit()</code> 已算好但未出界面）、逐笔出栏流水。
 
 ### 9.6 管理端
 
@@ -684,8 +716,27 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 - GET <code>/api/disaster-forecast</code>
 - GET <code>/api/disaster-forecast/regions</code>
 
-### 10.9 页面
+### 10.9 银行版（2026-09-23 新增；2026-09-26 增任务留痕）
 
+只读视图：
+
+- GET <code>/api/bank/overview</code>
+- GET <code>/api/bank/customer-pool</code>
+- GET <code>/api/bank/customer/{name}</code>
+- GET <code>/api/bank/customer/{name}/documents</code>
+- GET <code>/api/bank/ledger</code>
+- GET <code>/api/bank/post-loan</code>
+- GET <code>/api/bank/insurance</code>
+- GET <code>/api/bank/regions</code>
+
+操作留痕：
+
+- POST <code>/api/bank/task</code> —— 动作白名单；未知客户 404、非法动作或纯跳转动作 400（不落库）
+- GET <code>/api/bank/tasks</code> —— 列表与按动作汇总
+
+### 10.10 页面
+
+- GET <code>/bank</code> —— 银行版控制台
 - GET <code>/admin</code>
 - GET <code>/{path:path}</code>
 
