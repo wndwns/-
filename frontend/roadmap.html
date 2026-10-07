@@ -5,50 +5,109 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>牧融绿链 - 工行实施路线</title>
     <link rel="stylesheet" href="./styles.css" />
+    <style>
+      /* 本页专用：分步卡片。
+         用站点设计变量而非复用旧类名 —— roadmap.html 原来引用的 page-shell /
+         site-header / section-block / module-card 都不在 styles.css 里（2026-10-07 实测
+         全部 0 命中），所以整页渲染成了无样式裸文本。这里改用 :root 变量，既与全站
+         视觉一致，也不会因为样式表再次改名而失效。 */
+      .roadmap-main {
+        min-height: 100vh;
+        /* 本类在样式表之后加载，会覆盖 .public-page-plain 的 padding-top:46px，
+           所以这里直接给足：44px 固定导航栏 + 留白，标题文字落在 ~102px 处 */
+        padding-top: 84px;
+        padding-bottom: 56px;
+        /* 关键：grid 默认会把内容行撑满容器高度，导致卡片被拉长、底部留大片空白 */
+        align-content: start;
+      }
+      .roadmap-steps {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .roadmap-step {
+        padding: 22px 22px 24px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, #fff, #fbfdfc);
+        box-shadow: var(--shadow-card);
+      }
+      .roadmap-step .step-no {
+        display: block;
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+      .roadmap-step h3 {
+        margin: 10px 0 8px;
+        color: var(--text-dark);
+        font-size: 17px;
+        line-height: 1.35;
+      }
+      .roadmap-step p {
+        color: var(--text-secondary);
+        font-size: 13px;
+        line-height: 1.75;
+      }
+      /* 页头改成上下堆叠后，副标题需要一点上边距（原样式是为左右布局设的，无 margin） */
+      .roadmap-main .plain-page-head p {
+        margin-top: 6px;
+      }
+      @media (max-width: 860px) {
+        .roadmap-main { padding-top: 68px; }
+        .roadmap-steps { grid-template-columns: 1fr; }
+      }
+    </style>
   </head>
   <body>
-    <main class="page-shell">
-      <header class="site-header">
-        <div class="brand-mark">
-          <b>牧融绿链</b>
-          <span>工行实施路线</span>
-        </div>
-        <nav class="top-nav">
+    <!-- 顶部导航栏（与主站同一套类名，静态页无需 Vue） -->
+    <header class="top-navbar inner-page">
+      <div class="nav-inner">
+        <a class="nav-logo" href="./index.html">
+          <span class="logo-icon icbc-mark">ICBC</span>
+          <span class="logo-text">牧融绿链</span>
+        </a>
+        <nav class="nav-menu">
           <a href="./index.html">首页</a>
-          <a href="./overview.html">平台概览</a>
-          <a href="./modules.html">业务模块</a>
-          <a href="./data.html">数据底座</a>
+          <a href="./bank.html">银行版控制台</a>
+          <a class="active" href="./roadmap.html">实施路线</a>
         </nav>
-      </header>
+      </div>
+    </header>
 
-      <section class="section-block">
-        <div class="section-heading">
-          <span>实施路线</span>
+    <main class="public-page public-page-plain roadmap-main">
+      <section class="plain-page-head">
+        <div>
           <h1>从风险识别到绿色金融闭环</h1>
           <p>围绕客户经理的授信、核验和贷后工作，逐步补齐数据与协同能力。</p>
         </div>
-        <div class="module-grid modules-page-grid">
-          <article class="module-card">
-            <small>01</small>
-            <h3>数据与证据</h3>
-            <p>整理气象、遥感、草场、经营、授信和保险资料，明确公开观测、派生测算、演示样例和待人工核验边界。</p>
-          </article>
-          <article class="module-card">
-            <small>02</small>
-            <h3>授信与贷后</h3>
-            <p>围绕资金需求、偿债支持和授信约束形成唯一建议金额，并保留月度现金流和贷后核查依据。</p>
-          </article>
-          <article class="module-card">
-            <small>03</small>
-            <h3>风险核查</h3>
-            <p>将县域风险、主体经营和灾害线索整理为人工核查优先级，不替代客户经理和审批人员判断。</p>
-          </article>
-          <article class="module-card">
-            <small>04</small>
-            <h3>银保协同</h3>
-            <p>补充保单、查勘、理赔和资金用途资料，让风险缓释和贷后动作形成可追踪闭环。</p>
-          </article>
-        </div>
+      </section>
+
+      <section class="roadmap-steps">
+        <article class="roadmap-step">
+          <span class="step-no">01</span>
+          <h3>数据与证据</h3>
+          <p>整理气象、遥感、草场、经营、授信和保险资料，明确公开观测、派生测算、演示样例和待人工核验边界。</p>
+        </article>
+
+        <article class="roadmap-step">
+          <span class="step-no">02</span>
+          <h3>授信与贷后</h3>
+          <p>围绕资金需求、偿债支持和授信约束形成唯一建议金额，并保留月度现金流和贷后核查依据。</p>
+        </article>
+
+        <article class="roadmap-step">
+          <span class="step-no">03</span>
+          <h3>风险核查</h3>
+          <p>将县域风险、主体经营和灾害线索整理为人工核查优先级，不替代客户经理和审批人员判断。</p>
+        </article>
+
+        <article class="roadmap-step">
+          <span class="step-no">04</span>
+          <h3>银保协同</h3>
+          <p>补充保单、查勘、理赔和资金用途资料，让风险缓释和贷后动作形成可追踪闭环。</p>
+        </article>
       </section>
     </main>
   </body>

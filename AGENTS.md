@@ -118,6 +118,7 @@ git diff --check
 | D13 | 8 个死按钮 | **分两档**：跳转类切 Tab；写操作类走 `POST /api/bank/task` **真落库** + 贷后页留痕卡。不做完整状态流转（留二期） | 2026-09-26 |
 | D14 | 旱灾 SPI 目标月 | 取气候数据中**与当前月份相同**的最近一年。**不刷新数据、不加界面标注、不加超范围守卫**（用户明确要求最小改动）。SPI 是回看指标不是预测 | 2026-09-26 |
 | D15 | 是否刷新气候数据到当期 | **暂不刷新**。已核实 ERA5 能提供当期实测且与已存数据逐值同源，但 `_load_climate()` 同时供给 GDI / 气候修正 NPP / 雪灾 ERA5 降级，影响面超出旱灾 | 2026-09-26 |
+| D16 | 演示助手 LLM 提供方 | 换 **DeepSeek 官方**（`api.deepseek.com` + `deepseek-chat`），协议走 `chat/completions`。新增 `OPENAI_WIRE_API` 开关，不再硬编码 Responses API（否则换任何 OpenAI 兼容服务都会失败） | 2026-10-07 |
 
 ### 探讨进度
 
@@ -354,6 +355,65 @@ git diff --check
 **气候修正 NPP 预测**（行 420）、**雪灾 ERA5 降级分支**（行 1078）。补 2026 会让这些数字一起变动。
 `climate_era5.json` 已入 git（26 县 / 56992 行 / 5.1 MB），补 267 天约 +0.4 MB。
 要做时：先写 `public_data/scripts/` 下的刷新脚本，再重跑全量验证比对 GDI / NPP / 雪灾三处输出。
+
+### 2026-10-07：演示助手换 LLM 提供方 + 实施路线页重写（均已落地）
+
+#### A. 演示助手（`backend/demo_guide.py`）—— 此前是坏的
+
+现象：问什么都回「演示助手暂时不可用（内部错误）」。根因是 **LLM 提供方订阅失效**：
+
+```
+Error code: 403 - {'code': 'SUBSCRIPTION_NOT_FOUND', 'message': 'No active subscription found for this group'}
+```
+
+（原配置 `OPENAI_BASE_URL=https://ai.codesonline.dev` + `gpt-5.6-luna`，中转站订阅已过期。）
+
+**改法**：提供方换成 **DeepSeek 官方**，并把协议选择权交还配置。原代码在四处**硬编码
+`client.responses.create(...)`**（Responses API），等于把提供方锁死在一家 —— DeepSeek 等
+多数 OpenAI 兼容服务只提供 `chat/completions`，换谁都会失败。
+
+| 改动 | 说明 |
+|---|---|
+| 新增 `_wire_api()` | 读 `OPENAI_WIRE_API`，`chat`（默认）或 `responses` |
+| 新增 `_model()` / `_chat_messages()` | 模型名与消息体收敛到一处，不再散落 4 处 `os.environ.get` |
+| 4 处调用点改造 | `_chat_json` / `_chat_text` / `_chat_text_stream` / `_route` 内联调用 |
+| 新增 `_stream_pieces()` | 两种 wire 格式的流式事件结构不同（`delta` vs `choices[0].delta.content`），在此收口 |
+| `.env` | 换 DeepSeek 凭据，**旧 codesonline 配置注释保留**在下方以便回退 |
+
+`.env` / `.env.example` 里新增 `OPENAI_WIRE_API`；`.env.example` 的示例值同步改为 DeepSeek。
+
+**实测（走服务端，2026-10-07）**：
+
+| 场景 | 结果 |
+|---|---|
+| 知识问答「授信工作台怎么用」 | 3.6s，答出三步操作 |
+| 工具桥「百巴村能贷多少」 | 1.3s，`tool=credit_evaluate`、状态 `blocked`、**不给金额**（符合 D12） |
+| 流式「平台和银行什么关系」 | 252 个片段 / 1.9s |
+| DeepSeek 直连能力 | 流式 24 片段 0.5s；`response_format=json_object` 可用 |
+
+> 注意：`_chat_json` 目前**只定义、无调用点**（死代码），本次一并改对，避免将来用到时踩同一个坑。
+
+#### B. `frontend/roadmap.html`（实施路线页）—— 整页无样式
+
+根因：该页按**旧版类名**书写，而 `styles.css` 早已换了一套命名。实测这些类在样式表里
+**0 命中**：`page-shell` / `site-header` / `brand-mark` / `section-block` / `section-heading` /
+`module-card`。于是整页渲染成无样式裸文本（页面本身 HTTP 200、样式表也 200，纯类名对不上）。
+
+**改法**：改用**现行**类名（`top-navbar` / `nav-inner` / `nav-logo` / `nav-menu` /
+`public-page public-page-plain` / `plain-page-head`），4 个分步卡片用站点 `:root` 设计变量
+在本页内联一小段样式 —— 避免再次与类名耦合（样式表改名也不会再整页崩）。
+
+**顺带修掉两个隐患**：
+
+- 原导航指向 `overview.html` / `modules.html`，**两页已于 2026-09-23 下线**（方案 A2–A4），
+  是死链。现改为 首页 / 银行版控制台 / 实施路线。
+- 布局两坑：`.public-page-plain` 自身有 `padding-top:46px`（本页样式在其后加载会覆盖它，故直接给足 84px）；
+  grid 容器默认把内容行撑满高度 → 卡片被拉长，需 `align-content: start`。
+
+**实测**：4 张卡片、标题落在 102px、副标题上边距 6px、**死链 0**、JS 异常 0。
+
+> ⚠️ 同类问题还有一处：`frontend/data.html` 用的是**同一套已失效的旧类名**（同样 0 命中），
+> 且 AGENTS.md 早前已记录它「无导航入口」。本次**未动**，需要时按 roadmap 的改法处理。
 
 ### 测试工具链（2026-09-26 落地）
 

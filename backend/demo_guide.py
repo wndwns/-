@@ -2,8 +2,10 @@
 
 设计约束（已与用户确认）：
 - 不依赖 embedding/向量库（当前 LLM 代理 embedding 不稳定）。
-- 不依赖 Responses function-calling（代理偶发超时）。
+- 不依赖 function-calling（各家兼容面差异大）：工具由本地关键词路由触发，不交给模型决定。
 - 采用两段式 LLM：第一次做意图路由（JSON 输出），第二次生成最终回答。
+- LLM 走 OpenAI 兼容面，具体协议由 OPENAI_WIRE_API 决定：
+  `chat`（默认，chat/completions，DeepSeek 等多数服务）或 `responses`。
 - 实时金额/授信数据绝不靠 LLM 编造，必须走本地 credit_decision.evaluate_credit_case。
 - 输出严格遵守公演真实性边界（红线见 SYSTEM_HEAD）。
 """
@@ -71,26 +73,52 @@ TOOL_HINT = """
 _client: OpenAI | None = None
 
 
+def _wire_api() -> str:
+    """返回 'chat' 或 'responses'。
+
+    默认 'chat' —— chat/completions 是 OpenAI 兼容面最广的协议，DeepSeek、各家 relay、
+    本地网关都提供。此前四处硬编码 `responses.create(...)`，等于把提供方锁死在一家：
+    换成任何只支持 chat/completions 的服务都会直接失败。只有显式配置
+    OPENAI_WIRE_API=responses 时才走 Responses API。
+    """
+    v = (os.environ.get("OPENAI_WIRE_API") or "chat").strip().lower()
+    return "responses" if v == "responses" else "chat"
+
+
+def _model() -> str:
+    return os.environ.get("OPENAI_CHAT_MODEL", "deepseek-chat")
+
+
 def _get_client() -> OpenAI:
     global _client
     if _client is None:
         _client = OpenAI(
             api_key=os.environ.get("OPENAI_API_KEY", ""),
-            base_url=os.environ.get("OPENAI_BASE_URL", "https://ai.codesonline.dev"),
+            base_url=os.environ.get("OPENAI_BASE_URL", "https://api.deepseek.com"),
             timeout=90.0,
         )
     return _client
 
 
+def _chat_messages(system: str, user: str) -> list[dict[str, str]]:
+    """chat/completions 的消息体（system 单列，不再用 instructions）。"""
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+
 def _chat_json(system: str, user: str) -> dict[str, Any]:
     """调用 LLM，要求返回 JSON 对象。"""
-    r = _get_client().responses.create(
-        model=os.environ.get("OPENAI_CHAT_MODEL", "gpt-5.6-luna"),
-        input=user,
-        instructions=system,
-        text={"format": {"type": "json_object"}},
-    )
-    raw = r.output_text if hasattr(r, "output_text") else str(r)
+    if _wire_api() == "responses":
+        r = _get_client().responses.create(
+            model=_model(), input=user, instructions=system,
+            text={"format": {"type": "json_object"}},
+        )
+        raw = r.output_text if hasattr(r, "output_text") else str(r)
+    else:
+        r = _get_client().chat.completions.create(
+            model=_model(), messages=_chat_messages(system, user),
+            response_format={"type": "json_object"},
+        )
+        raw = (r.choices[0].message.content or "") if r.choices else ""
     raw = raw.strip()
     # 去掉可能的 ```json 包裹
     if raw.startswith("```"):
@@ -100,22 +128,52 @@ def _chat_json(system: str, user: str) -> dict[str, Any]:
 
 def _chat_text(system: str, user: str) -> str:
     """调用 LLM，返回纯文本回答。"""
-    r = _get_client().responses.create(
-        model=os.environ.get("OPENAI_CHAT_MODEL", "gpt-5.6-luna"),
-        input=user,
-        instructions=system,
-    )
-    return r.output_text if hasattr(r, "output_text") else str(r)
+    if _wire_api() == "responses":
+        r = _get_client().responses.create(
+            model=_model(), input=user, instructions=system)
+        return r.output_text if hasattr(r, "output_text") else str(r)
+    r = _get_client().chat.completions.create(
+        model=_model(), messages=_chat_messages(system, user))
+    return (r.choices[0].message.content or "") if r.choices else ""
 
 
 def _chat_text_stream(system: str, user: str) -> Any:
-    """调用 LLM，返回流式响应对象（调用方逐 chunk 读取 output_text）。"""
-    return _get_client().responses.create(
-        model=os.environ.get("OPENAI_CHAT_MODEL", "gpt-5.6-luna"),
-        input=user,
-        instructions=system,
-        stream=True,
-    )
+    """调用 LLM，返回流式响应对象（交给 _stream_pieces 迭代出文本片段）。"""
+    if _wire_api() == "responses":
+        return _get_client().responses.create(
+            model=_model(), input=user, instructions=system, stream=True)
+    return _get_client().chat.completions.create(
+        model=_model(), messages=_chat_messages(system, user), stream=True)
+
+
+def _stream_pieces(stream: Any):
+    """把两种 wire 格式的流式响应统一成文本片段迭代器。
+
+    - Responses API：事件带 `delta`（可能是字符串，也可能是带 .text 的对象）
+    - Chat Completions：`choices[0].delta.content`
+    两种格式的 chunk 结构完全不同，这里收口，调用方不必关心当前走哪条线。
+    """
+    for ev in stream:
+        dt = getattr(ev, "delta", None)
+        if isinstance(dt, str):
+            if dt:
+                yield dt
+            continue
+        if dt is not None:
+            t = getattr(dt, "text", None)
+            if t:
+                yield t
+            continue
+        choices = getattr(ev, "choices", None)
+        if choices:
+            d = getattr(choices[0], "delta", None)
+            c = getattr(d, "content", None) if d is not None else None
+            if c:
+                yield c
+            continue
+        t = getattr(ev, "text", None)
+        if t:
+            yield t
 
 
 # ---------------------------------------------------------------------------
@@ -196,12 +254,7 @@ def _route(query: str) -> str:
             "只有明确要求'给某个案例的授信/贷款/金额测算结果'时→返回 tools。"
             '只输出一个词，不要其他内容。'
         )
-        r = _get_client().responses.create(
-            model=os.environ.get("OPENAI_CHAT_MODEL", "gpt-5.6-luna"),
-            input=query,
-            instructions=sys_p,
-        )
-        txt = (r.output_text if hasattr(r, "output_text") else str(r)).strip().lower()
+        txt = _chat_text(sys_p, query).strip().lower()
         if "tool" in txt:
             return "tools"
     except Exception:
@@ -338,18 +391,9 @@ def answer_stream(query: str, history: list[dict[str, str]] | None = None):
     }
     try:
         stream = _chat_text_stream(prep["sys_p"], prep["user_prompt"])
-        # 流式响应必须迭代事件才有增量文本；不能读未消费的 stream.output_text（迭代前为空）
-        for ev in stream:
-            piece = ""
-            dt = getattr(ev, "delta", None)
-            if isinstance(dt, str):
-                piece = dt
-            elif dt is not None:
-                piece = getattr(dt, "text", None) or ""
-            if not piece:
-                piece = getattr(ev, "text", None) or ""
-            if piece:
-                yield {"type": "chunk", "text": piece}
+        # 必须迭代响应才有增量文本；两种协议的事件结构差异由 _stream_pieces 收口
+        for piece in _stream_pieces(stream):
+            yield {"type": "chunk", "text": piece}
     except Exception:
         yield {"type": "chunk", "text": "\n\n[回答生成中断，请稍后再试。]"}
     yield {"type": "done"}

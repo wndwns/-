@@ -505,7 +505,7 @@ FastAPI
 | <code>spatio_temporal_grid.py</code> | 草地 × 季节 × 年龄时空风险网格 |
 | <code>disaster_forecast.py</code> | Open-Meteo 五灾种 90 天规则预测，中后期段已加年际波动微起伏 |
 | <code>credit_decision.py</code> | 唯一授信金额纯计算模块，只公开 <code>evaluate_credit_case()</code>；金额用 Decimal 仅最后向下取整到 1 万元 |
-| <code>demo_guide.py</code> | 演示助手：唯一对外客服知识库全量固定进 system + 意图路由 + 实时授信测算工具桥（LLM 不编造金额）+ SSE 流式回答 |
+| <code>demo_guide.py</code> | 演示助手：唯一对外客服知识库全量固定进 system + 意图路由 + 实时授信测算工具桥（LLM 不编造金额）+ 流式回答。LLM 走 OpenAI 兼容面，协议由 <code>OPENAI_WIRE_API</code> 决定（<code>chat</code> 默认 / <code>responses</code>）；当前提供方为 DeepSeek 官方（2026-10-07 换，此前的中转站订阅已失效导致该功能整体不可用） |
 | <code>extract_npp.py</code> | NPP 提取工具 |
 | <code>extract_phenology.py</code> | 物候提取工具 |
 | <code>test_truthful_outputs.py</code> | 真实性边界的最小回归检查 |
@@ -577,6 +577,11 @@ JSON 是当前主要运行方式。MySQL 不是必需条件，也没有成为当
 **银行版控制台（<code>/bank</code>，2026-09-23 一期落地）**
 
 与上面 14 页的旧 SPA 是**并列关系，不是替代**：<code>/</code> 是主 SPA，<code>/bank</code> 是银行版控制台，两者共用同一后端与同一套 <code>/api</code>。银行版采用左侧边栏 3 组 7 项；客户档案页含 6 个 Tab（概览 / 资料 / 资产 / 授信 / 贷后 / 依据）并带顶部客户切换器（下拉 + 上一户 / 下一户）。
+
+**独立静态页（不在 Vue SPA 内）**
+
+- <code>/roadmap.html</code>（实施路线）—— 2026-10-07 重写。<b>此前整页无样式</b>：它按旧版类名书写，而 <code>styles.css</code> 早已换过命名，实测 <code>page-shell</code> / <code>site-header</code> / <code>brand-mark</code> / <code>section-block</code> / <code>section-heading</code> / <code>module-card</code> 在样式表里全部 0 命中，于是渲染成裸文本。现改用现行类名（<code>top-navbar</code> / <code>nav-inner</code> / <code>nav-logo</code> / <code>nav-menu</code> / <code>public-page public-page-plain</code> / <code>plain-page-head</code>），分步卡片改用站点 <code>:root</code> 设计变量本页内联，不再与类名耦合。同页修掉两条死链（原指向已下线的 <code>overview.html</code> / <code>modules.html</code>）。
+- <code>/data.html</code>（数据底座）—— **同一问题未处理**：用的是同一套已失效的旧类名，且无导航入口。
 
 **2026-09-26 两处落地**
 
