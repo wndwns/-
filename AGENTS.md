@@ -477,7 +477,7 @@ $env:PORT=8100; C:\Users\WH\.workbuddy\binaries\python\envs\default\Scripts\pyth
 | 远端 | `https://github.com/wndwns/-.git`（owner: wndwns）|
 | **默认分支** | **`main`**（同组人打开仓库直接看到）|
 | 当前工作分支 | `feature/demo-guide` |
-| 两者关系 | `origin/main` == `origin/feature/demo-guide` == **`282bf33`**（更新于 2026-09-26 21:2x；此表此前写成 `64ab654`，落后一次提交） |
+| 两者关系 | `origin/main` == `origin/feature/demo-guide` == **`abcdaef`**（更新于 2026-10-07；表中记的是**最近一次内容提交**，文档自身的提交号必然比它新一次） |
 | 其他分支 | `master`（92f6977，历史遗留，与 main 分叉，勿动）、`feature/npp`、`codex/*` 系列 |
 | 保护分支 | `codex/backup/pre-deepening-20260807`（勿覆盖）|
 
